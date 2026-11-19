@@ -1,0 +1,67 @@
+# Alert rules for the local stack. In Azure the same conditions become Azure Monitor alert rules.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: astra-platform
+    folder: Astra Travel
+    interval: 1m
+    rules:
+      - uid: astra-events-dead-lettered
+        title: Event deliveries dead-lettered
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: sum(increase(astra_events_deliveries_dead_lettered_total[15m])) or vector(0)
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        noDataState: OK
+        execErrState: Error
+        for: 0m
+        labels:
+          severity: high
+          team: platform-operations
+        annotations:
+          summary: One or more event deliveries used up their retries.
+          description: >-
+            Open the workbench at Operations > Events & deliveries > Dead-letter queue, fix the cause
+            (for example a partner endpoint that is down) and replay the deliveries.
+      - uid: astra-api-5xx
+        title: API server errors
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                (sum(increase(astra_api_request_duration_seconds_count{http_response_status_code=~"5.."}[5m])) or vector(0))
+                / clamp_min(sum(increase(astra_api_request_duration_seconds_count[5m])), 1)
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0.005] }
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: high
+          team: platform-operations
+        annotations:
+          summary: More than 0.5% of API requests failed with a server error for 5 minutes.

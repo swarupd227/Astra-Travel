@@ -1,0 +1,60 @@
+# Local development
+
+Requirements: Node.js 24, Docker Desktop.
+
+## First run
+
+```bash
+node scripts/init-env.mjs        # creates .env with generated local-only secrets
+npm install
+npm run stack:up                 # PostgreSQL :5433, Keycloak :8080, Grafana :3001, OTLP :4317/4318
+npm run db:migrate
+npm run db:seed:dev              # two synthetic sandbox accounts bound to the partner clients
+```
+
+Then, each in its own terminal:
+
+```bash
+npm run dev:api          # http://localhost:4000  (OpenAPI: http://localhost:4000/docs)
+npm run dev:worker       # health: http://localhost:4100/health/ready
+npm run dev:workbench    # http://localhost:3000
+```
+
+## Signing in
+
+The local Keycloak realm (`infra/docker/keycloak/realm-astra.json`) has one synthetic user per role, for
+example `platform.admin`, `compliance.officer`, `ops.supervisor`, `account.manager`, `underwriter`.
+All of them use the password in `DEV_USER_PASSWORD` in your `.env`. Each user is in the
+`astra-<role>` group, which the API maps to the role. In Azure the same mapping uses Entra ID
+groups (`OIDC_GROUP_ROLE_MAP`).
+
+Partner API access uses the client-credentials grant:
+
+```bash
+curl -s -d grant_type=client_credentials -d client_id=astra-partner-a -d "client_secret=$PARTNER_A_CLIENT_SECRET" http://localhost:8080/realms/astra/protocol/openid-connect/token
+```
+
+`astra-partner-a` is bound to *Sandbox Airline (synthetic)* and `astra-partner-b` to *Sandbox Bank (synthetic)*.
+
+## Tests
+
+```bash
+npm test                 # unit tests
+npm run test:int         # integration tests against the astra_test database (stack must be up)
+npm run verify           # format, lint, types, unit tests
+npx -w @astra/workbench playwright install chromium   # once, for end-to-end tests
+npm run test:e2e         # end to end + WCAG 2.2 AA (axe); needs the stack, API, worker and workbench running and DEV_USER_PASSWORD in the environment
+```
+
+## Local webhook endpoints
+
+Webhooks must use HTTPS to public addresses. To deliver to a receiver on your machine, set
+`ALLOW_PRIVATE_WEBHOOK_TARGETS=true` in `.env` for the API and worker. The services refuse to start with
+this setting when `NODE_ENV=production`.
+
+## Observability
+
+Grafana runs at http://localhost:3001 (user `admin`, password `GRAFANA_ADMIN_PASSWORD` in `.env`). The
+*Astra Travel - Service health* dashboard shows API availability and latency by route, event delivery
+outcomes and integration calls. Traces (Tempo) and logs (Loki) share the correlation ID that every API
+response returns in `x-correlation-id`.

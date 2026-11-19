@@ -1,0 +1,42 @@
+{
+  "name": "astra-travel",
+  "private": true,
+  "type": "module",
+  "description": "Astra Travel: AI-native travel policy management platform",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "stack:up": "docker compose -f infra/docker/compose.yml --env-file .env up -d --wait",
+    "stack:down": "docker compose -f infra/docker/compose.yml --env-file .env down",
+    "db:migrate": "node --env-file=.env --import tsx packages/platform/src/db/migrate-cli.ts",
+    "db:seed:dev": "node --env-file=.env --import tsx scripts/seed-dev.ts",
+    "dev:api": "npm -w @astra/api run dev",
+    "dev:worker": "npm -w @astra/worker run dev",
+    "dev:workbench": "npm -w @astra/workbench run dev",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run --project unit",
+    "test:int": "node --env-file=.env --import tsx scripts/prepare-test-db.ts && vitest run --project integration",
+    "test:e2e": "npm -w @astra/workbench run test:e2e",
+    "audit:deps": "npm audit --audit-level=high --omit=dev",
+    "build": "npm run build --workspaces --if-present",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "eslint": "10.15.0",
+    "prettier": "3.10.1",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.73.0",
+    "vitest": "5.1.1"
+  }
+}

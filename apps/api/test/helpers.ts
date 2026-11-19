@@ -1,0 +1,146 @@
+import { randomBytes, randomUUID } from 'node:crypto';
+import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT, type JWK } from 'jose';
+import pg from 'pg';
+import { createLogger, createPool, FeatureFlags, SecretBox, type Pool } from '@astra/platform';
+import { defaultGroupForRole, type Role } from '@astra/contracts';
+import { buildApp } from '../src/app';
+import { Authenticator } from '../src/auth/authenticator';
+import type { ApiConfig } from '../src/config';
+
+export const ISSUER = 'https://idp.test.astra.local/realms/astra';
+export const AUDIENCE = 'astra-api';
+
+export function requireEnv(name: string): string {
+  const v = process.env[name];
+  if (!v)
+    throw new Error(`${name} must be set for integration tests (run node scripts/init-env.mjs).`);
+  return v;
+}
+
+/** A real RSA key pair and JWKS: tokens are genuinely signed and verified, only the issuer is local. */
+export async function createTestIdp() {
+  const { privateKey, publicKey } = await generateKeyPair('RS256');
+  const jwk: JWK = { ...(await exportJWK(publicKey)), kid: 'test-key', alg: 'RS256', use: 'sig' };
+  const keys = createLocalJWKSet({ keys: [jwk] });
+
+  async function token(
+    opts: {
+      sub?: string;
+      roles?: Role[];
+      groups?: string[];
+      accountId?: string;
+      audience?: string;
+      issuer?: string;
+      lifetimeSeconds?: number;
+      name?: string;
+    } = {},
+  ): Promise<string> {
+    const now = Math.floor(Date.now() / 1000);
+    const claims: Record<string, unknown> = {
+      groups: opts.groups ?? (opts.roles ?? []).map(defaultGroupForRole),
+      name: opts.name ?? 'Test User',
+      email: 'test.user@astra.local',
+    };
+    if (opts.accountId) claims.account_id = opts.accountId;
+    return new SignJWT(claims)
+      .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
+      .setSubject(opts.sub ?? `user-${randomUUID()}`)
+      .setIssuer(opts.issuer ?? ISSUER)
+      .setAudience(opts.audience ?? AUDIENCE)
+      .setIssuedAt(now)
+      .setExpirationTime(now + (opts.lifetimeSeconds ?? 300))
+      .sign(privateKey);
+  }
+
+  return { keys, token };
+}
+
+export interface TestContext {
+  app: Awaited<ReturnType<typeof buildApp>>;
+  pool: Pool;
+  idp: Awaited<ReturnType<typeof createTestIdp>>;
+  close: () => Promise<void>;
+}
+
+export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise<TestContext> {
+  const pool = createPool(requireEnv('TEST_DATABASE_URL'), {
+    max: 5,
+    applicationName: 'astra-api-test',
+  });
+  const idp = await createTestIdp();
+  const config: ApiConfig = {
+    NODE_ENV: 'test',
+    LOG_LEVEL: 'fatal',
+    API_HOST: '127.0.0.1',
+    API_PORT: 0,
+    DATABASE_URL: requireEnv('TEST_DATABASE_URL'),
+    DATABASE_POOL_MAX: 5,
+    OIDC_ISSUER: ISSUER,
+    OIDC_AUDIENCE: AUDIENCE,
+    OIDC_MAX_TOKEN_LIFETIME_SECONDS: 900,
+    SECRETS_KEK_ID: 'test',
+    SECRETS_KEK: randomBytes(32).toString('base64'),
+    RATE_LIMIT_PER_MINUTE: 10_000,
+    ALLOW_PRIVATE_WEBHOOK_TARGETS: false,
+    ...overrides,
+  };
+  const app = await buildApp({
+    config,
+    pool,
+    logger: createLogger('astra-api-test', 'fatal'),
+    flags: new FeatureFlags(pool, 0),
+    secrets: new SecretBox({ test: config.SECRETS_KEK }, 'test'),
+    authenticator: new Authenticator({
+      issuer: ISSUER,
+      audience: AUDIENCE,
+      maxTokenLifetimeSeconds: config.OIDC_MAX_TOKEN_LIFETIME_SECONDS,
+      keys: idp.keys,
+    }),
+  });
+  await app.ready();
+  return {
+    app,
+    pool,
+    idp,
+    close: async () => {
+      await app.close();
+      await pool.end();
+    },
+  };
+}
+
+/** Clears mutable tables between tests. The audit trail is append-only and is never cleared. */
+export async function resetDatabase(): Promise<void> {
+  const client = new pg.Client({ connectionString: requireEnv('TEST_DATABASE_OWNER_URL') });
+  await client.connect();
+  try {
+    await client.query(`TRUNCATE platform.event_deliveries, platform.outbox, platform.idempotency_keys,
+                        platform.feature_flag_overrides, integration.webhook_subscriptions, platform.accounts CASCADE`);
+    await client.query(`UPDATE platform.feature_flags SET enabled = true`);
+  } finally {
+    await client.end();
+  }
+}
+
+/** Inserts an account directly (as the platform), returning its ID. */
+export async function insertAccount(
+  pool: Pool,
+  code: string,
+  kind = 'travel_account',
+): Promise<string> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`SELECT set_config('app.account_ids', '*', true)`);
+    const { rows } = await client.query<{ id: string }>(
+      `INSERT INTO platform.accounts (code, name, kind, created_by) VALUES ($1, $2, $3, 'test') RETURNING id`,
+      [code, `${code} (synthetic)`, kind],
+    );
+    await client.query('COMMIT');
+    return rows[0]!.id;
+  } finally {
+    client.release();
+  }
+}
+
+export const bearer = (token: string) => ({ authorization: `Bearer ${token}` });

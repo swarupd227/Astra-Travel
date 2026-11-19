@@ -1,0 +1,79 @@
+# Local development stack for Astra Travel.
+# Start with `npm run stack:up` (reads secrets from the repo-root .env created by scripts/init-env.mjs).
+# Each service maps to an Azure service in docs/adr/0001-architecture.md.
+name: astra-travel
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?run node scripts/init-env.mjs}
+      ASTRA_DB_OWNER_PASSWORD: ${ASTRA_DB_OWNER_PASSWORD}
+      ASTRA_DB_APP_PASSWORD: ${ASTRA_DB_APP_PASSWORD}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d astra']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    restart: unless-stopped
+    command: ['start-dev', '--import-realm']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_HOSTNAME: http://localhost:8080
+      KC_HTTP_PORT: '8080'
+      KC_HEALTH_ENABLED: 'true'
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      # Substituted into the realm import file.
+      WORKBENCH_CLIENT_SECRET: ${WORKBENCH_CLIENT_SECRET}
+      DEV_USER_PASSWORD: ${DEV_USER_PASSWORD}
+      PARTNER_A_CLIENT_SECRET: ${PARTNER_A_CLIENT_SECRET}
+      PARTNER_B_CLIENT_SECRET: ${PARTNER_B_CLIENT_SECRET}
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./keycloak/realm-astra.json:/opt/keycloak/data/import/realm-astra.json:ro
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q UP <&3",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  observability:
+    # OpenTelemetry collector + Tempo (traces) + Prometheus (metrics) + Loki (logs) + Grafana.
+    image: grafana/otel-lgtm:latest
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+    ports:
+      - '3001:3000'
+      - '4317:4317'
+      - '4318:4318'
+    volumes:
+      - ./grafana/provisioning/dashboards/astra.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/astra.yaml:ro
+      - ./grafana/provisioning/alerting/astra.yaml:/otel-lgtm/grafana/conf/provisioning/alerting/astra.yaml:ro
+      - ./grafana/dashboards:/var/lib/astra-dashboards:ro
+
+volumes:
+  postgres-data:
