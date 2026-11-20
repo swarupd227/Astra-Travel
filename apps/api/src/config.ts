@@ -24,6 +24,8 @@ const EnvSchema = z.object({
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(10).default(600),
   /** Local development only: lets webhooks target http:// and private addresses. */
   ALLOW_PRIVATE_WEBHOOK_TARGETS: bool,
+  /** Base64 SPKI PEM of the agent runtime's Ed25519 signing key. Without it, agent tokens are refused. */
+  AGENT_TOKEN_PUBLIC_KEY: z.string().optional(),
 });
 
 export type ApiConfig = z.infer<typeof EnvSchema>;

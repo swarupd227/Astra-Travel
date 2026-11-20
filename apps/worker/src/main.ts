@@ -8,6 +8,7 @@ const platform = await import('@astra/platform');
 const { loadConfig } = await import('./config');
 const { webhookSource } = await import('./webhooks');
 const { Loop } = await import('./loops');
+const { startAgentLoops } = await import('./agents');
 
 const {
   CompositeRegistry,
@@ -120,7 +121,8 @@ async function listen() {
 }
 await listen();
 
-const loops = [relay, dispatch, sealer, housekeeping];
+const agentLoops = await startAgentLoops(pool, config, logger);
+const loops = [relay, dispatch, sealer, housekeeping, ...agentLoops];
 for (const loop of loops) loop.start();
 
 const health = createServer((req, res) => {

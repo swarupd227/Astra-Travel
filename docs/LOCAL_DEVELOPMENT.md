@@ -20,6 +20,27 @@ npm run dev:worker       # health: http://localhost:4100/health/ready
 npm run dev:workbench    # http://localhost:3000
 ```
 
+## Agents
+
+The worker registers the agents in this build (today AG-10 Operations Copilot) as **pending** versions.
+Claude credentials come from `ANTHROPIC_API_KEY` in your environment, never from `.env`. To release an
+agent locally, sign in as `ai.governance.lead`, open **AI agents > Agent registry**, then set the warrant
+(start from the one proposed in code), set a budget, evaluate the pending version and approve it. Any staff
+user can then ask questions under **AI agents > Copilot**. Evaluations and questions call the real model and
+cost a few cents.
+
+If an existing `.env` predates a new variable (for example the agent signing keys), add the new ones
+without rotating the others:
+
+```bash
+node scripts/init-env.mjs --update
+```
+
+On a heavily loaded machine Node's watch mode can restart the API or worker before they finish starting;
+use `npm -w @astra/api run serve` and `npm -w @astra/worker run serve` (no watcher) instead. If the
+workbench dev server starts reloading pages in a loop after many file moves, stop it, delete
+`apps/workbench/.next` and start it again.
+
 ## Signing in
 
 The local Keycloak realm (`infra/docker/keycloak/realm-astra.json`) has one synthetic user per role, for
@@ -43,7 +64,7 @@ npm test                 # unit tests
 npm run test:int         # integration tests against the astra_test database (stack must be up)
 npm run verify           # format, lint, types, unit tests
 npx -w @astra/workbench playwright install chromium   # once, for end-to-end tests
-npm run test:e2e         # end to end + WCAG 2.2 AA (axe); needs the stack, API, worker and workbench running and DEV_USER_PASSWORD in the environment
+npm run test:e2e         # end to end (set E2E_LIVE_AGENTS=1 to include the live agent journey, which calls Claude) + WCAG 2.2 AA (axe); needs the stack, API, worker and workbench running and DEV_USER_PASSWORD in the environment
 ```
 
 ## Local webhook endpoints

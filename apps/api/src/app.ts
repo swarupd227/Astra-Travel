@@ -33,6 +33,7 @@ import { webhookRoutes } from './routes/webhooks';
 import { eventRoutes } from './routes/events';
 import { auditRoutes } from './routes/audit';
 import { flagRoutes } from './routes/flags';
+import { agentRoutes } from './routes/agents';
 
 export interface AppDeps {
   config: ApiConfig;
@@ -203,6 +204,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(eventRoutes, deps);
   await app.register(auditRoutes, deps);
   await app.register(flagRoutes, deps);
+  await app.register(agentRoutes, deps);
 
   return app;
 }

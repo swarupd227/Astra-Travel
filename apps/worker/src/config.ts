@@ -17,6 +17,12 @@ const EnvSchema = z.object({
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(8),
   AUDIT_SEAL_INTERVAL_MS: z.coerce.number().int().min(1_000).default(60_000),
   AUDIT_SEAL_MIN_AGE_SECONDS: z.coerce.number().int().min(70).default(120),
+  /** Base64 PKCS#8 PEM of the Ed25519 key that signs agent run tokens. Agents do not run without it. */
+  AGENT_TOKEN_PRIVATE_KEY: z.string().optional(),
+  /** Where agent tools call the platform API, and the audience their tokens are issued for. */
+  API_BASE_URL: z.url().default('http://localhost:4000'),
+  OIDC_AUDIENCE: z.string().min(1).default('astra-api'),
+  AGENT_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(2),
 });
 
 export type WorkerConfig = z.infer<typeof EnvSchema>;

@@ -6,12 +6,14 @@
   "description": "Astra Travel background worker: event relay and delivery, webhooks, audit sealing, housekeeping",
   "scripts": {
     "dev": "node --env-file=../../.env --watch --import tsx src/main.ts",
+    "serve": "node --env-file=../../.env --import tsx src/main.ts",
     "build": "tsup",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@astra/contracts": "0.1.0",
+    "@astra/agents": "0.1.0",
     "@astra/platform": "0.1.0",
     "pg": "8.23.1",
     "undici": "8.12.4",

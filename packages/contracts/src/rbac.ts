@@ -53,12 +53,17 @@ export const PERMISSIONS = {
   'audit:verify': 'Run audit-trail integrity verification',
   'flags:read': 'View feature flags',
   'flags:manage': 'Change feature flags',
+  'agents:use': 'Ask AI agents for help within your own access',
+  'agents:read': 'View AI agents, their warrants, runs and evaluations',
+  'agents:manage': 'Approve agent versions and set warrants, budgets and evaluations',
+  'agents:pause': 'Pause or resume an AI agent (kill switch)',
+  'agents:review': 'Review and resolve work routed from AI agents',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
 export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
 
-const STAFF_BASE: Permission[] = ['workbench:access', 'accounts:read', 'flags:read'];
+const STAFF_BASE: Permission[] = ['workbench:access', 'accounts:read', 'flags:read', 'agents:use'];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   product_manager: [...STAFF_BASE],
@@ -68,9 +73,24 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   service_rep: [...STAFF_BASE],
   finance_analyst: [...STAFF_BASE],
   card_programme_manager: [...STAFF_BASE, 'webhooks:read'],
-  compliance_officer: [...STAFF_BASE, 'audit:read', 'audit:verify', 'events:read'],
-  ops_supervisor: [...STAFF_BASE, 'events:read', 'events:replay', 'webhooks:read'],
-  ai_governance_lead: [...STAFF_BASE, 'audit:read'],
+  compliance_officer: [...STAFF_BASE, 'audit:read', 'audit:verify', 'events:read', 'agents:read'],
+  ops_supervisor: [
+    ...STAFF_BASE,
+    'events:read',
+    'events:replay',
+    'webhooks:read',
+    'agents:read',
+    'agents:pause',
+    'agents:review',
+  ],
+  ai_governance_lead: [
+    ...STAFF_BASE,
+    'audit:read',
+    'agents:read',
+    'agents:manage',
+    'agents:pause',
+    'agents:review',
+  ],
   platform_admin: [...ALL_PERMISSIONS],
   partner_developer: ['accounts:read', 'webhooks:read', 'webhooks:manage'],
 };

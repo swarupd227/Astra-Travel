@@ -4,13 +4,13 @@
     {
       "name": "api",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:api"],
+      "runtimeArgs": ["-w", "@astra/api", "run", "serve"],
       "port": 4000
     },
     {
       "name": "worker",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:worker"],
+      "runtimeArgs": ["-w", "@astra/worker", "run", "serve"],
       "port": 4100
     },
     {

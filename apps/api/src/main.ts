@@ -6,6 +6,8 @@ const { createLogger, createPool, FeatureFlags, SecretBox } = await import('@ast
 const { loadConfig } = await import('./config');
 const { Authenticator, parseGroupRoleMap } = await import('./auth/authenticator');
 const { buildApp } = await import('./app');
+const { AgentTokenVerifier } = await import('@astra/agents/agent-token');
+const { agentStatusChecker } = await import('./auth/agent-status');
 
 const config = loadConfig();
 const logger = createLogger('astra-api', config.LOG_LEVEL);
@@ -14,6 +16,11 @@ const pool = createPool(config.DATABASE_URL, {
   applicationName: 'astra-api',
 });
 pool.on('error', (err) => logger.error({ err }, 'Idle database client error'));
+
+const agentVerifier = config.AGENT_TOKEN_PUBLIC_KEY
+  ? await AgentTokenVerifier.fromPublicKey(config.AGENT_TOKEN_PUBLIC_KEY, config.OIDC_AUDIENCE)
+  : undefined;
+if (!agentVerifier) logger.warn('AGENT_TOKEN_PUBLIC_KEY is not set: agent tokens will be refused');
 
 const app = await buildApp({
   config,
@@ -26,6 +33,8 @@ const app = await buildApp({
     audience: config.OIDC_AUDIENCE,
     maxTokenLifetimeSeconds: config.OIDC_MAX_TOKEN_LIFETIME_SECONDS,
     groupRoleMap: parseGroupRoleMap(config.OIDC_GROUP_ROLE_MAP),
+    agentVerifier,
+    isAgentActive: agentStatusChecker(pool),
   }),
 });
 

@@ -1,5 +1,6 @@
 import {
   createRemoteJWKSet,
+  decodeJwt,
   errors as joseErrors,
   jwtVerify,
   type JWTPayload,
@@ -14,6 +15,8 @@ import {
   type Role,
 } from '@astra/contracts';
 import { AppError, type Principal } from '@astra/platform';
+import { AGENT_TOKEN_ISSUER, type AgentTokenVerifier } from '@astra/agents/agent-token';
+import { ALL_PERMISSIONS, type Permission } from '@astra/contracts';
 
 /**
  * Verifies OpenID Connect access tokens and turns them into principals (E13-F02-S02).
@@ -31,6 +34,10 @@ export interface AuthenticatorOptions {
   groupRoleMap?: Record<string, Role>;
   /** Injected key set (tests); otherwise discovered from the issuer. */
   keys?: JWTVerifyGetKey;
+  /** Verifies run tokens minted by the agent runtime. Agent tokens are refused without it. */
+  agentVerifier?: AgentTokenVerifier;
+  /** Kill switch: an agent token is refused as soon as its agent is no longer active. */
+  isAgentActive?: (agentId: string) => Promise<boolean>;
 }
 
 interface Claims extends JWTPayload {
@@ -76,6 +83,8 @@ export class Authenticator {
     if (!match?.[1])
       throw new AppError('unauthenticated', 'Send an OAuth 2.0 bearer access token.');
 
+    if (this.issuerOf(match[1]) === AGENT_TOKEN_ISSUER) return this.authenticateAgent(match[1]);
+
     let payload: Claims;
     try {
       const result = await jwtVerify(match[1], await this.keySet(), {
@@ -101,6 +110,45 @@ export class Authenticator {
       );
     }
     return this.toPrincipal(payload);
+  }
+
+  private issuerOf(token: string): string | undefined {
+    try {
+      return decodeJwt(token).iss;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Agent principals (E15-F02-S01): permissions and account scope come only from the run token, which
+   * the runtime limits to warrant, registered data access and the requesting person's own access.
+   */
+  private async authenticateAgent(token: string): Promise<Principal> {
+    if (!this.opts.agentVerifier)
+      throw new AppError('unauthenticated', 'Agent tokens are not accepted here.');
+    let claims;
+    try {
+      claims = await this.opts.agentVerifier.verify(token);
+    } catch {
+      throw new AppError('unauthenticated', 'The agent token is not valid.');
+    }
+    if (this.opts.isAgentActive && !(await this.opts.isAgentActive(claims.agentId))) {
+      throw new AppError('forbidden', `Agent ${claims.agentId} is paused.`);
+    }
+    const known = new Set<string>(ALL_PERMISSIONS);
+    return {
+      kind: 'agent',
+      subject: `agent:${claims.agentId}`,
+      name: `${claims.agentName} for ${claims.onBehalfOfName ?? claims.onBehalfOf}`,
+      email: null,
+      roles: [],
+      permissions: claims.permissions.filter((p): p is Permission => known.has(p)),
+      accountScope:
+        claims.accountScope === '*'
+          ? { type: 'all' }
+          : { type: 'accounts', accountIds: claims.accountScope },
+    };
   }
 
   rolesFromClaims(payload: Claims): Role[] {

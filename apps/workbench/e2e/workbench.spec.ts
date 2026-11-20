@@ -34,6 +34,10 @@ const PAGES = [
   '/governance/audit',
   '/admin/flags',
   '/profile',
+  '/copilot',
+  '/agents',
+  '/agents/AG-10',
+  '/agents/reviews',
 ];
 
 test('platform administrator sees every screen, and every screen is accessible', async ({
@@ -73,7 +77,8 @@ test('account manager registers an account and it appears in the audit trail', a
   await dialog.getByLabel('Account name').fill(`E2E Air ${code} (synthetic)`);
   await dialog.getByLabel('Account code').fill(code);
   await dialog.getByRole('button', { name: 'Register account' }).click();
-  await expect(page.getByText('Account registered')).toBeVisible();
+  // The redirect lands on a page that may need compiling first in development mode.
+  await expect(page.getByText('Account registered')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole('heading', { level: 1 })).toContainText(code);
 });
 

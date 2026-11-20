@@ -19,7 +19,10 @@ let sdk: NodeSDK | undefined;
 export function startTelemetry(serviceName: string): void {
   if (sdk || !process.env.OTEL_EXPORTER_OTLP_ENDPOINT) return;
   // Hook ES module loading so modules imported after this point (http, fastify, pg) are instrumented.
-  register('@opentelemetry/instrumentation/hook.mjs', import.meta.url);
+  // Only third-party modules need wrapping; the workspace's own TypeScript sources are excluded.
+  register('@opentelemetry/instrumentation/hook.mjs', import.meta.url, {
+    data: { exclude: [/\/(packages|apps)\/[^/]+\/src\//] },
+  });
   sdk = new NodeSDK({
     serviceName,
     traceExporter: new OTLPTraceExporter(),

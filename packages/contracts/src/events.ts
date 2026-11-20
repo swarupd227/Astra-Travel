@@ -74,12 +74,66 @@ export const FeatureFlagChanged = defineEvent({
   }),
 });
 
+export const AgentStatusChanged = defineEvent({
+  type: 'AgentStatusChanged',
+  version: 1,
+  source: 'astra.agents.registry',
+  schema: z.object({ agentId: z.string(), from: z.string(), to: z.string(), reason: z.string() }),
+});
+
+export const AgentVersionDecided = defineEvent({
+  type: 'AgentVersionDecided',
+  version: 1,
+  source: 'astra.agents.registry',
+  schema: z.object({
+    agentId: z.string(),
+    version: z.number().int(),
+    decision: z.enum(['approved', 'rejected']),
+  }),
+});
+
+export const AgentWarrantChanged = defineEvent({
+  type: 'AgentWarrantChanged',
+  version: 1,
+  source: 'astra.agents.warrants',
+  schema: z.object({ agentId: z.string(), version: z.number().int() }),
+});
+
+export const AgentRunFinished = defineEvent({
+  type: 'AgentRunFinished',
+  version: 1,
+  source: 'astra.agents.runtime',
+  schema: z.object({
+    runId: z.uuid(),
+    agentId: z.string(),
+    status: z.string(),
+    costUsd: z.string(),
+  }),
+});
+
+export const AgentReviewRaised = defineEvent({
+  type: 'AgentReviewRaised',
+  version: 1,
+  source: 'astra.agents.runtime',
+  schema: z.object({
+    reviewId: z.uuid(),
+    agentId: z.string(),
+    kind: z.string(),
+    runId: z.uuid().nullable(),
+  }),
+});
+
 export const EVENT_CATALOGUE = [
   AccountRegistered,
   AccountStatusChanged,
   WebhookSubscriptionCreated,
   WebhookSubscriptionStatusChanged,
   FeatureFlagChanged,
+  AgentStatusChanged,
+  AgentVersionDecided,
+  AgentWarrantChanged,
+  AgentRunFinished,
+  AgentReviewRaised,
 ] as const;
 
 export type CatalogueEventType = (typeof EVENT_CATALOGUE)[number]['type'];

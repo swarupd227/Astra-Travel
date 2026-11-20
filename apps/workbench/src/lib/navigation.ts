@@ -1,6 +1,16 @@
 import type { Permission } from '@astra/contracts';
 
-export type NavIcon = 'home' | 'building' | 'webhook' | 'activity' | 'scroll' | 'flag' | 'user';
+export type NavIcon =
+  | 'home'
+  | 'building'
+  | 'webhook'
+  | 'activity'
+  | 'scroll'
+  | 'flag'
+  | 'user'
+  | 'sparkles'
+  | 'bot'
+  | 'inbox';
 
 export interface NavItem {
   href: string;
@@ -61,6 +71,32 @@ export const NAVIGATION: NavSection[] = [
         icon: 'activity',
         permission: 'events:read',
         description: 'Business events, delivery status and the dead-letter queue.',
+      },
+    ],
+  },
+  {
+    label: 'AI agents',
+    items: [
+      {
+        href: '/copilot',
+        label: 'Copilot',
+        icon: 'sparkles',
+        permission: 'agents:use',
+        description: 'Ask the Operations Copilot about accounts, events and the audit trail.',
+      },
+      {
+        href: '/agents',
+        label: 'Agent registry',
+        icon: 'bot',
+        permission: 'agents:read',
+        description: 'Agents, their warrants, budgets, evaluations and kill switch.',
+      },
+      {
+        href: '/agents/reviews',
+        label: 'Agent reviews',
+        icon: 'inbox',
+        permission: 'agents:review',
+        description: 'Work that agents routed to people.',
       },
     ],
   },

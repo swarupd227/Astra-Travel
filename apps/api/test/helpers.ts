@@ -1,4 +1,6 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
+import { AgentTokenSigner, AgentTokenVerifier } from '@astra/agents/agent-token';
+import { agentStatusChecker } from '../src/auth/agent-status';
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT, type JWK } from 'jose';
 import pg from 'pg';
 import { createLogger, createPool, FeatureFlags, SecretBox, type Pool } from '@astra/platform';
@@ -59,6 +61,8 @@ export interface TestContext {
   app: Awaited<ReturnType<typeof buildApp>>;
   pool: Pool;
   idp: Awaited<ReturnType<typeof createTestIdp>>;
+  /** Signs agent run tokens the test API accepts (a real Ed25519 pair generated per test file). */
+  agentSigner: AgentTokenSigner;
   close: () => Promise<void>;
 }
 
@@ -68,6 +72,17 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
     applicationName: 'astra-api-test',
   });
   const idp = await createTestIdp();
+  const agentKeys = generateKeyPairSync('ed25519', {
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+  });
+  const agentSigner = await AgentTokenSigner.fromPrivateKey(
+    Buffer.from(agentKeys.privateKey).toString('base64'),
+  );
+  const agentVerifier = await AgentTokenVerifier.fromPublicKey(
+    Buffer.from(agentKeys.publicKey).toString('base64'),
+    AUDIENCE,
+  );
   const config: ApiConfig = {
     NODE_ENV: 'test',
     LOG_LEVEL: 'fatal',
@@ -95,6 +110,8 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
       audience: AUDIENCE,
       maxTokenLifetimeSeconds: config.OIDC_MAX_TOKEN_LIFETIME_SECONDS,
       keys: idp.keys,
+      agentVerifier,
+      isAgentActive: agentStatusChecker(pool, 0),
     }),
   });
   await app.ready();
@@ -102,6 +119,7 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
     app,
     pool,
     idp,
+    agentSigner,
     close: async () => {
       await app.close();
       await pool.end();
@@ -114,6 +132,13 @@ export async function resetDatabase(): Promise<void> {
   const client = new pg.Client({ connectionString: requireEnv('TEST_DATABASE_OWNER_URL') });
   await client.connect();
   try {
+    // Test databases only: the run log is append-only, so lift its truncate guard inside this transaction.
+    await client.query('BEGIN');
+    await client.query('ALTER TABLE agents.run_steps DISABLE TRIGGER run_steps_no_truncate');
+    await client.query(`TRUNCATE agents.run_steps, agents.reviews, agents.runs, agents.budgets, agents.warrants,
+                        agents.eval_runs, agents.eval_sets, agents.agent_versions, agents.agents CASCADE`);
+    await client.query('ALTER TABLE agents.run_steps ENABLE TRIGGER run_steps_no_truncate');
+    await client.query('COMMIT');
     await client.query(`TRUNCATE platform.event_deliveries, platform.outbox, platform.idempotency_keys,
                         platform.feature_flag_overrides, integration.webhook_subscriptions, platform.accounts CASCADE`);
     await client.query(`UPDATE platform.feature_flags SET enabled = true`);

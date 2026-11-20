@@ -10,12 +10,18 @@ import type { NavSection } from '@/lib/navigation';
 import { NavIcon } from './nav-icon';
 import { Logo } from './logo';
 
-function isActive(pathname: string, href: string) {
+function matches(pathname: string, href: string) {
   return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function NavList({ sections, onNavigate }: { sections: NavSection[]; onNavigate?: () => void }) {
   const pathname = usePathname();
+  // The most specific matching item is current (for example /agents/reviews, not /agents).
+  const current = sections
+    .flatMap((s) => s.items.map((i) => i.href))
+    .filter((href) => matches(pathname, href))
+    .sort((a, b) => b.length - a.length)[0];
+  const isActive = (_: string, href: string) => href === current;
   return (
     <nav aria-label="Workbench" className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
       {sections.map((section) => (

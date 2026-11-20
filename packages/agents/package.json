@@ -1,0 +1,23 @@
+{
+  "name": "@astra/agents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Governed agent runtime: registry, warrants, model gateway, tools, guardrails, evaluation and the agent catalogue",
+  "exports": {
+    ".": "./src/index.ts",
+    "./agent-token": "./src/agent-token.ts",
+    "./catalogue": "./src/catalogue/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.10.0",
+    "@astra/contracts": "0.1.0",
+    "@astra/platform": "0.1.0",
+    "@opentelemetry/api": "1.10.0",
+    "jose": "6.2.18",
+    "zod": "4.6.7"
+  }
+}
