@@ -38,12 +38,15 @@ const PAGES = [
   '/agents',
   '/agents/AG-10',
   '/agents/reviews',
+  '/card/programmes',
+  '/card/master-policies',
+  '/card/cover-check',
 ];
 
 test('platform administrator sees every screen, and every screen is accessible', async ({
   page,
 }) => {
-  test.setTimeout(240_000); // eight full axe scans in development mode
+  test.setTimeout(480_000); // fifteen full axe scans, with cold page compiles in development mode
   await signIn(page, 'platform.admin');
   await expect(page.getByRole('heading', { level: 1 })).toContainText(
     /Good (morning|afternoon|evening)/,
@@ -89,4 +92,106 @@ test('signing out ends the session', async ({ page }) => {
   await page.waitForURL(/signed-out/);
   await page.goto('/');
   await expect(page).toHaveURL(/localhost:8080/);
+});
+
+test('card programme manager takes a programme live and claims cover is answered from the feed', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'One journey is enough; the screens are checked on mobile above.');
+  test.setTimeout(240_000);
+  const suffix = Date.now().toString(36).toUpperCase();
+  const code = `E2E-${suffix}`;
+  await signIn(page, 'card.programme.manager', '/card/master-policies');
+
+  await page.getByRole('button', { name: 'Register master policy' }).click();
+  const mp = page.getByRole('dialog', { name: 'Register a master policy' });
+  await mp.getByLabel('Policyholder').selectOption({ label: 'Sandbox Bank (synthetic)' });
+  await mp.getByLabel('Policy number').fill(`MP-${code}`);
+  await mp.getByLabel('States').fill('NY, CA');
+  await mp.getByLabel('Effective from').fill('2025-01-01');
+  await expectAccessible(page);
+  await mp.getByRole('button', { name: 'Register master policy' }).click();
+  await expect(mp.getByText('Master policy registered.')).toBeVisible({ timeout: 30_000 });
+  await page.keyboard.press('Escape');
+
+  await page.goto('/card/programmes');
+  await page.getByRole('button', { name: 'Set up programme' }).click();
+  const setup = page.getByRole('dialog', { name: 'Set up a card programme' });
+  await setup
+    .getByLabel('Master policy')
+    .selectOption({ label: `MP-${code} · Sandbox Bank (synthetic)` });
+  await setup.getByLabel('Programme name').fill(`E2E card cover ${suffix}`);
+  await setup.getByLabel('Programme code').fill(code);
+  await setup.getByLabel('Card product').fill('Platinum Visa');
+  await setup.getByLabel('Effective from').fill('2025-01-01');
+  await setup.getByLabel('Payment condition').selectOption('partial');
+  await setup.getByLabel('Minimum share paid with the card (%)').fill('50');
+  await expectAccessible(page);
+  await setup.getByRole('button', { name: 'Set up programme' }).click();
+  await expect(page.getByText('Programme set up')).toBeVisible({ timeout: 30_000 });
+
+  const feed = (seq: number, mode: 'test' | 'live', lines: string[]) => ({
+    name: `${mode}-${seq}.txt`,
+    mimeType: 'text/plain',
+    buffer: Buffer.from(
+      [
+        `H|ASTRA-ELIG|1|${code}|${seq}|FULL|2026-11-01`,
+        ...lines,
+        `T|${lines.length}|${lines.length}|0|0`,
+        '',
+      ].join('\n'),
+    ),
+  });
+  const upload = async (file: ReturnType<typeof feed>, mode: 'test' | 'live') => {
+    await page.getByLabel('Feed file').setInputFiles(file);
+    await page.getByRole('radio', { name: mode === 'test' ? /^Test/ : /^Live/ }).check();
+    await page.getByRole('button', { name: 'Upload feed' }).click();
+    await expect(page.getByText(/received and queued/)).toBeVisible({ timeout: 30_000 });
+  };
+
+  await upload(feed(1, 'test', ['D|tok_e2e_1|PLAT|A|2025-01-01|']), 'test');
+  // The worker processes the feed; reload until the result shows.
+  await expect(async () => {
+    await page.reload();
+    await expect(page.getByText('A test feed has passed. The programme can go live.')).toBeVisible({
+      timeout: 2_000,
+    });
+  }).toPass({ timeout: 60_000 });
+
+  await page.getByRole('button', { name: 'Go live' }).click();
+  const live = page.getByRole('dialog', { name: 'Take the programme live' });
+  await live.getByLabel('Reason').fill('Test feed passed; go-live approved in e2e.');
+  await live.getByRole('button', { name: 'Go live' }).click();
+  await expect(page.getByText('The programme is live', { exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
+  await upload(
+    feed(1, 'live', ['D|tok_e2e_1|PLAT|A|2025-01-01|', 'D|tok_e2e_2|GOLD|A|2025-01-01|2026-06-30']),
+    'live',
+  );
+  await expect(async () => {
+    await page.reload();
+    await expect(page.getByRole('row', { name: /#1 Full.*Applied/ })).toBeVisible({
+      timeout: 2_000,
+    });
+  }).toPass({ timeout: 60_000 });
+  await expectAccessible(page);
+
+  await page.goto('/card/cover-check');
+  await page.getByLabel('Programme').selectOption({ label: `E2E card cover ${suffix} (${code})` });
+  await page.getByLabel('Account reference').fill('tok_e2e_2');
+  await page.getByLabel('Trip purchase date').fill('2026-05-01');
+  await page.getByLabel('Loss date').fill('2026-05-20');
+  await page.getByLabel('Trip cost (USD)').fill('1800');
+  await page.getByLabel('Paid with the card (USD)').fill('900');
+  await page.getByRole('button', { name: 'Verify cover' }).click();
+  await expect(page.getByText('Covered', { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(new RegExp(`certificate ${code}-\\d{9}`))).toBeVisible();
+  await expectAccessible(page);
+
+  await page.getByLabel('Trip purchase date').fill('2026-07-01');
+  await page.getByLabel('Loss date').fill('2026-07-10');
+  await page.getByRole('button', { name: 'Verify cover' }).click();
+  await expect(page.getByText('Not covered', { exact: true })).toBeVisible({ timeout: 30_000 });
 });

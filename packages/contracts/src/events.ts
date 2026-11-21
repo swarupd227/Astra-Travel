@@ -123,6 +123,58 @@ export const AgentReviewRaised = defineEvent({
   }),
 });
 
+export const MasterPolicyRegistered = defineEvent({
+  type: 'MasterPolicyRegistered',
+  version: 1,
+  source: 'astra.card.programmes',
+  schema: z.object({ masterPolicyId: z.uuid(), policyNumber: z.string(), underwriter: z.string() }),
+});
+
+export const CardProgrammeRegistered = defineEvent({
+  type: 'CardProgrammeRegistered',
+  version: 1,
+  source: 'astra.card.programmes',
+  schema: z.object({ programmeId: z.uuid(), code: z.string(), masterPolicyId: z.uuid() }),
+});
+
+export const CardProgrammeStatusChanged = defineEvent({
+  type: 'CardProgrammeStatusChanged',
+  version: 1,
+  source: 'astra.card.programmes',
+  schema: z.object({ programmeId: z.uuid(), from: z.string(), to: z.string(), reason: z.string() }),
+});
+
+export const EligibilityFeedReceived = defineEvent({
+  type: 'EligibilityFeedReceived',
+  version: 1,
+  source: 'astra.card.eligibility',
+  schema: z.object({
+    feedId: z.uuid(),
+    programmeId: z.uuid(),
+    mode: z.string(),
+    sha256: z.string(),
+  }),
+});
+
+export const EligibilityFeedLoaded = defineEvent({
+  type: 'EligibilityFeedLoaded',
+  version: 1,
+  source: 'astra.card.eligibility',
+  schema: z.object({
+    feedId: z.uuid(),
+    programmeId: z.uuid(),
+    sequence: z.number().int().nullable(),
+    mode: z.string(),
+    status: z.string(),
+    reason: z.string().nullable(),
+    added: z.number().int(),
+    updated: z.number().int(),
+    removed: z.number().int(),
+    rejected: z.number().int(),
+    certificatesIssued: z.number().int(),
+  }),
+});
+
 export const EVENT_CATALOGUE = [
   AccountRegistered,
   AccountStatusChanged,
@@ -134,6 +186,11 @@ export const EVENT_CATALOGUE = [
   AgentWarrantChanged,
   AgentRunFinished,
   AgentReviewRaised,
+  MasterPolicyRegistered,
+  CardProgrammeRegistered,
+  CardProgrammeStatusChanged,
+  EligibilityFeedReceived,
+  EligibilityFeedLoaded,
 ] as const;
 
 export type CatalogueEventType = (typeof EVENT_CATALOGUE)[number]['type'];

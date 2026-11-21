@@ -113,6 +113,14 @@
           "External account integration developer"
         ]
       }
+    },
+    {
+      "name": "astra-cover-verifier",
+      "attributes": {
+        "description": [
+          "Cover verification system (claims); machine clients only"
+        ]
+      }
     }
   ],
   "users": [
@@ -482,6 +490,48 @@
           "config": {
             "claim.name": "groups",
             "claim.value": "[\"astra-partner-developer\"]",
+            "jsonType.label": "JSON",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "astra-claims",
+      "name": "Claims system: card-linked cover verification",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${CLAIMS_CLIENT_SECRET}",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "attributes": {
+        "access.token.lifespan": "300"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-astra-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "astra-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "cover-verifier-group",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "config": {
+            "claim.name": "groups",
+            "claim.value": "[\"astra-cover-verifier\"]",
             "jsonType.label": "JSON",
             "access.token.claim": "true",
             "id.token.claim": "false",

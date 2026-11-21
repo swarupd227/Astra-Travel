@@ -32,6 +32,12 @@ const config: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   transpilePackages: ['@astra/contracts'],
+  experimental: {
+    // Eligibility feed uploads from the workbench. Server actions buffer the file, so larger feeds go
+    // through the API directly (or SFTP in Azure); see docs/integration/eligibility-feed-v1.md.
+    serverActions: { bodySizeLimit: '100mb' },
+    proxyClientMaxBodySize: '100mb',
+  },
   async headers() {
     return [
       {

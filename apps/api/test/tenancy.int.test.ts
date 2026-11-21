@@ -15,6 +15,8 @@ let accountB: string;
 let tokenA: string;
 let tokenB: string;
 let subscriptionA: string;
+let programmeA: string;
+let feedA: string;
 
 beforeAll(async () => {
   t = await createTestApp();
@@ -23,8 +25,8 @@ afterAll(async () => t.close());
 
 beforeEach(async () => {
   await resetDatabase();
-  accountA = await insertAccount(t.pool, 'TENANT-A');
-  accountB = await insertAccount(t.pool, 'TENANT-B');
+  accountA = await insertAccount(t.pool, 'TENANT-A', 'card_issuer');
+  accountB = await insertAccount(t.pool, 'TENANT-B', 'card_issuer');
   tokenA = await t.idp.token({
     roles: ['partner_developer'],
     accountId: accountA,
@@ -43,6 +45,49 @@ beforeEach(async () => {
   });
   expect(res.statusCode, res.body).toBe(201);
   subscriptionA = res.json().id;
+
+  // A card programme of account A, with a feed A uploaded itself.
+  const staff = await t.idp.token({ roles: ['card_programme_manager'] });
+  const staffPost = (url: string, payload: object) =>
+    t.app.inject({
+      method: 'POST',
+      url,
+      headers: {
+        ...bearer(staff),
+        'idempotency-key': `tenancy-${Math.random().toString(36).slice(2)}`,
+      },
+      payload,
+    });
+  const mp = await staffPost('/v1/master-policies', {
+    accountId: accountA,
+    policyNumber: 'MP-TENANT-A',
+    underwriter: 'ABIC',
+    states: ['NY'],
+    effectiveFrom: '2026-01-01',
+  });
+  expect(mp.statusCode, mp.body).toBe(201);
+  const programme = await staffPost('/v1/card-programmes', {
+    masterPolicyId: mp.json().id,
+    code: 'TENANT-A-CARD',
+    name: 'Tenant A card cover',
+    cardProduct: 'Gold',
+    states: ['NY'],
+    effectiveFrom: '2026-01-01',
+    paymentCondition: { rule: 'none' },
+    eligibilityRule: 'purchase_date',
+  });
+  expect(programme.statusCode, programme.body).toBe(201);
+  programmeA = programme.json().id;
+  const feed = await t.app.inject({
+    method: 'POST',
+    url: `/v1/card-programmes/${programmeA}/feeds?mode=test`,
+    headers: { ...bearer(tokenA), 'content-type': 'application/octet-stream' },
+    payload: Buffer.from(
+      'H|ASTRA-ELIG|1|TENANT-A-CARD|1|FULL|2026-02-01\nD|tok_tenant_a|GOLD|A|2026-01-01|\nT|1|1|0|0\n',
+    ),
+  });
+  expect(feed.statusCode, feed.body).toBe(202);
+  feedA = feed.json().id;
 });
 
 type Probe = { method: 'GET' | 'POST' | 'DELETE'; url: () => string; payload?: () => unknown };
@@ -79,6 +124,36 @@ const PROBES: Record<string, Probe[]> = {
   'DELETE /v1/webhook-subscriptions/:subscriptionId': [
     { method: 'DELETE', url: () => `/v1/webhook-subscriptions/${subscriptionA}` },
   ],
+  'GET /v1/card-programmes': [
+    { method: 'GET', url: () => '/v1/card-programmes' },
+    { method: 'GET', url: () => `/v1/card-programmes?accountId=${accountA}` },
+  ],
+  'GET /v1/card-programmes/:programmeId': [
+    { method: 'GET', url: () => `/v1/card-programmes/${programmeA}` },
+  ],
+  'POST /v1/card-programmes/:programmeId/feeds': [
+    {
+      method: 'POST',
+      url: () => `/v1/card-programmes/${programmeA}/feeds?mode=test`,
+      payload: () => ({}),
+    },
+  ],
+  'GET /v1/card-programmes/:programmeId/feeds': [
+    { method: 'GET', url: () => `/v1/card-programmes/${programmeA}/feeds` },
+  ],
+  'GET /v1/card-programmes/:programmeId/feeds/:feedId': [
+    { method: 'GET', url: () => `/v1/card-programmes/${programmeA}/feeds/${feedA}` },
+  ],
+  'GET /v1/card-programmes/:programmeId/feeds/:feedId/rejections': [
+    { method: 'GET', url: () => `/v1/card-programmes/${programmeA}/feeds/${feedA}/rejections` },
+  ],
+  'POST /v1/card-programmes/:programmeId/eligibility-checks': [
+    {
+      method: 'POST',
+      url: () => `/v1/card-programmes/${programmeA}/eligibility-checks`,
+      payload: () => ({ accountRef: 'tok_tenant_a', date: '2026-03-01' }),
+    },
+  ],
 };
 
 describe('route catalogue', () => {
@@ -114,6 +189,8 @@ describe('cross-account access', () => {
           // List endpoints succeed but must contain nothing from account A.
           expect(body, route).not.toContain(accountA);
           expect(body, route).not.toContain(subscriptionA);
+          expect(body, route).not.toContain(programmeA);
+          expect(body, route).not.toContain(feedA);
         } else {
           expect([403, 404], `${route} answered ${res.statusCode}`).toContain(res.statusCode);
         }

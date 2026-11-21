@@ -10,7 +10,10 @@ export type NavIcon =
   | 'user'
   | 'sparkles'
   | 'bot'
-  | 'inbox';
+  | 'inbox'
+  | 'card'
+  | 'shield'
+  | 'check';
 
 export interface NavItem {
   href: string;
@@ -59,6 +62,32 @@ export const NAVIGATION: NavSection[] = [
         icon: 'webhook',
         permission: 'webhooks:read',
         description: 'Signed event notifications sent to partner systems.',
+      },
+    ],
+  },
+  {
+    label: 'Card-linked cover',
+    items: [
+      {
+        href: '/card/programmes',
+        label: 'Card programmes',
+        icon: 'card',
+        permission: 'card:read',
+        description: 'Issuer programmes, eligibility feeds and the eligibility ledger.',
+      },
+      {
+        href: '/card/master-policies',
+        label: 'Master policies',
+        icon: 'shield',
+        permission: 'card:read',
+        description: 'Group policies issued to card issuers and banks.',
+      },
+      {
+        href: '/card/cover-check',
+        label: 'Cover check',
+        icon: 'check',
+        permission: 'cover:verify',
+        description: 'Was a cardholder covered for a trip? The answer claims staff use.',
       },
     ],
   },

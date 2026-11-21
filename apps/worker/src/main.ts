@@ -9,6 +9,7 @@ const { loadConfig } = await import('./config');
 const { webhookSource } = await import('./webhooks');
 const { Loop } = await import('./loops');
 const { startAgentLoops } = await import('./agents');
+const { cardFeedLoop } = await import('./card-feeds');
 
 const {
   CompositeRegistry,
@@ -122,7 +123,10 @@ async function listen() {
 await listen();
 
 const agentLoops = await startAgentLoops(pool, config, logger);
-const loops = [relay, dispatch, sealer, housekeeping, ...agentLoops];
+const cardFeeds = cardFeedLoop(pool, config, logger);
+// A new feed is announced through the outbox, so the same notification wakes feed processing.
+listener.on('notification', () => cardFeeds.wake());
+const loops = [relay, dispatch, sealer, housekeeping, cardFeeds, ...agentLoops];
 for (const loop of loops) loop.start();
 
 const health = createServer((req, res) => {

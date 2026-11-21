@@ -17,6 +17,7 @@ import {
   normaliseCorrelationId,
   platformMetrics,
   type FeatureFlags,
+  type FileStore,
   type Logger,
   type Pool,
   type Principal,
@@ -34,6 +35,7 @@ import { eventRoutes } from './routes/events';
 import { auditRoutes } from './routes/audit';
 import { flagRoutes } from './routes/flags';
 import { agentRoutes } from './routes/agents';
+import { cardRoutes } from './routes/card';
 
 export interface AppDeps {
   config: ApiConfig;
@@ -42,6 +44,7 @@ export interface AppDeps {
   flags: FeatureFlags;
   secrets: SecretBox;
   logger: Logger;
+  files: FileStore;
 }
 
 export type App = Awaited<ReturnType<typeof buildApp>>;
@@ -205,6 +208,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(auditRoutes, deps);
   await app.register(flagRoutes, deps);
   await app.register(agentRoutes, deps);
+  await app.register(cardRoutes, deps);
 
   return app;
 }

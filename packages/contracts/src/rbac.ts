@@ -22,7 +22,13 @@ export const STAFF_ROLES = [
 
 export const EXTERNAL_ROLES = ['partner_developer'] as const;
 
-export const ROLES = [...STAFF_ROLES, ...EXTERNAL_ROLES] as const;
+/**
+ * Roles held by Assurant systems rather than people (client-credentials clients). They act platform-wide
+ * but only within their permissions, and are audited as `system` actors.
+ */
+export const SYSTEM_ROLES = ['cover_verifier'] as const;
+
+export const ROLES = [...STAFF_ROLES, ...EXTERNAL_ROLES, ...SYSTEM_ROLES] as const;
 export type Role = (typeof ROLES)[number];
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
@@ -39,6 +45,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   ai_governance_lead: 'AI governance lead',
   platform_admin: 'Platform administrator',
   partner_developer: 'Account integration developer',
+  cover_verifier: 'Cover verification system (claims)',
 };
 
 export const PERMISSIONS = {
@@ -58,6 +65,10 @@ export const PERMISSIONS = {
   'agents:manage': 'Approve agent versions and set warrants, budgets and evaluations',
   'agents:pause': 'Pause or resume an AI agent (kill switch)',
   'agents:review': 'Review and resolve work routed from AI agents',
+  'card:read': 'View card programmes, master policies, feeds and eligibility',
+  'card:manage': 'Set up card programmes and master policies and take them live',
+  'card:feeds': 'Load issuer eligibility feeds and reject held feeds',
+  'cover:verify': 'Check whether a cardholder or traveller was covered on a date',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -68,12 +79,32 @@ const STAFF_BASE: Permission[] = ['workbench:access', 'accounts:read', 'flags:re
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   product_manager: [...STAFF_BASE],
   rating_analyst: [...STAFF_BASE],
-  underwriter: [...STAFF_BASE],
-  account_manager: [...STAFF_BASE, 'accounts:manage', 'webhooks:read', 'webhooks:manage'],
-  service_rep: [...STAFF_BASE],
-  finance_analyst: [...STAFF_BASE],
-  card_programme_manager: [...STAFF_BASE, 'webhooks:read'],
-  compliance_officer: [...STAFF_BASE, 'audit:read', 'audit:verify', 'events:read', 'agents:read'],
+  underwriter: [...STAFF_BASE, 'card:read'],
+  account_manager: [
+    ...STAFF_BASE,
+    'accounts:manage',
+    'webhooks:read',
+    'webhooks:manage',
+    'card:read',
+  ],
+  service_rep: [...STAFF_BASE, 'card:read', 'cover:verify'],
+  finance_analyst: [...STAFF_BASE, 'card:read'],
+  card_programme_manager: [
+    ...STAFF_BASE,
+    'webhooks:read',
+    'card:read',
+    'card:manage',
+    'card:feeds',
+    'cover:verify',
+  ],
+  compliance_officer: [
+    ...STAFF_BASE,
+    'audit:read',
+    'audit:verify',
+    'events:read',
+    'agents:read',
+    'card:read',
+  ],
   ops_supervisor: [
     ...STAFF_BASE,
     'events:read',
@@ -92,8 +123,20 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'agents:review',
   ],
   platform_admin: [...ALL_PERMISSIONS],
-  partner_developer: ['accounts:read', 'webhooks:read', 'webhooks:manage'],
+  // Issuers deliver eligibility feeds for their own programmes through the API (E21-F02-S01).
+  partner_developer: [
+    'accounts:read',
+    'webhooks:read',
+    'webhooks:manage',
+    'card:read',
+    'card:feeds',
+  ],
+  cover_verifier: ['cover:verify'],
 };
+
+export function isSystemRole(role: Role): boolean {
+  return (SYSTEM_ROLES as readonly string[]).includes(role);
+}
 
 export function permissionsFor(roles: readonly Role[]): Permission[] {
   const set = new Set<Permission>();

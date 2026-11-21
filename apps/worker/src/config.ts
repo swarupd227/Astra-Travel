@@ -23,6 +23,8 @@ const EnvSchema = z.object({
   API_BASE_URL: z.url().default('http://localhost:4000'),
   OIDC_AUDIENCE: z.string().min(1).default('astra-api'),
   AGENT_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(2),
+  /** Where uploaded files (eligibility feeds) are kept; must be the API's FILE_STORE_DIR. */
+  FILE_STORE_DIR: z.string().default('../../var/files'),
 });
 
 export type WorkerConfig = z.infer<typeof EnvSchema>;

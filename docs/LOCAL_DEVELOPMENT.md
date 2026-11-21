@@ -56,6 +56,38 @@ curl -s -d grant_type=client_credentials -d client_id=astra-partner-a -d "client
 ```
 
 `astra-partner-a` is bound to *Sandbox Airline (synthetic)* and `astra-partner-b` to *Sandbox Bank (synthetic)*.
+`astra-claims` is the claims system's client: it has only the `cover_verifier` role, for
+`POST /v1/cover-verifications`.
+
+Keycloak reads the realm file only when the realm is first created. After pulling a change that adds
+groups or clients (Increment 2 added `astra-cover-verifier` and `astra-claims`), add the new secrets to
+`.env` and push the additions into the running Keycloak:
+
+```bash
+node scripts/init-env.mjs --update
+```
+
+```bash
+node --env-file=.env scripts/keycloak-sync.mjs
+```
+
+## Card-linked cover
+
+Eligibility feed files are stored under `var/files` (`FILE_STORE_DIR`; the API and worker must share it)
+and processed by the worker. The file format is in
+[docs/integration/eligibility-feed-v1.md](integration/eligibility-feed-v1.md). Issuers upload with their
+client-credentials token:
+
+```bash
+curl -s -X POST -H "authorization: Bearer $TOKEN" -H "content-type: application/octet-stream" --data-binary @feed.txt "http://localhost:4000/v1/card-programmes/$PROGRAMME_ID/feeds?mode=test&fileName=feed.txt"
+```
+
+The workbench accepts uploads up to 100 MB. The feed load test (synthetic data, in its own account) runs
+against the local database; stop the worker first so it does not pick up the test feeds:
+
+```bash
+node --env-file=.env --import tsx scripts/card-feed-load.ts 1000000 100000
+```
 
 ## Tests
 

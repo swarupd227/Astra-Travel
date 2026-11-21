@@ -3,7 +3,17 @@ import { AgentTokenSigner, AgentTokenVerifier } from '@astra/agents/agent-token'
 import { agentStatusChecker } from '../src/auth/agent-status';
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT, type JWK } from 'jose';
 import pg from 'pg';
-import { createLogger, createPool, FeatureFlags, SecretBox, type Pool } from '@astra/platform';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import {
+  createLogger,
+  createPool,
+  FeatureFlags,
+  LocalFileStore,
+  SecretBox,
+  type Pool,
+} from '@astra/platform';
 import { defaultGroupForRole, type Role } from '@astra/contracts';
 import { buildApp } from '../src/app';
 import { Authenticator } from '../src/auth/authenticator';
@@ -63,6 +73,8 @@ export interface TestContext {
   idp: Awaited<ReturnType<typeof createTestIdp>>;
   /** Signs agent run tokens the test API accepts (a real Ed25519 pair generated per test file). */
   agentSigner: AgentTokenSigner;
+  /** The file store the test app writes uploads to (a temporary directory). */
+  files: LocalFileStore;
   close: () => Promise<void>;
 }
 
@@ -97,14 +109,18 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
     SECRETS_KEK: randomBytes(32).toString('base64'),
     RATE_LIMIT_PER_MINUTE: 10_000,
     ALLOW_PRIVATE_WEBHOOK_TARGETS: false,
+    FILE_STORE_DIR: mkdtempSync(join(tmpdir(), 'astra-files-')),
+    CARD_FEED_MAX_BYTES: 64 * 1024 * 1024,
     ...overrides,
   };
+  const files = new LocalFileStore(config.FILE_STORE_DIR);
   const app = await buildApp({
     config,
     pool,
     logger: createLogger('astra-api-test', 'fatal'),
     flags: new FeatureFlags(pool, 0),
     secrets: new SecretBox({ test: config.SECRETS_KEK }, 'test'),
+    files,
     authenticator: new Authenticator({
       issuer: ISSUER,
       audience: AUDIENCE,
@@ -120,9 +136,11 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
     pool,
     idp,
     agentSigner,
+    files,
     close: async () => {
       await app.close();
       await pool.end();
+      rmSync(config.FILE_STORE_DIR, { recursive: true, force: true });
     },
   };
 }
@@ -140,7 +158,7 @@ export async function resetDatabase(): Promise<void> {
     await client.query('ALTER TABLE agents.run_steps ENABLE TRIGGER run_steps_no_truncate');
     await client.query('COMMIT');
     await client.query(`TRUNCATE platform.event_deliveries, platform.outbox, platform.idempotency_keys,
-                        platform.feature_flag_overrides, integration.webhook_subscriptions, platform.accounts CASCADE`);
+                        platform.feature_flag_overrides, integration.webhook_subscriptions, card.feed_records, platform.accounts CASCADE`);
     await client.query(`UPDATE platform.feature_flags SET enabled = true`);
   } finally {
     await client.end();

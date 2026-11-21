@@ -7,6 +7,8 @@ export type Tx = pg.PoolClient;
 // Return bigint columns (int8) as strings and numeric as strings: never lose precision on money.
 pg.types.setTypeParser(pg.types.builtins.INT8, (v) => v);
 pg.types.setTypeParser(pg.types.builtins.NUMERIC, (v) => v);
+// Return DATE as the YYYY-MM-DD string: a calendar date has no time zone, and Date objects would add one.
+pg.types.setTypeParser(pg.types.builtins.DATE, (v) => v);
 
 export interface PoolOptions {
   max?: number;

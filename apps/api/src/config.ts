@@ -26,6 +26,14 @@ const EnvSchema = z.object({
   ALLOW_PRIVATE_WEBHOOK_TARGETS: bool,
   /** Base64 SPKI PEM of the agent runtime's Ed25519 signing key. Without it, agent tokens are refused. */
   AGENT_TOKEN_PUBLIC_KEY: z.string().optional(),
+  /** Where uploaded files (eligibility feeds) are kept. Azure uses Blob Storage instead. */
+  FILE_STORE_DIR: z.string().default('../../var/files'),
+  /** Largest eligibility feed accepted, in bytes (default 4 GiB: about 50 million records). */
+  CARD_FEED_MAX_BYTES: z.coerce
+    .number()
+    .int()
+    .min(1024)
+    .default(4 * 1024 ** 3),
 });
 
 export type ApiConfig = z.infer<typeof EnvSchema>;

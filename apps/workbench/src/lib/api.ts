@@ -56,6 +56,48 @@ export async function api<T>(path: string, req: ApiRequest = {}): Promise<T> {
     });
   }
 
+  return readResponse<T>(res);
+}
+
+/** Streams a file to the API as the request body (application/octet-stream). */
+export async function apiUpload<T>(
+  path: string,
+  file: Blob,
+  query: Record<string, string> = {},
+): Promise<{ status: number; body: T }> {
+  const session = await getSession();
+  if (!session) redirect('/api/auth/login');
+  const url = new URL(path, env().API_BASE_URL);
+  for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
+  let res: Response;
+  const correlationId = randomUUID();
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${session.accessToken}`,
+        accept: 'application/json',
+        'content-type': 'application/octet-stream',
+        'x-correlation-id': correlationId,
+      },
+      body: file.stream(),
+      duplex: 'half',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(300_000),
+    } as RequestInit);
+  } catch {
+    throw new ApiProblem({
+      type: 'urn:astra:error:service_unavailable',
+      title: 'The platform API is not reachable',
+      status: 503,
+      code: 'service_unavailable',
+      correlationId,
+    });
+  }
+  return { status: res.status, body: await readResponse<T>(res) };
+}
+
+async function readResponse<T>(res: Response): Promise<T> {
   if (res.status === 204) return undefined as T;
   const json: unknown = await res.json().catch(() => null);
   if (res.status === 401) redirect('/api/auth/login');

@@ -10,6 +10,7 @@ import {
   defaultGroupForRole,
   isRole,
   isStaffRole,
+  isSystemRole,
   permissionsFor,
   ROLES,
   type Role,
@@ -200,10 +201,15 @@ export class Authenticator {
         'Your account has no Astra Travel role. Ask an administrator.',
       );
     }
+    // Assurant systems (for example the claims application) hold only system roles.
+    const systemRoles = roles.filter((r) => isSystemRole(r));
+    if (systemRoles.length && systemRoles.length !== roles.length) {
+      throw new AppError('forbidden', 'A token cannot carry both system and person roles.');
+    }
     return {
-      kind: 'user',
+      kind: systemRoles.length ? 'system' : 'user',
       subject: payload.sub!,
-      name,
+      name: systemRoles.length && typeof payload.azp === 'string' ? payload.azp : name,
       email,
       roles,
       permissions: permissionsFor(roles),

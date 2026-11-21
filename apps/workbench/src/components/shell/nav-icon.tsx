@@ -1,11 +1,14 @@
 import {
   Activity,
+  BadgeCheck,
   Bot,
   Building2,
+  CreditCard,
   Flag,
   Home,
   Inbox,
   ScrollText,
+  ShieldCheck,
   Sparkles,
   UserRound,
   Webhook,
@@ -23,6 +26,9 @@ const ICONS = {
   sparkles: Sparkles,
   bot: Bot,
   inbox: Inbox,
+  card: CreditCard,
+  shield: ShieldCheck,
+  check: BadgeCheck,
 } as const;
 
 export function NavIcon({ name, className }: { name: NavIconName; className?: string }) {
