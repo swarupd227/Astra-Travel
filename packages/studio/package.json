@@ -1,0 +1,19 @@
+{
+  "name": "@astra/studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Product configuration foundations: form text and variable maps, reference data, and the filing check",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@astra/contracts": "0.1.0",
+    "@astra/platform": "0.1.0",
+    "pdfjs-dist": "6.4.299",
+    "zod": "4.6.7"
+  }
+}

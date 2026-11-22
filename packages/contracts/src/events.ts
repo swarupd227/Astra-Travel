@@ -175,6 +175,57 @@ export const EligibilityFeedLoaded = defineEvent({
   }),
 });
 
+export const ReferenceDataApproved = defineEvent({
+  type: 'ReferenceDataApproved',
+  version: 1,
+  source: 'astra.refdata',
+  schema: z.object({
+    dataset: z.string(),
+    versionId: z.uuid(),
+    version: z.number().int(),
+    effectiveFrom: z.string(),
+    entryCount: z.number().int(),
+  }),
+});
+
+export const FilingStatusChanged = defineEvent({
+  type: 'FilingStatusChanged',
+  version: 1,
+  source: 'astra.compliance.filings',
+  schema: z.object({
+    filingId: z.uuid(),
+    state: z.string(),
+    itemType: z.string(),
+    itemReference: z.string(),
+    from: z.string().nullable(),
+    to: z.string(),
+    effectiveFrom: z.string().nullable(),
+  }),
+});
+
+export const FormEditionLoaded = defineEvent({
+  type: 'FormEditionLoaded',
+  version: 1,
+  source: 'astra.studio.forms',
+  schema: z.object({
+    editionId: z.uuid(),
+    formNumber: z.string(),
+    edition: z.string(),
+    sha256: z.string(),
+  }),
+});
+
+export const VariableMapApproved = defineEvent({
+  type: 'VariableMapApproved',
+  version: 1,
+  source: 'astra.studio.forms',
+  schema: z.object({
+    editionId: z.uuid(),
+    mapId: z.uuid(),
+    version: z.number().int(),
+    variables: z.number().int(),
+  }),
+});
 export const EVENT_CATALOGUE = [
   AccountRegistered,
   AccountStatusChanged,
@@ -191,6 +242,10 @@ export const EVENT_CATALOGUE = [
   CardProgrammeStatusChanged,
   EligibilityFeedReceived,
   EligibilityFeedLoaded,
+  ReferenceDataApproved,
+  FilingStatusChanged,
+  FormEditionLoaded,
+  VariableMapApproved,
 ] as const;
 
 export type CatalogueEventType = (typeof EVENT_CATALOGUE)[number]['type'];

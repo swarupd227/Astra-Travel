@@ -71,6 +71,16 @@ node scripts/init-env.mjs --update
 node --env-file=.env scripts/keycloak-sync.mjs
 ```
 
+## Reference data and forms
+
+Public reference data (US states and territories, ISO countries) is loaded as drafts; a second person approves them in the workbench (Reference data), as with any version:
+
+```bash
+node --env-file=.env --import tsx scripts/load-public-refdata.ts 2026-01-01
+```
+
+Filings are recorded by state, so approve the US states first. Form editions are loaded in Forms & schedules (PDF with a text layer, or plain text, up to 25 MB).
+
 ## Card-linked cover
 
 Eligibility feed files are stored under `var/files` (`FILE_STORE_DIR`; the API and worker must share it)

@@ -74,7 +74,10 @@ export const CardProgrammeSchema = z.object({
   maxRejectPercent: z.number(),
   status: z.enum(PROGRAMME_STATUSES),
   lastAppliedSequence: z.number().int(),
-  eligibleAccounts: z.number().int(),
+  /** Accounts with a current ledger period (as of the last applied feed). */
+  accountsOnFile: z.number().int(),
+  /** Accounts eligible today; given on the programme itself, not in lists. */
+  eligibleToday: z.number().int().nullable(),
   certificates: z.number().int(),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),

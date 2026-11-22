@@ -69,16 +69,30 @@ export const PERMISSIONS = {
   'card:manage': 'Set up card programmes and master policies and take them live',
   'card:feeds': 'Load issuer eligibility feeds and reject held feeds',
   'cover:verify': 'Check whether a cardholder or traveller was covered on a date',
+  'refdata:read': 'View reference data and its versions',
+  'refdata:manage': 'Load reference data versions, and approve versions loaded by someone else',
+  'filings:read': 'View the filing register',
+  'filings:manage': 'Record filings and their status by state',
+  'forms:read': 'View filed forms, schedules and their variable maps',
+  'forms:manage': 'Load form editions and edit or approve variable maps',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
 export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
 
-const STAFF_BASE: Permission[] = ['workbench:access', 'accounts:read', 'flags:read', 'agents:use'];
+const STAFF_BASE: Permission[] = [
+  'workbench:access',
+  'accounts:read',
+  'flags:read',
+  'agents:use',
+  'refdata:read',
+  'filings:read',
+  'forms:read',
+];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  product_manager: [...STAFF_BASE],
-  rating_analyst: [...STAFF_BASE],
+  product_manager: [...STAFF_BASE, 'forms:manage'],
+  rating_analyst: [...STAFF_BASE, 'forms:manage', 'refdata:manage'],
   underwriter: [...STAFF_BASE, 'card:read'],
   account_manager: [
     ...STAFF_BASE,
@@ -104,6 +118,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'events:read',
     'agents:read',
     'card:read',
+    'filings:manage',
+    'forms:manage',
+    'refdata:manage',
   ],
   ops_supervisor: [
     ...STAFF_BASE,

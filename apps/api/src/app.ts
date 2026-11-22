@@ -36,6 +36,9 @@ import { auditRoutes } from './routes/audit';
 import { flagRoutes } from './routes/flags';
 import { agentRoutes } from './routes/agents';
 import { cardRoutes } from './routes/card';
+import { refdataRoutes } from './routes/refdata';
+import { filingRoutes } from './routes/filings';
+import { formRoutes } from './routes/forms';
 
 export interface AppDeps {
   config: ApiConfig;
@@ -209,6 +212,9 @@ export async function buildApp(deps: AppDeps) {
   await app.register(flagRoutes, deps);
   await app.register(agentRoutes, deps);
   await app.register(cardRoutes, deps);
+  await app.register(refdataRoutes, deps);
+  await app.register(filingRoutes, deps);
+  await app.register(formRoutes, deps);
 
   return app;
 }

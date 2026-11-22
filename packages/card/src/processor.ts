@@ -407,8 +407,13 @@ export class FeedProcessor {
         [feed.id, JSON.stringify(stats), Date.now() - started],
       );
       await client.query(
-        `UPDATE card.programmes SET last_applied_sequence = $2, updated_at = now() WHERE id = $1`,
-        [programme.id, header.sequence],
+        // Counts for programme lists, recalculated exactly (an index count, once per feed).
+        `UPDATE card.programmes SET last_applied_sequence = $2, updated_at = now(),
+                accounts_on_file = (SELECT count(*) FROM card.eligibility_periods
+                                     WHERE programme_id = $1 AND ended_by IS NULL),
+                certificates_issued = certificates_issued + $3
+          WHERE id = $1`,
+        [programme.id, header.sequence, stats.certificatesIssued],
       );
       await client.query(`DELETE FROM card.feed_records WHERE feed_id = $1`, [feed.id]);
       await client.query(`DELETE FROM card.feed_plan WHERE feed_id = $1`, [feed.id]);

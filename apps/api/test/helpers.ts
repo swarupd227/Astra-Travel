@@ -159,6 +159,8 @@ export async function resetDatabase(): Promise<void> {
     await client.query('COMMIT');
     await client.query(`TRUNCATE platform.event_deliveries, platform.outbox, platform.idempotency_keys,
                         platform.feature_flag_overrides, integration.webhook_subscriptions, card.feed_records, platform.accounts CASCADE`);
+    await client.query(`TRUNCATE refdata.entries, refdata.versions, compliance.filing_events, compliance.filings,
+                        studio.form_variables, studio.variable_maps, studio.form_editions CASCADE`);
     await client.query(`UPDATE platform.feature_flags SET enabled = true`);
   } finally {
     await client.end();

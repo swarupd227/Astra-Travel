@@ -145,7 +145,7 @@ export default async function ProgrammePage({
       </div>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <Stat label="Eligible today" value={integer(p.eligibleAccounts)} />
+        <Stat label="Eligible today" value={integer(p.eligibleToday ?? 0)} />
         <Stat label="Certificates issued" value={integer(p.certificates)} />
         <Stat
           label="Last applied feed"

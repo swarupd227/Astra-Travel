@@ -270,7 +270,13 @@ describe('eligibility feeds (E21-F02)', () => {
       url: `/v1/card-programmes/${p.id}`,
       headers: bearer(manager),
     });
-    expect(programme.json()).toMatchObject({ lastAppliedSequence: 1, certificates: 2 });
+    expect(programme.json()).toMatchObject({
+      lastAppliedSequence: 1,
+      certificates: 2,
+      accountsOnFile: 2,
+      // tok_a2's eligibility ends on 2026-12-31.
+      eligibleToday: new Date().toISOString().slice(0, 10) <= '2026-12-31' ? 2 : 1,
+    });
 
     // The same file again is the same feed.
     const again = await upload(

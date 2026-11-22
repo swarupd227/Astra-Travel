@@ -5,3 +5,6 @@ export * from './errors';
 export * from './api';
 export * from './agents';
 export * from './card';
+export * from './refdata';
+export * from './compliance';
+export * from './studio';

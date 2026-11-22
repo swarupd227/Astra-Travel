@@ -41,12 +41,16 @@ const PAGES = [
   '/card/programmes',
   '/card/master-policies',
   '/card/cover-check',
+  '/forms',
+  '/compliance/filings',
+  '/reference-data',
+  '/reference-data/us_states',
 ];
 
 test('platform administrator sees every screen, and every screen is accessible', async ({
   page,
 }) => {
-  test.setTimeout(480_000); // fifteen full axe scans, with cold page compiles in development mode
+  test.setTimeout(600_000); // nineteen full axe scans, with cold page compiles in development mode
   await signIn(page, 'platform.admin');
   await expect(page.getByRole('heading', { level: 1 })).toContainText(
     /Good (morning|afternoon|evening)/,

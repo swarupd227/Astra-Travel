@@ -116,7 +116,7 @@ export default async function ProgrammesPage({ searchParams }: { searchParams: S
                     <TH>Programme</TH>
                     <TH>Issuer</TH>
                     <TH>Status</TH>
-                    <TH className="text-right">Eligible today</TH>
+                    <TH className="text-right">Accounts on file</TH>
                     <TH className="text-right">Certificates</TH>
                     <TH className="text-right">Last feed</TH>
                   </tr>
@@ -139,7 +139,7 @@ export default async function ProgrammesPage({ searchParams }: { searchParams: S
                           {sentenceCase(p.status)}
                         </Badge>
                       </TD>
-                      <TD className="text-right tabular-nums">{integer(p.eligibleAccounts)}</TD>
+                      <TD className="text-right tabular-nums">{integer(p.accountsOnFile)}</TD>
                       <TD className="text-right tabular-nums">{integer(p.certificates)}</TD>
                       <TD className="text-right tabular-nums text-muted">
                         {p.lastAppliedSequence ? `#${p.lastAppliedSequence}` : '—'}

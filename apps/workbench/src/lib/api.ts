@@ -59,11 +59,12 @@ export async function api<T>(path: string, req: ApiRequest = {}): Promise<T> {
   return readResponse<T>(res);
 }
 
-/** Streams a file to the API as the request body (application/octet-stream). */
+/** Streams a file to the API as the request body. */
 export async function apiUpload<T>(
   path: string,
   file: Blob,
   query: Record<string, string> = {},
+  contentType = 'application/octet-stream',
 ): Promise<{ status: number; body: T }> {
   const session = await getSession();
   if (!session) redirect('/api/auth/login');
@@ -77,7 +78,7 @@ export async function apiUpload<T>(
       headers: {
         authorization: `Bearer ${session.accessToken}`,
         accept: 'application/json',
-        'content-type': 'application/octet-stream',
+        'content-type': contentType,
         'x-correlation-id': correlationId,
       },
       body: file.stream(),

@@ -4,12 +4,15 @@ import {
   Bot,
   Building2,
   CreditCard,
+  Database,
+  FileText,
   Flag,
   Home,
   Inbox,
   ScrollText,
   ShieldCheck,
   Sparkles,
+  Stamp,
   UserRound,
   Webhook,
 } from 'lucide-react';
@@ -29,6 +32,9 @@ const ICONS = {
   card: CreditCard,
   shield: ShieldCheck,
   check: BadgeCheck,
+  file: FileText,
+  stamp: Stamp,
+  database: Database,
 } as const;
 
 export function NavIcon({ name, className }: { name: NavIconName; className?: string }) {

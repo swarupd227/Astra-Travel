@@ -52,6 +52,33 @@ export const FEED_STATUS_HELP: Record<string, string> = {
   rejected: 'Rejected; its sequence can be sent again.',
 };
 
+export const FILING_STATUS_TONES: Record<string, Tone> = {
+  draft: 'neutral',
+  submitted: 'primary',
+  approved: 'success',
+  disapproved: 'danger',
+  withdrawn: 'warning',
+};
+
+export const FILING_ITEM_LABELS: Record<string, string> = {
+  form_edition: 'Form edition',
+  rate_manual: 'Rate manual',
+  rule_set: 'Rule set',
+};
+
+/** Approved and in effect on the date (a withdrawn approval still covers the dates before withdrawal). */
+export function filingInForce(
+  f: { status: string; effectiveFrom: string | null; effectiveTo: string | null },
+  date: string,
+): boolean {
+  return (
+    (f.status === 'approved' || f.status === 'withdrawn') &&
+    !!f.effectiveFrom &&
+    f.effectiveFrom <= date &&
+    (!f.effectiveTo || f.effectiveTo > date)
+  );
+}
+
 export const ELIGIBILITY_RULE_LABELS: Record<string, string> = {
   purchase_date: 'Eligible on the trip purchase date',
   purchase_and_loss_date: 'Eligible on both the purchase date and the loss date',

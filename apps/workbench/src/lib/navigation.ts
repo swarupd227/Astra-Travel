@@ -13,7 +13,10 @@ export type NavIcon =
   | 'inbox'
   | 'card'
   | 'shield'
-  | 'check';
+  | 'check'
+  | 'file'
+  | 'stamp'
+  | 'database';
 
 export interface NavItem {
   href: string;
@@ -62,6 +65,33 @@ export const NAVIGATION: NavSection[] = [
         icon: 'webhook',
         permission: 'webhooks:read',
         description: 'Signed event notifications sent to partner systems.',
+      },
+    ],
+  },
+  {
+    label: 'Product & compliance',
+    items: [
+      {
+        href: '/forms',
+        label: 'Forms & schedules',
+        icon: 'file',
+        permission: 'forms:read',
+        description: 'Filed forms and schedules, editions and their variable maps.',
+      },
+      {
+        href: '/compliance/filings',
+        label: 'Filing register',
+        icon: 'stamp',
+        permission: 'filings:read',
+        description: 'What is filed and approved, by state, with effective dates.',
+      },
+      {
+        href: '/reference-data',
+        label: 'Reference data',
+        icon: 'database',
+        permission: 'refdata:read',
+        description:
+          'States, countries, regions, segments, prohibited destinations and tax tables, versioned.',
       },
     ],
   },

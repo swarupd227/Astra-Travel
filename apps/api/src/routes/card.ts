@@ -94,19 +94,15 @@ interface ProgrammeRow {
   max_reject_percent: string;
   status: CardProgramme['status'];
   last_applied_sequence: number;
-  eligible_accounts: string;
-  certificates: string;
+  accounts_on_file: number;
+  certificates_issued: number;
   created_at: Date;
   updated_at: Date;
 }
 
-// Eligible today: a current ledger period that has started and not ended.
+// Counts come from the programme (kept when feeds are applied); lists never count the ledger.
 const PROGRAMME_SELECT = `
-  SELECT p.*, a.name AS account_name, m.policy_number AS master_policy_number,
-         (SELECT count(*) FROM card.eligibility_periods e
-           WHERE e.programme_id = p.id AND e.ended_by IS NULL AND e.valid_from <= current_date
-             AND (e.valid_to IS NULL OR e.valid_to > current_date)) AS eligible_accounts,
-         (SELECT count(*) FROM card.certificates c WHERE c.programme_id = p.id) AS certificates
+  SELECT p.*, a.name AS account_name, m.policy_number AS master_policy_number
     FROM card.programmes p
     JOIN platform.accounts a ON a.id = p.account_id
     JOIN card.master_policies m ON m.id = p.master_policy_id`;
@@ -128,8 +124,9 @@ const toProgramme = (r: ProgrammeRow): CardProgramme => ({
   maxRejectPercent: Number(r.max_reject_percent),
   status: r.status,
   lastAppliedSequence: r.last_applied_sequence,
-  eligibleAccounts: Number(r.eligible_accounts),
-  certificates: Number(r.certificates),
+  accountsOnFile: r.accounts_on_file,
+  certificates: r.certificates_issued,
+  eligibleToday: null,
   createdAt: r.created_at.toISOString(),
   updatedAt: r.updated_at.toISOString(),
 });
@@ -517,9 +514,17 @@ export const cardRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
       },
     },
     async (request) =>
-      toProgramme(
-        await withTx(deps.pool, request.ctx, (tx) => findProgramme(tx, request.params.programmeId)),
-      ),
+      withTx(deps.pool, request.ctx, async (tx) => {
+        const p = await findProgramme(tx, request.params.programmeId);
+        // Exact for one programme, from the partial index on current periods.
+        const today = await tx.query<{ n: string }>(
+          `SELECT count(*) AS n FROM card.eligibility_periods
+            WHERE programme_id = $1 AND ended_by IS NULL AND valid_from <= current_date
+              AND (valid_to IS NULL OR valid_to > current_date)`,
+          [p.id],
+        );
+        return { ...toProgramme(p), eligibleToday: Number(today.rows[0]!.n) };
+      }),
   );
 
   async function changeStatus(
