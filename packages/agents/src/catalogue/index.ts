@@ -1,8 +1,9 @@
 import type { AgentManifest } from '../manifest';
 import { AG10 } from './ag-10-operations-copilot';
+import { AG01, AG02, AG03 } from './configuration-agents';
 
 /** Every agent the platform may run. An agent not listed here cannot be registered or run. */
-export const AGENT_MANIFESTS: readonly AgentManifest[] = [AG10];
+export const AGENT_MANIFESTS: readonly AgentManifest[] = [AG01, AG02, AG03, AG10];
 
 export function manifestFor(agentId: string): AgentManifest | undefined {
   return AGENT_MANIFESTS.find((m) => m.id === agentId);

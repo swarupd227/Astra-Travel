@@ -305,6 +305,33 @@ export const ReferralDecided = defineEvent({
   }),
 });
 
+export const AgentProposalRaised = defineEvent({
+  type: 'AgentProposalRaised',
+  version: 1,
+  source: 'astra.agents',
+  schema: z.object({
+    proposalId: z.uuid(),
+    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation']),
+    agentId: z.string(),
+    subjectId: z.uuid(),
+    items: z.number().int(),
+  }),
+});
+
+export const AgentProposalResolved = defineEvent({
+  type: 'AgentProposalResolved',
+  version: 1,
+  source: 'astra.agents',
+  schema: z.object({
+    proposalId: z.uuid(),
+    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation']),
+    agentId: z.string(),
+    accepted: z.number().int(),
+    corrected: z.number().int(),
+    rejected: z.number().int(),
+  }),
+});
+
 export const EVENT_CATALOGUE = [
   AccountRegistered,
   AccountStatusChanged,
@@ -331,6 +358,8 @@ export const EVENT_CATALOGUE = [
   RuleSetPublished,
   ReferralRaised,
   ReferralDecided,
+  AgentProposalRaised,
+  AgentProposalResolved,
 ] as const;
 
 export type CatalogueEventType = (typeof EVENT_CATALOGUE)[number]['type'];

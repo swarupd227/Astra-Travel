@@ -14,6 +14,8 @@ export interface ParityCaseInput {
   expectedAmount: string;
   /** Worksheet step id (for example `table.2.1.5`) to expected value. */
   expectedFactors: Record<string, string>;
+  /** The row of the imported file (the header is row 1), so an explanation can cite the workbook cell. */
+  sourceRow?: number;
 }
 
 export interface ParityResult {
@@ -194,6 +196,7 @@ export function parseParityCsv(
       name: r.name ?? `Row ${line}`,
       request: parsed.data,
       expectedAmount: r.expected_amount,
+      sourceRow: line,
       expectedFactors: Object.fromEntries(
         Object.entries(r)
           .filter(([k, v]) => k.startsWith('factor:') && v !== '')

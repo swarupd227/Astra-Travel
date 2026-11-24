@@ -9,3 +9,4 @@ export * from './runtime';
 export * from './evaluation';
 export * from './catalogue';
 export { AG10 } from './catalogue/ag-10-operations-copilot';
+export { AG01, AG02, AG03 } from './catalogue/configuration-agents';

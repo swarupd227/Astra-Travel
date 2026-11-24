@@ -12,3 +12,4 @@ export * from './catalogue';
 export * from './rating';
 export * from './plans';
 export * from './underwriting';
+export * from './proposals';

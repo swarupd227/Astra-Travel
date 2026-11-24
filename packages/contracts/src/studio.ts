@@ -9,6 +9,8 @@ export const FORM_KINDS = [
   'certificate',
   'endorsement',
   'application',
+  /** A filed rate manual, read page by page by the Rate Manual Ingestion agent. */
+  'rate_manual',
 ] as const;
 
 export const VARIABLE_TYPES = [

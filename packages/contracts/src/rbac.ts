@@ -86,6 +86,8 @@ export const PERMISSIONS = {
   'underwriting:manage': 'Build rule sets and their test cases and load sanctions lists',
   'underwriting:approve': 'Approve rule sets and sanctions lists loaded by someone else and publish rule sets',
   'referrals:decide': 'Decide referrals and sanctions holds',
+  'proposals:read': 'View what agents have proposed for forms, manuals and parity',
+  'proposals:create': 'Submit proposals for forms, manuals and parity (used by agents acting for a person)',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -102,16 +104,18 @@ const STAFF_BASE: Permission[] = [
   'rating:read',
   'plans:read',
   'underwriting:read',
+  'proposals:read',
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  product_manager: [...STAFF_BASE, 'forms:manage', 'plans:manage', 'plans:approve'],
+  product_manager: [...STAFF_BASE, 'forms:manage', 'plans:manage', 'plans:approve', 'proposals:create'],
   rating_analyst: [
     ...STAFF_BASE,
     'forms:manage',
     'refdata:manage',
     'rating:manage',
     'rating:approve',
+    'proposals:create',
   ],
   underwriter: [...STAFF_BASE, 'card:read', 'underwriting:evaluate', 'underwriting:manage', 'underwriting:approve', 'referrals:decide'],
   account_manager: [

@@ -6,3 +6,4 @@ export * from './refdata';
 export * from './filings';
 export * from './refdata-store';
 export * from './catalogue';
+export * from './golden';

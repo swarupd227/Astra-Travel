@@ -26,6 +26,7 @@ import { LocalTime } from '@/components/ui/time';
 import { RecordFilingDialog } from '../../compliance/filings/filing-forms';
 import { UsabilityCheck } from '../form-forms';
 import { MapWorkspace } from './map-workspace';
+import { AgentProposals } from '../../proposals/agent-proposals';
 
 export const metadata = { title: 'Form edition' };
 
@@ -34,12 +35,12 @@ export default async function EditionPage({
   searchParams,
 }: {
   params: Promise<{ editionId: string }>;
-  searchParams: Promise<{ loaded?: string; approved?: string }>;
+  searchParams: Promise<{ loaded?: string; approved?: string; asked?: string }>;
 }) {
   const me = (await getMe())!;
   if (!me.permissions.includes('forms:read')) return <AccessDenied permission="forms:read" />;
   const { editionId } = await params;
-  const { loaded, approved } = await searchParams;
+  const { loaded, approved, asked } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(editionId)) notFound();
 
   const edition = await load(() => api<FormEdition>(`/v1/form-editions/${editionId}`));
@@ -209,6 +210,31 @@ export default async function EditionPage({
         </Card>
       </div>
 
+      {e.kind === 'rate_manual' ? (
+        <AgentProposals
+          subjectId={e.id}
+          kind="rate_manual"
+          agentId="AG-02"
+          agentName="Rate Manual Ingestion"
+          question={`Draft the tables and formula of the rate manual in document ${e.id} (${e.formNumber}, edition ${e.edition}).`}
+          askLabel="Ask for a draft manual"
+          description="Reads this filed manual page by page and drafts its tables and formula. A rating analyst compares the draft with the filed pages and loads it as a draft manual; nothing is published."
+          canAsk={me.permissions.includes('agents:use') && me.permissions.includes('proposals:create')}
+          asked={asked}
+        />
+      ) : (
+        <AgentProposals
+          subjectId={e.id}
+          kind="variable_map"
+          agentId="AG-01"
+          agentName="Form Configuration"
+          question={`Propose the variable map for edition ${e.id}, the ${e.kind} "${e.title}" (${e.formNumber}, edition ${e.edition}).`}
+          askLabel="Ask for a proposed map"
+          description="Reads this form and proposes every variable with its type, filed range and source text. A product manager accepts, corrects or rejects each one; nothing is saved until then."
+          canAsk={me.permissions.includes('agents:use') && me.permissions.includes('proposals:create')}
+          asked={asked}
+        />
+      )}
       <MapWorkspace
         editionId={e.id}
         text={text.data.text}

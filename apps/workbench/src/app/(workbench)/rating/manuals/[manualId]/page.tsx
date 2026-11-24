@@ -19,6 +19,7 @@ import {
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
 import { ApproveManualForm, ParityForms, PublishManualForm } from '../../rating-forms';
+import { AgentProposals } from '../../../proposals/agent-proposals';
 
 export const metadata = { title: 'Rate manual' };
 
@@ -35,12 +36,12 @@ export default async function ManualPage({
   searchParams,
 }: {
   params: Promise<{ manualId: string }>;
-  searchParams: Promise<{ loaded?: string; done?: string }>;
+  searchParams: Promise<{ loaded?: string; done?: string; asked?: string }>;
 }) {
   const me = (await getMe())!;
   if (!me.permissions.includes('rating:read')) return <AccessDenied permission="rating:read" />;
   const { manualId } = await params;
-  const { loaded, done } = await searchParams;
+  const { loaded, done, asked } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(manualId)) notFound();
   const [manual, readiness, cases, run] = await Promise.all([
     load(() => api<RateManual>(`/v1/rate-manuals/${manualId}`)),
@@ -241,6 +242,19 @@ export default async function ManualPage({
         )}
       </Card>
 
+      {run.data && run.data.passed < run.data.total ? (
+        <AgentProposals
+          subjectId={m.id}
+          kind="parity_explanation"
+          agentId="AG-03"
+          agentName="Rating Parity and Explanation"
+          question={`Explain the parity differences of rate manual ${m.id} (${m.code}, version ${m.version}).`}
+          askLabel="Ask for an explanation"
+          description="Finds the worksheet step where the engine and the workbook diverge for each failed case, and cites the manual page and the workbook cell. Every citation is checked against the run, the manual and the imported file."
+          canAsk={me.permissions.includes('agents:use') && me.permissions.includes('proposals:create')}
+          asked={asked}
+        />
+      ) : null}
       <Card>
         <CardHeader title={`Tables (${d.tables.length})`} />
         {d.tables.length === 0 ? (

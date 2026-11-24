@@ -104,7 +104,7 @@ async function findManual(tx: Tx, id: string, lock = false): Promise<ManualRow> 
 }
 
 /** Tables referenced by the formula must exist. */
-function checkDocument(doc: ManualDocument): string[] {
+export function checkDocument(doc: ManualDocument): string[] {
   const ids = new Set(doc.tables.map((t) => t.id));
   const problems: string[] = [];
   const need = (id: string, what: string) => {
@@ -126,6 +126,7 @@ interface CaseRow {
   request: RatingRequest;
   expected_amount: string;
   expected_factors: Record<string, string>;
+  source_row: number | null;
 }
 
 const casesHash = (cases: CaseRow[]) =>
@@ -146,7 +147,7 @@ const casesHash = (cases: CaseRow[]) =>
 
 async function casesFor(tx: Tx, code: string): Promise<CaseRow[]> {
   const { rows } = await tx.query<CaseRow>(
-    `SELECT id, name, source, request, expected_amount, expected_factors FROM rating.parity_cases WHERE manual_code = $1 ORDER BY name`,
+    `SELECT id, name, source, request, expected_amount, expected_factors, source_row FROM rating.parity_cases WHERE manual_code = $1 ORDER BY name`,
     [code],
   );
   return rows;
@@ -533,6 +534,10 @@ export const ratingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
                 source: z.string(),
                 expectedAmount: z.string(),
                 factors: z.number().int(),
+                /** The row of the imported file (the header is row 1), when known. */
+                sourceRow: z.number().int().nullable(),
+                expectedFactors: z.record(z.string(), z.string()),
+                request: z.unknown(),
               }),
             ),
           }),
@@ -550,6 +555,9 @@ export const ratingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
             source: c.source,
             expectedAmount: c.expected_amount,
             factors: Object.keys(c.expected_factors).length,
+            sourceRow: c.source_row,
+            expectedFactors: c.expected_factors,
+            request: c.request,
           })),
         };
       }),
@@ -600,10 +608,10 @@ export const ratingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
         }
         for (const c of cases) {
           await tx.query(
-            `INSERT INTO rating.parity_cases (manual_code, name, source, request, expected_amount, expected_factors, created_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `INSERT INTO rating.parity_cases (manual_code, name, source, request, expected_amount, expected_factors, created_by, source_row)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              ON CONFLICT (manual_code, name) DO UPDATE SET source = EXCLUDED.source, request = EXCLUDED.request,
-               expected_amount = EXCLUDED.expected_amount, expected_factors = EXCLUDED.expected_factors`,
+               expected_amount = EXCLUDED.expected_amount, expected_factors = EXCLUDED.expected_factors, source_row = EXCLUDED.source_row`,
             [
               m.code,
               c.name,
@@ -612,6 +620,7 @@ export const ratingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
               c.expectedAmount,
               JSON.stringify(c.expectedFactors),
               request.ctx.principal.subject,
+              c.sourceRow ?? null,
             ],
           );
         }

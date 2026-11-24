@@ -60,4 +60,39 @@ export class AgentApiClient {
     }
     return body as T;
   }
+
+  /** Posts JSON. Used only by tools that submit proposals; a person applies anything an agent proposes. */
+  async post<T>(path: string, body: unknown): Promise<T> {
+    const url = new URL(path, this.baseUrl);
+    const res = await outboundFetch(
+      url.toString(),
+      {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${this.token}`,
+          accept: 'application/json',
+          'content-type': 'application/json',
+          'x-correlation-id': this.correlationId,
+        },
+        body: JSON.stringify(body),
+      },
+      {
+        integration: 'platform-api',
+        idempotent: false,
+        policy: { timeoutMs: 30_000 },
+        fetchImpl: this.fetchImpl,
+      },
+    );
+    const parsed: unknown = await res.json().catch(() => null);
+    if (!res.ok) {
+      const p = parsed as { detail?: string; title?: string; code?: string; errors?: { field?: string; message?: string }[] } | null;
+      const lines = (p?.errors ?? []).slice(0, 30).map((e) => `- ${e.field ?? ''}: ${e.message ?? ''}`);
+      throw new ToolCallError(
+        [p?.detail ?? p?.title ?? `HTTP ${res.status}`, ...lines].join('\n'),
+        res.status,
+        p?.code ?? null,
+      );
+    }
+    return parsed as T;
+  }
 }

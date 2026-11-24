@@ -385,6 +385,8 @@ export class AgentRuntime {
           ? '*'
           : run.account_scope.split(',').filter(Boolean);
     const writeAllowed = pre.agent.autonomy === 'L2' || pre.agent.autonomy === 'L3';
+    // Proposals only ask a person to act, so any agent above L0 may submit them.
+    const proposeAllowed = pre.agent.autonomy !== 'L0';
     const warrantTools = new Map(warrant.tools.map((t) => [t.name, t.maxCallsPerRun]));
     const offered = manifest.tools.filter((name) => {
       const t = TOOL_CATALOGUE[name];
@@ -392,7 +394,7 @@ export class AgentRuntime {
         t &&
         warrantTools.has(name) &&
         permissions.includes(t.permission) &&
-        (t.risk === 'read' || writeAllowed)
+        (t.risk === 'read' || (t.risk === 'propose' && proposeAllowed) || writeAllowed)
       );
     });
     await steps.record('warrant', 'scope', 'allowed', {
@@ -602,6 +604,8 @@ export class AgentRuntime {
           refusal = `The warrant allows at most ${limit} calls to ${use.name} per run.`;
         else if (tool.risk === 'write' && !writeAllowed)
           refusal = 'This agent may not take actions.';
+        else if (tool.risk === 'propose' && !proposeAllowed)
+          refusal = 'This agent may not submit proposals.';
 
         if (refusal) {
           refusalCounter.add(1, { agent: run.agent_id, tool: use.name });
