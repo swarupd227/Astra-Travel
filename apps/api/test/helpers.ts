@@ -167,7 +167,7 @@ export async function resetDatabase(): Promise<void> {
     await client.query(`TRUNCATE platform.event_deliveries, platform.outbox, platform.idempotency_keys,
                         platform.feature_flag_overrides, integration.webhook_subscriptions, card.feed_records, platform.people, platform.accounts CASCADE`);
     await client.query(`TRUNCATE refdata.entries, refdata.versions, compliance.filing_events, compliance.filings,
-                        rating.worksheets, rating.parity_runs, rating.parity_cases, rating.manuals, studio.benefit_catalogues, studio.form_variables, studio.variable_maps, studio.form_editions CASCADE`);
+                        plans.test_runs, plans.test_cases, plans.plan_versions, plans.plans, rating.worksheets, rating.parity_runs, rating.parity_cases, rating.manuals, studio.benefit_catalogues, studio.form_variables, studio.variable_maps, studio.form_editions CASCADE`);
     await client.query(`UPDATE platform.feature_flags SET enabled = true`);
   } finally {
     await client.end();

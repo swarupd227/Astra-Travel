@@ -1,0 +1,18 @@
+{
+  "name": "@astra/plans",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Plan builder: plan checks against filed ranges and bounds, rating requests from plans, version comparison",
+  "exports": {
+    ".": "./src/index.ts",
+    "./required": "./src/required.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@astra/contracts": "0.1.0",
+    "@astra/studio": "0.1.0"
+  }
+}

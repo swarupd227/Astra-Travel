@@ -18,7 +18,8 @@ export type NavIcon =
   | 'stamp'
   | 'database'
   | 'table'
-  | 'calculator';
+  | 'calculator'
+  | 'layers';
 
 export interface NavItem {
   href: string;
@@ -79,6 +80,13 @@ export const NAVIGATION: NavSection[] = [
         icon: 'file',
         permission: 'forms:read',
         description: 'Filed forms and schedules, editions and their variable maps.',
+      },
+      {
+        href: '/plans',
+        label: 'Plans',
+        icon: 'layers',
+        permission: 'plans:read',
+        description: 'Base, state and account plans: build, approve, test and publish.',
       },
       {
         href: '/compliance/filings',

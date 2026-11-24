@@ -31,7 +31,7 @@ const config: NextConfig = {
   output: 'standalone',
   poweredByHeader: false,
   reactStrictMode: true,
-  transpilePackages: ['@astra/contracts'],
+  transpilePackages: ['@astra/contracts', '@astra/plans'],
   experimental: {
     // Eligibility feed uploads from the workbench. Server actions buffer the file, so larger feeds go
     // through the API directly (or SFTP in Azure); see docs/integration/eligibility-feed-v1.md.

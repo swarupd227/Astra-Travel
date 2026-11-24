@@ -254,6 +254,21 @@ export const RateManualPublished = defineEvent({
   }),
 });
 
+export const PlanVersionPublished = defineEvent({
+  type: 'PlanVersionPublished',
+  version: 1,
+  source: 'astra.plans',
+  schema: z.object({
+    planId: z.uuid(),
+    versionId: z.uuid(),
+    code: z.string(),
+    version: z.number().int(),
+    state: z.string().nullable(),
+    accountId: z.uuid().nullable(),
+    effectiveFrom: z.string(),
+  }),
+});
+
 export const EVENT_CATALOGUE = [
   AccountRegistered,
   AccountStatusChanged,
@@ -276,6 +291,7 @@ export const EVENT_CATALOGUE = [
   VariableMapApproved,
   BenefitCatalogueApproved,
   RateManualPublished,
+  PlanVersionPublished,
 ] as const;
 
 export type CatalogueEventType = (typeof EVENT_CATALOGUE)[number]['type'];

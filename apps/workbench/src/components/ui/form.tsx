@@ -68,19 +68,26 @@ export function SubmitButton({
   variant = 'primary',
   pendingLabel,
   className,
+  disabled = false,
+  size = 'md',
+  'aria-label': ariaLabel,
 }: {
   children: ReactNode;
-  variant?: 'primary' | 'secondary' | 'danger';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   pendingLabel?: string;
   className?: string;
+  disabled?: boolean;
+  size?: 'sm' | 'md';
+  'aria-label'?: string;
 }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
-      disabled={pending}
-      aria-disabled={pending}
-      className={buttonClass(variant, 'md', className)}
+      disabled={pending || disabled}
+      aria-disabled={pending || disabled}
+      aria-label={ariaLabel}
+      className={buttonClass(variant, size, className)}
     >
       {pending ? <Loader2 aria-hidden className="size-4 animate-spin" /> : null}
       {pending ? (pendingLabel ?? 'Saving…') : children}

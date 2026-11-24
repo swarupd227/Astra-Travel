@@ -10,6 +10,7 @@ import {
   Flag,
   Home,
   Inbox,
+  Layers,
   ScrollText,
   ShieldCheck,
   Sparkles,
@@ -39,6 +40,7 @@ const ICONS = {
   database: Database,
   table: Table2,
   calculator: Calculator,
+  layers: Layers,
 } as const;
 
 export function NavIcon({ name, className }: { name: NavIconName; className?: string }) {

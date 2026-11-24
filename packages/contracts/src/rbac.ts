@@ -78,6 +78,9 @@ export const PERMISSIONS = {
   'rating:read': 'View rate manuals, parity results and rating worksheets, and rate trips',
   'rating:manage': 'Load rate manuals and parity cases',
   'rating:approve': 'Approve rate manuals loaded by someone else and publish them',
+  'plans:read': 'View plans, their versions, comparisons and test results',
+  'plans:manage': 'Build plans, state variants and account plans, and their test cases',
+  'plans:approve': 'Approve plan versions built by someone else and publish them',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -92,10 +95,11 @@ const STAFF_BASE: Permission[] = [
   'filings:read',
   'forms:read',
   'rating:read',
+  'plans:read',
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  product_manager: [...STAFF_BASE, 'forms:manage'],
+  product_manager: [...STAFF_BASE, 'forms:manage', 'plans:manage', 'plans:approve'],
   rating_analyst: [
     ...STAFF_BASE,
     'forms:manage',
@@ -132,6 +136,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'forms:manage',
     'refdata:manage',
     'rating:approve',
+    'plans:approve',
   ],
   ops_supervisor: [
     ...STAFF_BASE,

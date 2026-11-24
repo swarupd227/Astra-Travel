@@ -47,6 +47,7 @@ const PAGES = [
   '/reference-data/us_states',
   '/rating/manuals',
   '/rating/calculator',
+  '/plans',
 ];
 
 test('platform administrator sees every screen, and every screen is accessible', async ({
