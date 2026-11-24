@@ -8,6 +8,7 @@ import type {
   VariableMap,
 } from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
+import { nameOf, peopleNames } from '@/lib/people';
 import { bytes, FILING_STATUS_TONES, filingInForce, sentenceCase } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
@@ -56,6 +57,11 @@ export default async function EditionPage({
   ]);
   if (text.error) return <ErrorPanel error={text.error} />;
   const today = new Date().toISOString().slice(0, 10);
+  const names = await peopleNames([
+    e.createdBy,
+    ...(draft?.data?.contributors ?? []),
+    current?.data?.approvedBy,
+  ]);
   const canFile = me.permissions.includes('filings:manage');
 
   return (
@@ -124,7 +130,7 @@ export default async function EditionPage({
                   value: <span className="break-all font-mono text-xs">{e.sha256}</span>,
                 },
                 { term: 'Loaded', value: <LocalTime iso={e.createdAt} /> },
-                { term: 'Loaded by', value: e.createdBy },
+                { term: 'Loaded by', value: nameOf(names, e.createdBy) },
               ]}
             />
           </div>
@@ -212,6 +218,7 @@ export default async function EditionPage({
         current={current?.data ?? null}
         canEdit={me.permissions.includes('forms:manage')}
         me={me.subject}
+        names={names}
         datasets={(datasets?.data?.items ?? []).map((d) => ({ code: d.code, name: d.name }))}
       />
     </>

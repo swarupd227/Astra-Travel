@@ -7,6 +7,7 @@ import {
   type RefdataVersion,
 } from '@astra/contracts';
 import { api, getMe } from '@/lib/api';
+import { nameOf, peopleNames } from '@/lib/people';
 import { integer, sentenceCase } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
@@ -47,6 +48,7 @@ export default async function DatasetPage({ params }: { params: Promise<{ datase
   if (versions.error) return <ErrorPanel error={versions.error} />;
   const d = summary.data.items.find((x) => x.code === dataset)!;
   const today = new Date().toISOString().slice(0, 10);
+  const names = await peopleNames(versions.data.items.map((v) => v.loadedBy));
 
   return (
     <>
@@ -127,7 +129,7 @@ export default async function DatasetPage({ params }: { params: Promise<{ datase
                   <TD className="text-right tabular-nums">{integer(v.entryCount)}</TD>
                   <TD className="max-w-xs text-muted">{v.source}</TD>
                   <TD className="text-muted">
-                    <LocalTime iso={v.loadedAt} /> · {v.loadedBy}
+                    <LocalTime iso={v.loadedAt} /> · {nameOf(names, v.loadedBy)}
                   </TD>
                 </TR>
               ))}

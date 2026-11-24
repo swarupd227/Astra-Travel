@@ -9,6 +9,7 @@ import {
   type RefdataVersion,
 } from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
+import { nameOf, peopleNames } from '@/lib/people';
 import { integer, readParams, sentenceCase, type SearchParams } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
@@ -89,6 +90,7 @@ export default async function VersionPage({
   if (version.error) return <ErrorPanel error={version.error} />;
   const v = version.data;
   const def = REFDATA_DATASETS[dataset as RefdataDataset];
+  const names = await peopleNames([v.loadedBy, v.decidedBy]);
   const fields = entries.data?.items[0] ? Object.keys(entries.data.items[0].data) : [];
   const canDecide =
     v.status === 'draft' && me.permissions.includes('refdata:manage') && v.loadedBy !== me.subject;
@@ -148,9 +150,9 @@ export default async function VersionPage({
                 items={[
                   { term: 'Source', value: v.source },
                   { term: 'Entries', value: integer(v.entryCount) },
-                  { term: 'Loaded by', value: v.loadedBy },
+                  { term: 'Loaded by', value: nameOf(names, v.loadedBy) },
                   { term: 'Loaded', value: <LocalTime iso={v.loadedAt} /> },
-                  { term: 'Decided by', value: v.decidedBy ?? '—' },
+                  { term: 'Decided by', value: nameOf(names, v.decidedBy) },
                   { term: 'Decision', value: v.decisionReason ?? '—' },
                   {
                     term: 'Content SHA-256',
@@ -163,7 +165,10 @@ export default async function VersionPage({
           </Card>
           {canDecide ? (
             <Card>
-              <CardHeader title="Approve or reject" description={`Loaded by ${v.loadedBy}.`} />
+              <CardHeader
+                title="Approve or reject"
+                description={`Loaded by ${nameOf(names, v.loadedBy)}.`}
+              />
               <DecideVersionForm dataset={dataset} versionId={v.id} />
             </Card>
           ) : null}

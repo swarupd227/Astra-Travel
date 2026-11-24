@@ -11,6 +11,7 @@ import {
   type Role,
 } from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
+import { nameOf, peopleNames } from '@/lib/people';
 import { RUN_STATUS_TONES, usd } from '@/lib/agents';
 import { sentenceCase } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
@@ -60,6 +61,7 @@ export default async function AgentPage({ params }: { params: Promise<{ agentId:
   if (agent.error instanceof ApiProblem && agent.error.problem.code === 'not_found') notFound();
   if (agent.error) return <ErrorPanel error={agent.error} />;
   const a = agent.data;
+  const names = await peopleNames([...a.versions.map((v) => v.approvedBy), a.warrant?.createdBy]);
   const evalRuns = evals.data?.items ?? [];
   const evaluating = evalRuns.some((e) => e.status === 'queued' || e.status === 'running');
 
@@ -139,7 +141,7 @@ export default async function AgentPage({ params }: { params: Promise<{ agentId:
                       </Badge>
                       {v.approvedBy ? (
                         <span className="mt-1 block text-[11px] text-subtle">
-                          by {v.approvedBy}
+                          by {nameOf(names, v.approvedBy)}
                         </span>
                       ) : null}
                     </TD>
@@ -383,7 +385,7 @@ export default async function AgentPage({ params }: { params: Promise<{ agentId:
                           ROLE_LABELS[a.warrant.document.escalationRole as Role] ??
                           a.warrant.document.escalationRole,
                       },
-                      { term: 'Set by', value: a.warrant.createdBy },
+                      { term: 'Set by', value: nameOf(names, a.warrant.createdBy) },
                     ]}
                   />
                   <p className="text-xs text-subtle">Reason: {a.warrant.reason}</p>

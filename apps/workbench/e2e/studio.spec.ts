@@ -156,5 +156,7 @@ test('reference data, a filed form and its variable map, each approved by a seco
     .fill('Each variable matches the filed range in the form.');
   await page.getByRole('button', { name: 'Approve map' }).click();
   await expect(page.getByText('Variable map approved')).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText(/^Approved by .+ Approved maps never change/)).toBeVisible();
+  await expect(
+    page.getByText(/^Approved by Quinn Compliance \(you\)\. Approved maps never change/),
+  ).toBeVisible();
 });

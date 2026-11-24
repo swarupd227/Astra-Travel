@@ -499,6 +499,7 @@ export function MapWorkspace({
   canEdit,
   me,
   datasets,
+  names,
 }: {
   editionId: string;
   text: string;
@@ -509,6 +510,7 @@ export function MapWorkspace({
   canEdit: boolean;
   me: string;
   datasets: { code: string; name: string }[];
+  names: Record<string, string>;
 }) {
   const map = draft ?? current;
   const editing = !!draft && canEdit;
@@ -578,9 +580,9 @@ export function MapWorkspace({
         title={map ? `Variable map, version ${map.version}` : 'Variable map'}
         description={
           draft
-            ? `Draft by ${draft.contributors.join(', ')}. Approved by someone who did not build it, it replaces the current map.`
+            ? `Draft by ${draft.contributors.map((c) => names[c] ?? c).join(', ')}. Approved by someone who did not build it, it replaces the current map.`
             : current
-              ? `Approved by ${current.approvedBy}. Approved maps never change; start a new version to make changes.`
+              ? `Approved by ${names[current.approvedBy ?? ''] ?? current.approvedBy}. Approved maps never change; start a new version to make changes.`
               : 'Each bracketed option or value in the form becomes a variable with its filed range.'
         }
         actions={

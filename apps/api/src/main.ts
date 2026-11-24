@@ -2,7 +2,7 @@ import { startTelemetry, stopTelemetry } from '@astra/platform/telemetry';
 
 startTelemetry('astra-api');
 
-const { createLogger, createPool, FeatureFlags, LocalFileStore, SecretBox } =
+const { createLogger, createPool, FeatureFlags, LocalFileStore, PeopleDirectory, SecretBox } =
   await import('@astra/platform');
 const { loadConfig } = await import('./config');
 const { Authenticator, parseGroupRoleMap } = await import('./auth/authenticator');
@@ -30,6 +30,7 @@ const app = await buildApp({
   flags: new FeatureFlags(pool),
   secrets: SecretBox.fromEnv(),
   files: new LocalFileStore(config.FILE_STORE_DIR),
+  people: new PeopleDirectory(pool, logger),
   authenticator: new Authenticator({
     issuer: config.OIDC_ISSUER,
     audience: config.OIDC_AUDIENCE,

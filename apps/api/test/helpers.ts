@@ -11,6 +11,7 @@ import {
   createPool,
   FeatureFlags,
   LocalFileStore,
+  PeopleDirectory,
   SecretBox,
   type Pool,
 } from '@astra/platform';
@@ -121,6 +122,7 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
     flags: new FeatureFlags(pool, 0),
     secrets: new SecretBox({ test: config.SECRETS_KEK }, 'test'),
     files,
+    people: new PeopleDirectory(pool, createLogger('astra-people-test', 'fatal'), 0),
     authenticator: new Authenticator({
       issuer: ISSUER,
       audience: AUDIENCE,
@@ -158,7 +160,7 @@ export async function resetDatabase(): Promise<void> {
     await client.query('ALTER TABLE agents.run_steps ENABLE TRIGGER run_steps_no_truncate');
     await client.query('COMMIT');
     await client.query(`TRUNCATE platform.event_deliveries, platform.outbox, platform.idempotency_keys,
-                        platform.feature_flag_overrides, integration.webhook_subscriptions, card.feed_records, platform.accounts CASCADE`);
+                        platform.feature_flag_overrides, integration.webhook_subscriptions, card.feed_records, platform.people, platform.accounts CASCADE`);
     await client.query(`TRUNCATE refdata.entries, refdata.versions, compliance.filing_events, compliance.filings,
                         studio.benefit_catalogues, studio.form_variables, studio.variable_maps, studio.form_editions CASCADE`);
     await client.query(`UPDATE platform.feature_flags SET enabled = true`);

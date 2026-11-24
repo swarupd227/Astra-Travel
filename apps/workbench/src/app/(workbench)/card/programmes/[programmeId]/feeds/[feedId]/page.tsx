@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ChevronLeft, ListChecks } from 'lucide-react';
 import type { CardProgramme, EligibilityFeed, FeedRejection } from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
+import { nameOf, peopleNames } from '@/lib/people';
 import {
   bytes,
   FEED_STATUS_HELP,
@@ -63,6 +64,7 @@ export default async function FeedPage({
   const p = programme.data;
   const f = feed.data;
   const s = f.stats;
+  const names = await peopleNames([f.receivedBy]);
   const canReject =
     me.permissions.includes('card:feeds') &&
     me.accountScope.type === 'all' &&
@@ -122,7 +124,7 @@ export default async function FeedPage({
                   value: <span className="font-mono text-xs break-all">{f.sha256}</span>,
                 },
                 { term: 'Received', value: <LocalTime iso={f.receivedAt} /> },
-                { term: 'Received by', value: f.receivedBy },
+                { term: 'Received by', value: nameOf(names, f.receivedBy) },
                 {
                   term: 'Processed',
                   value: f.processedAt ? <LocalTime iso={f.processedAt} /> : 'Not yet',

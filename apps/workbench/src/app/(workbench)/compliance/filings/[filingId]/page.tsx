@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import type { Filing } from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
+import { nameOf, peopleNames } from '@/lib/people';
 import { FILING_ITEM_LABELS, FILING_STATUS_TONES, filingInForce, sentenceCase } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
@@ -47,6 +48,7 @@ export default async function FilingPage({
   if (result.error) return <ErrorPanel error={result.error} />;
   const f = result.data;
   const today = new Date().toISOString().slice(0, 10);
+  const names = await peopleNames([f.createdBy, ...f.history.map((h) => h.actor)]);
 
   return (
     <>
@@ -112,7 +114,7 @@ export default async function FilingPage({
                   term: 'Effective to',
                   value: f.effectiveTo ?? (f.effectiveFrom ? 'Open-ended' : '—'),
                 },
-                { term: 'Recorded by', value: f.createdBy },
+                { term: 'Recorded by', value: nameOf(names, f.createdBy) },
                 ...(f.notes ? [{ term: 'Notes', value: f.notes }] : []),
               ]}
             />
@@ -140,7 +142,7 @@ export default async function FilingPage({
                       ? `${sentenceCase(h.fromStatus)} → ${sentenceCase(h.toStatus)}`
                       : 'Recorded'}
                   </TD>
-                  <TD className="text-muted">{h.actor}</TD>
+                  <TD className="text-muted">{nameOf(names, h.actor)}</TD>
                   <TD className="text-muted">{h.reason ?? '—'}</TD>
                 </TR>
               ))}

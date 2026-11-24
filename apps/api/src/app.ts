@@ -18,6 +18,7 @@ import {
   platformMetrics,
   type FeatureFlags,
   type FileStore,
+  type PeopleDirectory,
   type Logger,
   type Pool,
   type Principal,
@@ -40,6 +41,7 @@ import { refdataRoutes } from './routes/refdata';
 import { filingRoutes } from './routes/filings';
 import { formRoutes } from './routes/forms';
 import { catalogueRoutes } from './routes/catalogue';
+import { peopleRoutes } from './routes/people';
 
 export interface AppDeps {
   config: ApiConfig;
@@ -49,6 +51,8 @@ export interface AppDeps {
   secrets: SecretBox;
   logger: Logger;
   files: FileStore;
+  /** Records display names of signed-in principals; optional so tests can leave it out. */
+  people?: PeopleDirectory;
 }
 
 export type App = Awaited<ReturnType<typeof buildApp>>;
@@ -151,6 +155,7 @@ export async function buildApp(deps: AppDeps) {
     }
     request.ctx = { correlationId: String(request.id), principal };
     request.log = request.log.child({ actor: principal.subject });
+    await deps.people?.record(principal);
   });
 
   await app.register(rateLimit, {
@@ -217,6 +222,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(filingRoutes, deps);
   await app.register(formRoutes, deps);
   await app.register(catalogueRoutes, deps);
+  await app.register(peopleRoutes, deps);
 
   return app;
 }
