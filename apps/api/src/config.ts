@@ -30,6 +30,8 @@ const EnvSchema = z.object({
   FILE_STORE_DIR: z.string().default('../../var/files'),
   /** Demonstration and sandbox only: allows illustrative manuals (estimated loadings), always labelled. */
   ALLOW_ILLUSTRATIVE_RATING: bool,
+  /** How long a quote stays open for bind (days). Assurant confirms the period. */
+  QUOTE_VALID_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   /** Largest eligibility feed accepted, in bytes (default 4 GiB: about 50 million records). */
   CARD_FEED_MAX_BYTES: z.coerce
     .number()

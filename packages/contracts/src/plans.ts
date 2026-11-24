@@ -61,6 +61,47 @@ export const PLAN_SETTING_LABELS: Record<PlanSetting, string> = {
   annual_term: 'Annual term',
 };
 
+/** The underwriting arrangement a benefit's premium and documents follow (E05-F04-S01). */
+export const ARRANGEMENTS = ['VSC', 'ABIC', 'VSC_CLIP'] as const;
+export const ARRANGEMENT_LABELS: Record<(typeof ARRANGEMENTS)[number], string> = {
+  VSC: 'Virginia Surety Company (VSC)',
+  ABIC: 'American Bankers Insurance Company of Florida (ABIC)',
+  VSC_CLIP: 'VSC, contractual liability insurance policy (CLIP)',
+};
+
+/**
+ * When a benefit group's cover starts and ends (E05-F03-S01). Times are local date-times as the forms state
+ * them. The departure instant is taken as the start of the departure date.
+ */
+export const TimingStartSchema = z.discriminatedUnion('kind', [
+  /** 12:01 a.m. the day after the premium is received. */
+  z.object({ kind: z.literal('day_after_premium_received') }),
+  /** 12:01 a.m. on the purchase date. */
+  z.object({ kind: z.literal('purchase_date') }),
+  /** 12:01 a.m. on the departure date. */
+  z.object({ kind: z.literal('departure') }),
+]);
+export const TimingEndSchema = z.discriminatedUnion('kind', [
+  /** 11:59 p.m. on the return date. */
+  z.object({ kind: z.literal('return_date') }),
+  /** The start of the departure date. */
+  z.object({ kind: z.literal('departure') }),
+  /** A number of hours before the start of the departure date, as CFAR ends. */
+  z.object({ kind: z.literal('hours_before_departure'), hours: z.number().int().min(1).max(720) }),
+]);
+export const TimingSchema = z.object({ start: TimingStartSchema, end: TimingEndSchema });
+export type Timing = z.infer<typeof TimingSchema>;
+export const TIMING_START_LABELS = {
+  day_after_premium_received: '12:01 a.m. the day after premium is received',
+  purchase_date: '12:01 a.m. on the purchase date',
+  departure: '12:01 a.m. on the departure date',
+} as const;
+export const TIMING_END_LABELS = {
+  return_date: '11:59 p.m. on the return date',
+  departure: 'The start of the departure date',
+  hours_before_departure: 'Hours before the start of the departure date',
+} as const;
+
 export const PlanValueSchema = z.union([
   z.boolean(),
   z.number(),
@@ -83,6 +124,8 @@ export const PlanDocumentSchema = z.object({
           .regex(/^[A-Z]{2,8}$/)
           .nullable()
           .default(null),
+        /** The underwriting arrangement of this benefit; null until configured. */
+        underwriter: z.enum(ARRANGEMENTS).nullable().default(null),
       }),
     )
     .default([]),
@@ -107,6 +150,8 @@ export const PlanDocumentSchema = z.object({
     )
     .default({}),
   productType: z.string().max(40).nullable().default(null),
+  /** Cover start and end per benefit group (or per benefit, which wins), keyed by group or benefit code. */
+  timing: z.record(z.string().regex(/^[a-z][a-z0-9_]{1,63}$/), TimingSchema).default({}),
 });
 export type PlanDocument = z.infer<typeof PlanDocumentSchema>;
 
@@ -214,7 +259,7 @@ export const PlanDiffSchema = z.object({
   to: z.object({ id: z.uuid(), version: z.number().int() }),
   changes: z.array(
     z.object({
-      area: z.enum(['benefit', 'upgrade', 'covered_reason', 'value', 'setting', 'bound', 'link', 'dates']),
+      area: z.enum(['benefit', 'upgrade', 'covered_reason', 'value', 'setting', 'bound', 'timing', 'link', 'dates']),
       item: z.string(),
       change: z.enum(['added', 'removed', 'changed']),
       before: z.string().nullable(),

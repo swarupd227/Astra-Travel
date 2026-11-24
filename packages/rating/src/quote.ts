@@ -18,6 +18,8 @@ export interface QuoteLine {
   benefit: string;
   travellerId: string;
   result: RatingResult;
+  /** The request the line was rated with, so its worksheet can be stored and reproduced. */
+  request: RatingRequest;
 }
 
 export interface QuoteRatingResult {
@@ -117,7 +119,7 @@ export function rateQuote(q: QuoteRatingRequest, manualFor: ManualResolver): Quo
         continue;
       }
       try {
-        lines.push({ benefit: b.benefit, travellerId: t.id, result: rate(manual, request) });
+        lines.push({ benefit: b.benefit, travellerId: t.id, result: rate(manual, request), request });
       } catch (err) {
         if (!(err instanceof RatingError)) throw err;
         problems.push({

@@ -32,6 +32,7 @@ const AREA_LABELS: Record<PlanDiff['changes'][number]['area'], string> = {
   value: 'Value',
   setting: 'Condition',
   bound: 'Account bound',
+  timing: 'Cover dates',
   link: 'Form or manual',
   dates: 'Dates',
 };

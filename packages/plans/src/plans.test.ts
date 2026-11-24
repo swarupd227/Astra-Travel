@@ -35,7 +35,7 @@ const vars: PlanVariables = new Map([
 
 const plan = (over: Partial<PlanDocument> = {}): PlanDocument =>
   PlanDocumentSchema.parse({
-    benefits: [{ code: 'trip_cancellation', packaging: 'packaged', ratingBenefit: 'TCAN' }],
+    benefits: [{ code: 'trip_cancellation', packaging: 'packaged', ratingBenefit: 'TCAN', underwriter: null }],
     coveredReasons: [{ code: 'sickness', levels: ['self', 'family_member'] }],
     values: { 'schedule:tc_max': 10_000, 'schedule:tc_basis': 'PER PERSON', 'schedule:tuition_on': false },
     settings: [
@@ -67,7 +67,7 @@ describe('plan checks (E01-F03)', () => {
   it('requires a value for every amount of an included benefit, unless an optional sub-limit is off', () => {
     expect(requiredValues(plan(), cat)).toEqual(['schedule:tc_basis', 'schedule:tc_max']);
     expect(requiredValues(plan({ values: { ...plan().values, 'schedule:tuition_on': true } }), cat)).toContain('schedule:tc_tuition');
-    const missing = validatePlan(plan({ benefits: [...plan().benefits, { code: 'medical', packaging: 'standalone_optional', ratingBenefit: null }] }), cat, vars);
+    const missing = validatePlan(plan({ benefits: [...plan().benefits, { code: 'medical', packaging: 'standalone_optional', ratingBenefit: null, underwriter: null }] }), cat, vars);
     expect(missing).toEqual([{ path: 'values.schedule:med_max', message: 'Medical maximum needs a value.' }]);
   });
 
@@ -94,7 +94,7 @@ describe('plan checks (E01-F03)', () => {
 describe('rating requests from a plan', () => {
   it('takes package type, perils by coverage level and the lookback period from the plan', () => {
     const q = planToQuote(
-      plan({ benefits: [{ code: 'trip_cancellation', packaging: 'standalone_optional', ratingBenefit: 'TCAN' }] }),
+      plan({ benefits: [{ code: 'trip_cancellation', packaging: 'standalone_optional', ratingBenefit: 'TCAN', underwriter: null }] }),
       cat,
       'DE',
       {
@@ -121,7 +121,7 @@ describe('version comparison (E01-F04-S02)', () => {
       id: '00000000-0000-4000-8000-000000000002',
       version: 2,
       document: plan({
-        benefits: [{ code: 'trip_cancellation', packaging: 'standalone_optional', ratingBenefit: 'TCAN' }],
+        benefits: [{ code: 'trip_cancellation', packaging: 'standalone_optional', ratingBenefit: 'TCAN', underwriter: null }],
         values: { ...plan().values, 'schedule:tc_max': 20_000 },
         settings: [{ setting: 'review_period', variable: p('review'), value: 14 }],
       }),

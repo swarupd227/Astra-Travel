@@ -46,6 +46,7 @@ import { ratingRoutes } from './routes/rating';
 import { planRoutes } from './routes/plans';
 import { underwritingRoutes } from './routes/underwriting';
 import { proposalRoutes } from './routes/proposals';
+import { policyRoutes } from './routes/policies';
 
 export interface AppDeps {
   config: ApiConfig;
@@ -231,6 +232,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(planRoutes, deps);
   await app.register(underwritingRoutes, deps);
   await app.register(proposalRoutes, deps);
+  await app.register(policyRoutes, deps);
 
   return app;
 }

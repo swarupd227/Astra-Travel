@@ -7,7 +7,7 @@ import type {
   QuoteRatingRequest,
   VariableType,
 } from '@astra/contracts';
-import { PLAN_SETTING_LABELS } from '@astra/contracts';
+import { BENEFIT_GROUPS, PLAN_SETTING_LABELS } from '@astra/contracts';
 import { checkValue } from '@astra/studio';
 import { refKey, requiredValues } from './required';
 
@@ -82,6 +82,13 @@ export function validatePlan(
       continue;
     }
     check(`settings.${s.setting}`, refKey(s.variable), s.value);
+  }
+
+  // Timing is keyed by a benefit group or a benefit of the catalogue (E05-F03-S01).
+  for (const key of Object.keys(doc.timing)) {
+    if (!(BENEFIT_GROUPS as readonly string[]).includes(key) && !cat.benefits.some((b) => b.code === key)) {
+      add(`timing.${key}`, `${key} is neither a benefit group nor a benefit of the catalogue.`);
+    }
   }
 
   if (kind !== 'base' && Object.keys(doc.bounds).length) add('bounds', 'Only base plans set bounds for account plans.');
@@ -190,7 +197,8 @@ export function diffPlans(
     }
   };
   const byCode = <T extends { code: string }>(xs: T[], f: (x: T) => unknown) => Object.fromEntries(xs.map((x) => [x.code, f(x)]));
-  cmp('benefit', byCode(from.document.benefits, (b) => ({ packaging: b.packaging, rated: b.ratingBenefit })), byCode(to.document.benefits, (b) => ({ packaging: b.packaging, rated: b.ratingBenefit })));
+  cmp('benefit', byCode(from.document.benefits, (b) => ({ packaging: b.packaging, rated: b.ratingBenefit, underwriter: b.underwriter })), byCode(to.document.benefits, (b) => ({ packaging: b.packaging, rated: b.ratingBenefit, underwriter: b.underwriter })));
+  cmp('timing', from.document.timing, to.document.timing);
   cmp('upgrade', byCode(from.document.upgrades, (u) => u.packaging), byCode(to.document.upgrades, (u) => u.packaging));
   cmp('covered_reason', byCode(from.document.coveredReasons, (r) => r.levels.join(', ')), byCode(to.document.coveredReasons, (r) => r.levels.join(', ')));
   cmp('value', from.document.values, to.document.values);

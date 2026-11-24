@@ -33,6 +33,9 @@ const config: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@astra/contracts', '@astra/plans'],
   experimental: {
+    // The dev server's own disk cache is written inside the watched project, which can set it recompiling and
+    // reloading pages forever, so it is off in development.
+    turbopackFileSystemCacheForDev: false,
     // Eligibility feed uploads from the workbench. Server actions buffer the file, so larger feeds go
     // through the API directly (or SFTP in Azure); see docs/integration/eligibility-feed-v1.md.
     serverActions: { bodySizeLimit: '100mb' },

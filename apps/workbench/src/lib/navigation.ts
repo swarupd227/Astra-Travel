@@ -108,6 +108,25 @@ export const NAVIGATION: NavSection[] = [
     ],
   },
   {
+    label: 'Policies',
+    items: [
+      {
+        href: '/quotes',
+        label: 'Quotes',
+        icon: 'calculator',
+        permission: 'quotes:read',
+        description: 'Priced and decided offers, with the versions they were made with.',
+      },
+      {
+        href: '/policies',
+        label: 'Policies',
+        icon: 'file',
+        permission: 'policies:read',
+        description: 'One record per policy, with history and the record as it was at any date.',
+      },
+    ],
+  },
+  {
     label: 'Underwriting',
     items: [
       {

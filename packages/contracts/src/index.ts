@@ -13,3 +13,4 @@ export * from './rating';
 export * from './plans';
 export * from './underwriting';
 export * from './proposals';
+export * from './policies';

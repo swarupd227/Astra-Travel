@@ -3,7 +3,10 @@
 import { useActionState, useMemo, useState } from 'react';
 import { AlertTriangle, Plus, Save, Trash2 } from 'lucide-react';
 import {
+  ARRANGEMENTS,
   BENEFIT_GROUP_LABELS,
+  TIMING_END_LABELS,
+  TIMING_START_LABELS,
   COVERAGE_LEVEL_LABELS,
   PACKAGING,
   PACKAGING_LABELS,
@@ -266,7 +269,7 @@ export function PlanBuilder({
                   .map((b) => {
                     const pb = doc.benefits.find((x) => x.code === b.code);
                     return (
-                      <div key={b.code} className="grid items-center gap-3 sm:grid-cols-[1fr_12rem_9rem]">
+                      <div key={b.code} className="grid items-center gap-3 sm:grid-cols-[1fr_12rem_9rem_12rem]">
                         <label className="flex items-center gap-2 text-sm font-medium text-fg">
                           <input
                             type="checkbox"
@@ -275,7 +278,7 @@ export function PlanBuilder({
                             onChange={(e) =>
                               update({
                                 benefits: e.target.checked
-                                  ? [...doc.benefits, { code: b.code, packaging: 'packaged', ratingBenefit: null }]
+                                  ? [...doc.benefits, { code: b.code, packaging: 'packaged', ratingBenefit: null, underwriter: null }]
                                   : doc.benefits.filter((x) => x.code !== b.code),
                               })
                             }
@@ -317,9 +320,29 @@ export function PlanBuilder({
                                 })
                               }
                             />
+                            <Select
+                              aria-label={`${b.name}: underwriting arrangement`}
+                              className={inputClass}
+                              disabled={structureLocked}
+                              value={pb.underwriter ?? ''}
+                              onChange={(e) =>
+                                update({
+                                  benefits: doc.benefits.map((x) =>
+                                    x.code === b.code ? { ...x, underwriter: (e.target.value || null) as (typeof ARRANGEMENTS)[number] | null } : x,
+                                  ),
+                                })
+                              }
+                            >
+                              <option value="">Underwriter…</option>
+                              {ARRANGEMENTS.map((a) => (
+                                <option key={a} value={a}>
+                                  {a.replace('_', ' ')}
+                                </option>
+                              ))}
+                            </Select>
                           </>
                         ) : null}
-                        <div className="sm:col-span-3">
+                        <div className="sm:col-span-4">
                           <ProblemText problems={allProblems} path={`benefits.${b.code}`} />
                         </div>
                       </div>
@@ -541,6 +564,8 @@ export function PlanBuilder({
 
       <Settings doc={doc} variables={variables} vars={vars} editable={editable && kind !== 'account'} problems={allProblems} update={update} />
 
+      <TimingEditor doc={doc} catalogue={catalogue} editable={editable && kind !== 'account'} problems={allProblems} update={update} />
+
       <Card>
         <CardHeader title="Dates" />
         <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
@@ -730,6 +755,136 @@ function Settings({
             }}
           >
             <Plus aria-hidden className="size-3.5" /> Add condition
+          </Button>
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+const START_KINDS = ['day_after_premium_received', 'purchase_date', 'departure'] as const;
+const END_KINDS = ['return_date', 'departure', 'hours_before_departure'] as const;
+
+/** When cover starts and ends for each benefit group the plan includes, with optional overrides per benefit (E05-F03-S01). */
+function TimingEditor({
+  doc,
+  catalogue,
+  editable,
+  problems,
+  update,
+}: {
+  doc: PlanDocument;
+  catalogue: CatalogueDocument;
+  editable: boolean;
+  problems: PlanProblem[];
+  update: (patch: Partial<PlanDocument>) => void;
+}) {
+  const [extra, setExtra] = useState('');
+  const included = doc.benefits.map((b) => catalogue.benefits.find((x) => x.code === b.code)).filter((b): b is NonNullable<typeof b> => !!b);
+  const groupKeys: string[] = [...new Set(included.map((b) => b.group as string))];
+  const overrideKeys = Object.keys(doc.timing).filter((k) => !groupKeys.includes(k));
+  const keys = [...groupKeys, ...overrideKeys];
+  const label = (k: string) => (BENEFIT_GROUP_LABELS[k as keyof typeof BENEFIT_GROUP_LABELS] ? `${BENEFIT_GROUP_LABELS[k as keyof typeof BENEFIT_GROUP_LABELS]} benefits` : (catalogue.benefits.find((b) => b.code === k)?.name ?? k));
+  const set = (k: string, t: PlanDocument['timing'][string] | null) => {
+    const { [k]: _drop, ...rest } = doc.timing;
+    update({ timing: t ? { ...rest, [k]: t } : rest });
+  };
+  const initial = { start: { kind: 'day_after_premium_received' as const }, end: { kind: 'return_date' as const } };
+  return (
+    <Card>
+      <CardHeader title="Cover dates" description="When cover starts and ends for each group of benefits, as the filed forms state it. A benefit can have its own timing, as CFAR does. A quote cannot be made for a benefit with no timing." />
+      <div className="divide-y divide-border">
+        {keys.length === 0 ? <p className="px-5 py-4 text-sm text-muted">Include benefits to set their cover dates.</p> : null}
+        {keys.map((k) => {
+          const t = doc.timing[k];
+          const isOverride = !groupKeys.includes(k);
+          return (
+            <div key={k} className="grid items-center gap-3 px-5 py-3 sm:grid-cols-[12rem_1fr_1fr_auto]">
+              <div>
+                <p className="text-sm font-medium text-fg">{label(k)}</p>
+                <ProblemText problems={problems} path={`timing.${k}`} />
+              </div>
+              {t ? (
+                <>
+                  <Select aria-label={`${label(k)}: cover starts`} className={inputClass} disabled={!editable} value={t.start.kind} onChange={(e) => set(k, { ...t, start: { kind: e.target.value as (typeof START_KINDS)[number] } })}>
+                    {START_KINDS.map((s) => (
+                      <option key={s} value={s}>
+                        Starts: {TIMING_START_LABELS[s]}
+                      </option>
+                    ))}
+                  </Select>
+                  <div className="flex gap-2">
+                    <Select
+                      aria-label={`${label(k)}: cover ends`}
+                      className={inputClass}
+                      disabled={!editable}
+                      value={t.end.kind}
+                      onChange={(e) => set(k, { ...t, end: e.target.value === 'hours_before_departure' ? { kind: 'hours_before_departure', hours: 48 } : { kind: e.target.value as 'return_date' | 'departure' } })}
+                    >
+                      {END_KINDS.map((s) => (
+                        <option key={s} value={s}>
+                          Ends: {TIMING_END_LABELS[s]}
+                        </option>
+                      ))}
+                    </Select>
+                    {t.end.kind === 'hours_before_departure' ? (
+                      <Input
+                        type="number"
+                        aria-label={`${label(k)}: hours before departure`}
+                        className={`${inputClass} w-24`}
+                        disabled={!editable}
+                        min={1}
+                        value={t.end.hours}
+                        onChange={(e) => set(k, { ...t, end: { kind: 'hours_before_departure', hours: Number(e.target.value) } })}
+                      />
+                    ) : null}
+                  </div>
+                  {editable ? (
+                    <Button variant="ghost" size="sm" aria-label={`Clear the cover dates of ${label(k)}`} onClick={() => set(k, null)}>
+                      <Trash2 aria-hidden className="size-3.5" />
+                    </Button>
+                  ) : (
+                    <span />
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted sm:col-span-2">{isOverride ? '' : 'No cover dates set.'}</p>
+                  {editable ? (
+                    <Button variant="secondary" size="sm" onClick={() => set(k, initial)}>
+                      Set cover dates
+                    </Button>
+                  ) : (
+                    <span />
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {editable && included.length ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-3">
+          <Select aria-label="Set cover dates for one benefit" className={`${inputClass} max-w-sm`} value={extra} onChange={(e) => setExtra(e.target.value)}>
+            <option value="">A benefit with its own timing…</option>
+            {included
+              .filter((b) => !(b.code in doc.timing))
+              .map((b) => (
+                <option key={b.code} value={b.code}>
+                  {b.name}
+                </option>
+              ))}
+          </Select>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={!extra}
+            onClick={() => {
+              set(extra, initial);
+              setExtra('');
+            }}
+          >
+            <Plus aria-hidden className="size-3.5" /> Add
           </Button>
         </div>
       ) : null}

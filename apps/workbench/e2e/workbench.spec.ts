@@ -52,12 +52,15 @@ const PAGES = [
   '/underwriting/plans',
   '/underwriting/referrals',
   '/underwriting/sanctions',
+  '/quotes',
+  '/quotes/new',
+  '/policies',
 ];
 
 test('platform administrator sees every screen, and every screen is accessible', async ({
   page,
 }) => {
-  test.setTimeout(600_000); // twenty-one full axe scans, with cold page compiles in development mode
+  test.setTimeout(1_500_000); // thirty-one full axe scans, with cold page compiles in development mode
   await signIn(page, 'platform.admin');
   await expect(page.getByRole('heading', { level: 1 })).toContainText(
     /Good (morning|afternoon|evening)/,

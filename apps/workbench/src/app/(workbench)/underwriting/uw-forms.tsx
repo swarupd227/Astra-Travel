@@ -177,7 +177,7 @@ export function EvaluationView({ r }: { r: EvaluationResult }) {
           ))}
         </div>
       </details>
-      <pre className="overflow-x-auto rounded-md bg-subtle p-3 text-xs whitespace-pre-wrap">{r.summary}</pre>
+      <pre className="overflow-x-auto rounded-md bg-surface-muted p-3 text-xs text-fg whitespace-pre-wrap">{r.summary}</pre>
     </div>
   );
 }
@@ -693,7 +693,7 @@ export function SanctionsDecisionForm({ listId }: { listId: string }) {
       <button name="decision" value="approve" className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-fg hover:opacity-90">
         Approve
       </button>
-      <button name="decision" value="reject" className="h-9 rounded-md border border-border px-3 text-sm font-medium hover:bg-subtle">
+      <button name="decision" value="reject" className="h-9 rounded-md border border-border px-3 text-sm font-medium hover:bg-surface-muted">
         Reject
       </button>
       <div className="basis-full">
@@ -716,7 +716,7 @@ export function ReferralDecisionForm({ referralId, sanctions }: { referralId: st
         <button name="decision" value="approved" className="h-10 rounded-lg bg-primary px-4 text-sm font-medium text-primary-fg hover:opacity-90">
           {sanctions ? 'Clear the match' : 'Approve'}
         </button>
-        <button name="decision" value="declined" className="h-10 rounded-lg border border-border px-4 text-sm font-medium hover:bg-subtle">
+        <button name="decision" value="declined" className="h-10 rounded-lg border border-border px-4 text-sm font-medium hover:bg-surface-muted">
           {sanctions ? 'Confirm the match and decline' : 'Decline'}
         </button>
       </div>

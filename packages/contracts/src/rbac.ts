@@ -88,6 +88,9 @@ export const PERMISSIONS = {
   'referrals:decide': 'Decide referrals and sanctions holds',
   'proposals:read': 'View what agents have proposed for forms, manuals and parity',
   'proposals:create': 'Submit proposals for forms, manuals and parity (used by agents acting for a person)',
+  'quotes:create': 'Create quotes, change their selections and bind them to policies',
+  'quotes:read': 'View quotes',
+  'policies:read': 'View policies, their history and their record at any date',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -105,6 +108,8 @@ const STAFF_BASE: Permission[] = [
   'plans:read',
   'underwriting:read',
   'proposals:read',
+  'quotes:read',
+  'policies:read',
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
@@ -124,8 +129,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'webhooks:read',
     'webhooks:manage',
     'card:read',
+    'quotes:create',
   ],
-  service_rep: [...STAFF_BASE, 'card:read', 'cover:verify'],
+  service_rep: [...STAFF_BASE, 'card:read', 'cover:verify', 'quotes:create'],
   finance_analyst: [...STAFF_BASE, 'card:read'],
   card_programme_manager: [
     ...STAFF_BASE,
@@ -177,6 +183,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'webhooks:manage',
     'card:read',
     'card:feeds',
+    'quotes:create',
+    'quotes:read',
+    'policies:read',
   ],
   cover_verifier: ['cover:verify'],
 };

@@ -90,7 +90,10 @@ beforeEach(async () => {
   feedA = feed.json().id;
 });
 
-type Probe = { method: 'GET' | 'POST' | 'DELETE'; url: () => string; payload?: () => unknown };
+/** A well-formed ID that exists nowhere: the cross-account answer must be the same as for a missing resource. */
+const ABSENT = '00000000-0000-4000-8000-0000000000aa';
+
+type Probe = { method: 'GET' | 'POST' | 'PUT' | 'DELETE'; url: () => string; payload?: () => unknown };
 
 /** Partner B attacking partner A's data, one probe per account-scoped route. */
 const PROBES: Record<string, Probe[]> = {
@@ -154,6 +157,37 @@ const PROBES: Record<string, Probe[]> = {
       payload: () => ({ accountRef: 'tok_tenant_a', date: '2026-03-01' }),
     },
   ],
+  'POST /v1/quotes': [
+    {
+      method: 'POST',
+      url: () => '/v1/quotes',
+      payload: () => ({
+        accountId: accountA,
+        planCode: 'ANY-PLAN',
+        state: 'DE',
+        travellers: [{ firstName: 'Pat', lastName: 'Sample', age: 40, costPerTraveller: '1000' }],
+        trip: { departureDate: '2030-01-10', returnDate: '2030-01-20' },
+      }),
+    },
+  ],
+  'GET /v1/quotes': [
+    { method: 'GET', url: () => '/v1/quotes' },
+    { method: 'GET', url: () => `/v1/quotes?accountId=${accountA}` },
+  ],
+  'GET /v1/quotes/:quoteId': [{ method: 'GET', url: () => `/v1/quotes/${ABSENT}` }],
+  'PUT /v1/quotes/:quoteId/selection': [{ method: 'PUT', url: () => `/v1/quotes/${ABSENT}/selection`, payload: () => ({ selection: [] }) }],
+  'POST /v1/quotes/:quoteId/bind': [
+    {
+      method: 'POST',
+      url: () => `/v1/quotes/${ABSENT}/bind`,
+      payload: () => ({ ableToTravel: true, acknowledgement: { disclosureVersion: 'v1', acknowledgedBy: 'Pat Sample' }, payment: { reference: 'PAY-TENANT-1', amount: '10.00' }, purchaser: { name: 'Pat Sample' } }),
+    },
+  ],
+  'GET /v1/policies': [
+    { method: 'GET', url: () => '/v1/policies' },
+    { method: 'GET', url: () => `/v1/policies?accountId=${accountA}` },
+  ],
+  'GET /v1/policies/:policyId': [{ method: 'GET', url: () => `/v1/policies/${ABSENT}` }],
 };
 
 describe('route catalogue', () => {

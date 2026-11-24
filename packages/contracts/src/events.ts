@@ -332,6 +332,35 @@ export const AgentProposalResolved = defineEvent({
   }),
 });
 
+export const QuoteIssued = defineEvent({
+  type: 'QuoteIssued',
+  version: 1,
+  source: 'astra.policies',
+  schema: z.object({
+    quoteId: z.uuid(),
+    planCode: z.string(),
+    state: z.string(),
+    outcome: z.enum(['eligible', 'ineligible', 'referred', 'held']),
+    total: z.string().nullable(),
+  }),
+});
+
+export const PolicyBound = defineEvent({
+  type: 'PolicyBound',
+  version: 1,
+  source: 'astra.policies',
+  schema: z.object({
+    policyId: z.uuid(),
+    number: z.string(),
+    quoteId: z.uuid(),
+    planCode: z.string(),
+    state: z.string(),
+    premiumTotal: z.string(),
+    coverageStart: z.string(),
+    coverageEnd: z.string(),
+  }),
+});
+
 export const EVENT_CATALOGUE = [
   AccountRegistered,
   AccountStatusChanged,
@@ -360,6 +389,8 @@ export const EVENT_CATALOGUE = [
   ReferralDecided,
   AgentProposalRaised,
   AgentProposalResolved,
+  QuoteIssued,
+  PolicyBound,
 ] as const;
 
 export type CatalogueEventType = (typeof EVENT_CATALOGUE)[number]['type'];

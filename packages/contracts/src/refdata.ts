@@ -90,6 +90,17 @@ export const REFDATA_DATASETS = {
         path: ['key'],
       }),
   },
+  state_disclosures: {
+    name: 'State disclosures',
+    description: 'The disclosure each state requires before a policy is bound. Its version is stored with the traveller’s acknowledgement.',
+    keyField: 'state',
+    expectedSource: 'State filings and Assurant compliance',
+    entry: z.object({
+      state: STATE,
+      title: z.string().min(3).max(200),
+      text: z.string().min(20).max(20000),
+    }),
+  },
 } as const;
 
 export type RefdataDataset = keyof typeof REFDATA_DATASETS;
@@ -106,6 +117,7 @@ export const STATE_REFERENCES: Partial<
   Record<RefdataDataset, (entry: Record<string, unknown>) => string[]>
 > = {
   premium_tax_rates: (e) => [e.state as string],
+  state_disclosures: (e) => [e.state as string],
 };
 
 export const REFDATA_VERSION_STATUSES = ['draft', 'approved', 'rejected'] as const;

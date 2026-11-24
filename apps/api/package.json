@@ -17,6 +17,7 @@
     "@astra/contracts": "0.1.0",
     "@astra/platform": "0.1.0",
     "@astra/plans": "0.1.0",
+    "@astra/policies": "0.1.0",
     "@astra/rating": "0.1.0",
     "@astra/studio": "0.1.0",
     "@astra/underwriting": "0.1.0",
