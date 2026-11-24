@@ -9,9 +9,11 @@ import {
   FileText,
   Flag,
   Home,
+  ClipboardList,
   Inbox,
   Layers,
   ScrollText,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
   Stamp,
@@ -41,6 +43,8 @@ const ICONS = {
   table: Table2,
   calculator: Calculator,
   layers: Layers,
+  clipboard: ClipboardList,
+  alert: ShieldAlert,
 } as const;
 
 export function NavIcon({ name, className }: { name: NavIconName; className?: string }) {

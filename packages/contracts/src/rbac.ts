@@ -81,6 +81,11 @@ export const PERMISSIONS = {
   'plans:read': 'View plans, their versions, comparisons and test results',
   'plans:manage': 'Build plans, state variants and account plans, and their test cases',
   'plans:approve': 'Approve plan versions built by someone else and publish them',
+  'underwriting:read': 'View rule sets, sanctions lists and referrals',
+  'underwriting:evaluate': 'Evaluate eligibility, record declarations and screen travellers',
+  'underwriting:manage': 'Build rule sets and their test cases and load sanctions lists',
+  'underwriting:approve': 'Approve rule sets and sanctions lists loaded by someone else and publish rule sets',
+  'referrals:decide': 'Decide referrals and sanctions holds',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -96,6 +101,7 @@ const STAFF_BASE: Permission[] = [
   'forms:read',
   'rating:read',
   'plans:read',
+  'underwriting:read',
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
@@ -107,7 +113,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'rating:manage',
     'rating:approve',
   ],
-  underwriter: [...STAFF_BASE, 'card:read'],
+  underwriter: [...STAFF_BASE, 'card:read', 'underwriting:evaluate', 'underwriting:manage', 'underwriting:approve', 'referrals:decide'],
   account_manager: [
     ...STAFF_BASE,
     'accounts:manage',
@@ -137,6 +143,10 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'refdata:manage',
     'rating:approve',
     'plans:approve',
+    'underwriting:evaluate',
+    'underwriting:manage',
+    'underwriting:approve',
+    'referrals:decide',
   ],
   ops_supervisor: [
     ...STAFF_BASE,

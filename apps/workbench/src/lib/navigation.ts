@@ -19,7 +19,9 @@ export type NavIcon =
   | 'database'
   | 'table'
   | 'calculator'
-  | 'layers';
+  | 'layers'
+  | 'clipboard'
+  | 'alert';
 
 export interface NavItem {
   href: string;
@@ -102,6 +104,39 @@ export const NAVIGATION: NavSection[] = [
         permission: 'refdata:read',
         description:
           'States, countries, regions, segments, prohibited destinations and tax tables, versioned.',
+      },
+    ],
+  },
+  {
+    label: 'Underwriting',
+    items: [
+      {
+        href: '/underwriting/check',
+        label: 'Eligibility check',
+        icon: 'check',
+        permission: 'underwriting:evaluate',
+        description: 'Run a case through limits, sanctions screening, duplicate cover, referral rules, the waiver and CFAR.',
+      },
+      {
+        href: '/underwriting/plans',
+        label: 'Rule sets',
+        icon: 'clipboard',
+        permission: 'underwriting:read',
+        description: 'Plan limits and referral rules per plan, with test cases and publishing.',
+      },
+      {
+        href: '/underwriting/referrals',
+        label: 'Referrals',
+        icon: 'inbox',
+        permission: 'underwriting:read',
+        description: 'Cases referred to an underwriter and sanctions holds to review.',
+      },
+      {
+        href: '/underwriting/sanctions',
+        label: 'Sanctions lists',
+        icon: 'alert',
+        permission: 'underwriting:read',
+        description: 'The OFAC list used to screen travellers, with approval.',
       },
     ],
   },

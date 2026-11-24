@@ -1,8 +1,12 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
 // End-to-end and accessibility tests against a running local stack (Keycloak, API, worker, workbench).
 export default defineConfig({
   testDir: './e2e',
+  // Outside the Next.js project: the dev server watches its folder, and traces written during a test would reload the page under test.
+  outputDir: join(tmpdir(), 'astra-playwright'),
   timeout: 60_000,
   fullyParallel: false,
   retries: process.env.CI ? 1 : 0,

@@ -48,6 +48,10 @@ const PAGES = [
   '/rating/manuals',
   '/rating/calculator',
   '/plans',
+  '/underwriting/check',
+  '/underwriting/plans',
+  '/underwriting/referrals',
+  '/underwriting/sanctions',
 ];
 
 test('platform administrator sees every screen, and every screen is accessible', async ({

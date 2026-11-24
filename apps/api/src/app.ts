@@ -44,6 +44,7 @@ import { catalogueRoutes } from './routes/catalogue';
 import { peopleRoutes } from './routes/people';
 import { ratingRoutes } from './routes/rating';
 import { planRoutes } from './routes/plans';
+import { underwritingRoutes } from './routes/underwriting';
 
 export interface AppDeps {
   config: ApiConfig;
@@ -227,6 +228,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(peopleRoutes, deps);
   await app.register(ratingRoutes, deps);
   await app.register(planRoutes, deps);
+  await app.register(underwritingRoutes, deps);
 
   return app;
 }

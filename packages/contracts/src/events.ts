@@ -269,6 +269,42 @@ export const PlanVersionPublished = defineEvent({
   }),
 });
 
+export const RuleSetPublished = defineEvent({
+  type: 'RuleSetPublished',
+  version: 1,
+  source: 'astra.underwriting',
+  schema: z.object({
+    ruleSetId: z.uuid(),
+    planId: z.uuid(),
+    version: z.number().int(),
+    effectiveFrom: z.string(),
+  }),
+});
+
+export const ReferralRaised = defineEvent({
+  type: 'ReferralRaised',
+  version: 1,
+  source: 'astra.underwriting',
+  schema: z.object({
+    referralId: z.uuid(),
+    caseRef: z.string(),
+    kind: z.enum(['underwriting', 'sanctions']),
+    stage: z.enum(['quote', 'bind', 'change']),
+    recommendation: z.enum(['refer', 'recommend_decline']),
+  }),
+});
+
+export const ReferralDecided = defineEvent({
+  type: 'ReferralDecided',
+  version: 1,
+  source: 'astra.underwriting',
+  schema: z.object({
+    referralId: z.uuid(),
+    caseRef: z.string(),
+    decision: z.enum(['approved', 'declined']),
+  }),
+});
+
 export const EVENT_CATALOGUE = [
   AccountRegistered,
   AccountStatusChanged,
@@ -292,6 +328,9 @@ export const EVENT_CATALOGUE = [
   BenefitCatalogueApproved,
   RateManualPublished,
   PlanVersionPublished,
+  RuleSetPublished,
+  ReferralRaised,
+  ReferralDecided,
 ] as const;
 
 export type CatalogueEventType = (typeof EVENT_CATALOGUE)[number]['type'];

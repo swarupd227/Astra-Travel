@@ -135,7 +135,7 @@ async function catalogueFor(
 }
 
 /** Variables of the approved maps of the plan's schedule and policy editions. */
-async function variablesFor(tx: Tx, scheduleEditionId: string, policyEditionId: string | null): Promise<PlanVariables> {
+export async function variablesFor(tx: Tx, scheduleEditionId: string, policyEditionId: string | null): Promise<PlanVariables> {
   const { rows } = await tx.query<{ source: string; key: string; label: string; type: VariableType; constraints: Record<string, unknown> }>(
     `SELECT CASE WHEN m.edition_id = $1 THEN 'schedule' ELSE 'policy' END AS source, v.key, v.label, v.type, v.constraints
        FROM studio.variable_maps m JOIN studio.form_variables v ON v.map_id = m.id
