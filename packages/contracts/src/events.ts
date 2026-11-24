@@ -226,6 +226,20 @@ export const VariableMapApproved = defineEvent({
     variables: z.number().int(),
   }),
 });
+export const BenefitCatalogueApproved = defineEvent({
+  type: 'BenefitCatalogueApproved',
+  version: 1,
+  source: 'astra.studio.catalogue',
+  schema: z.object({
+    catalogueId: z.uuid(),
+    scheduleEditionId: z.uuid(),
+    version: z.number().int(),
+    benefits: z.number().int(),
+    coveredReasons: z.number().int(),
+    upgrades: z.number().int(),
+  }),
+});
+
 export const EVENT_CATALOGUE = [
   AccountRegistered,
   AccountStatusChanged,
@@ -246,6 +260,7 @@ export const EVENT_CATALOGUE = [
   FilingStatusChanged,
   FormEditionLoaded,
   VariableMapApproved,
+  BenefitCatalogueApproved,
 ] as const;
 
 export type CatalogueEventType = (typeof EVENT_CATALOGUE)[number]['type'];

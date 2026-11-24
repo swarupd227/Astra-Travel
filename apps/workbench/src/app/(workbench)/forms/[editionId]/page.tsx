@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft, Download } from 'lucide-react';
+import { ChevronLeft, Download, ListTree } from 'lucide-react';
 import type {
   BracketSpan,
   FormEdition,
@@ -75,12 +75,22 @@ export default async function EditionPage({
           </>
         }
         actions={
-          <a
-            href={`/forms/${e.id}/document`}
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-strong bg-surface px-4 text-sm font-medium text-fg shadow-card hover:bg-surface-muted"
-          >
-            <Download aria-hidden className="size-4" /> Filed document
-          </a>
+          <>
+            {e.kind === 'schedule' ? (
+              <Link
+                href={`/forms/${e.id}/catalogue`}
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-contrast shadow-card hover:bg-primary-hover"
+              >
+                <ListTree aria-hidden className="size-4" /> Benefit catalogue
+              </Link>
+            ) : null}
+            <a
+              href={`/forms/${e.id}/document`}
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-border-strong bg-surface px-4 text-sm font-medium text-fg shadow-card hover:bg-surface-muted"
+            >
+              <Download aria-hidden className="size-4" /> Filed document
+            </a>
+          </>
         }
       />
       <div className="mb-6 space-y-3">

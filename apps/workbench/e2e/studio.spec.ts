@@ -68,13 +68,11 @@ test('reference data, a filed form and its variable map, each approved by a seco
   await page.goto('/forms');
   await page.getByRole('button', { name: 'Load edition' }).click();
   const load = page.getByRole('dialog', { name: 'Load a form edition' });
-  await load
-    .getByLabel('Document')
-    .setInputFiles({
-      name: `e2e_${run}.txt`,
-      mimeType: 'text/plain',
-      buffer: Buffer.from(`${FORM_TEXT}\nTest run ${run}`),
-    });
+  await load.getByLabel('Document').setInputFiles({
+    name: `e2e_${run}.txt`,
+    mimeType: 'text/plain',
+    buffer: Buffer.from(`${FORM_TEXT}\nTest run ${run}`),
+  });
   await load.getByLabel('Form number').fill(`e2e_pol_${run}`);
   await load.getByLabel('Edition').fill('2026-05');
   await load.getByLabel('Title').fill(`E2E individual policy ${run}`);

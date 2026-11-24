@@ -143,10 +143,14 @@ export function findBrackets(text: string, pageStarts: number[] = [0]): BracketC
   const out: BracketCandidate[] = [];
   const used = new Set<Span>();
 
-  // Group runs of sibling brackets separated only by spaces into one choice.
+  // Group runs of sibling brackets separated only by spaces into one choice. Only plain alternatives
+  // group: a bracket that reads as a range or an optional benefit stands on its own, so
+  // "[$10,000-$500,000] [PER PERSON] [PER TRIP]" is an amount followed by a limit basis.
+  const plainAlternative = (sp: Span) =>
+    sp.kind === 'bracket' && suggest(text.slice(sp.start + 1, sp.end - 1)) === null;
   for (let i = 0; i < all.length; i++) {
     const s = all[i]!;
-    if (used.has(s) || s.kind !== 'bracket') continue;
+    if (used.has(s) || !plainAlternative(s)) continue;
     const run = [s];
     let j = i + 1;
     while (j < all.length) {
@@ -156,7 +160,7 @@ export function findBrackets(text: string, pageStarts: number[] = [0]): BracketC
         continue; // nested inside the run
       }
       if (
-        next.kind === 'bracket' &&
+        plainAlternative(next) &&
         next.depth === s.depth &&
         /^[ \t]{0,2}$/.test(text.slice(run.at(-1)!.end, next.start))
       ) {

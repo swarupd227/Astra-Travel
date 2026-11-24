@@ -39,6 +39,7 @@ import { cardRoutes } from './routes/card';
 import { refdataRoutes } from './routes/refdata';
 import { filingRoutes } from './routes/filings';
 import { formRoutes } from './routes/forms';
+import { catalogueRoutes } from './routes/catalogue';
 
 export interface AppDeps {
   config: ApiConfig;
@@ -215,6 +216,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(refdataRoutes, deps);
   await app.register(filingRoutes, deps);
   await app.register(formRoutes, deps);
+  await app.register(catalogueRoutes, deps);
 
   return app;
 }

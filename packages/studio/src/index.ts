@@ -5,3 +5,4 @@ export * from './pdf-text';
 export * from './refdata';
 export * from './filings';
 export * from './refdata-store';
+export * from './catalogue';

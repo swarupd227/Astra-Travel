@@ -8,3 +8,4 @@ export * from './card';
 export * from './refdata';
 export * from './compliance';
 export * from './studio';
+export * from './catalogue';

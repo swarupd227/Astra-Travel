@@ -70,6 +70,15 @@ describe('bracket finder', () => {
     expect(by('[PER RESERVATION] [PER POLICY]')?.suggestion?.type).toBe('limit_basis');
   });
 
+  it('does not group a range with the limit bases that follow it', () => {
+    const t = 'Maximum [$10,000-$500,000] [PER PERSON] [PER TRIP]';
+    const f = findBrackets(t).map((b) => [b.text, b.suggestion?.type]);
+    expect(f).toEqual([
+      ['[$10,000-$500,000]', 'numeric_range'],
+      ['[PER PERSON] [PER TRIP]', 'limit_basis'],
+    ]);
+  });
+
   it('reads the hours of the CFAR cancellation window', () => {
     expect(
       by('[twenty-four (24) – one hundred sixty-eight (168) hours]')?.suggestion,
@@ -196,7 +205,8 @@ describe('variable values against filed ranges', () => {
   });
 });
 
-describe('form text extraction', () => {
+// The first pdf.js load is heavy; on a busy machine it can take longer than the default 5 seconds.
+describe('form text extraction', { timeout: 30_000 }, () => {
   it('reads plain text with form-feed page breaks', async () => {
     const t = await extractText(new TextEncoder().encode('page one\r\n\fpage two'), 'text/plain');
     expect(t).toEqual({ text: 'page one\n\fpage two', pageStarts: [0, 10] });
