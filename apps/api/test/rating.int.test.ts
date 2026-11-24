@@ -239,6 +239,74 @@ describe('rate manuals and rating (E02)', () => {
     expect(run.results[0]).toMatchObject({ expectedAmount: '99.99', actualAmount: EXPECTED });
   });
 
+  it('rates a quote of several benefits and travellers within the latency target (E02-F05-S01)', async () => {
+    const tcan = await loadManual();
+    // SYNTHETIC Trip Interruption manual: the quoted tables with the interruption exposure.
+    const tint = await loadManual({
+      code: 'SYNTH-DE-TINT',
+      benefit: 'TINT',
+      source: 'Synthetic test manual',
+      document: { ...DOC, exposure: { kind: 'per_100_interruption_limit', table: '2.1.5' } },
+    });
+    const plan = { packageType: 'optional', perils: [], waivedExclusions: [], supplemental: [] };
+    const travellers = Array.from({ length: 6 }, (_, i) => ({
+      id: `T${i + 1}`,
+      age: 45,
+      preExistingWaived: true,
+      costPerTraveller: '4200',
+    }));
+    const benefits = Array.from({ length: 10 }, (_, i) =>
+      i % 2
+        ? { benefit: 'TINT', plan: { ...plan, interruption: { limitPercent: 150 } } }
+        : { benefit: 'TCAN', plan },
+    );
+    const body = {
+      state: 'DE',
+      rateDate: '2026-11-01',
+      travellers,
+      trip: SPEC_ILLUSTRATIVE_REQUEST.trip,
+      account: SPEC_ILLUSTRATIVE_REQUEST.account,
+      benefits,
+      billingBasis: { basis: 'per_100_trip_cost' },
+      previewManuals: { TCAN: tcan.id, TINT: tint.id },
+    };
+    const first = await send('POST', '/v1/rating/quote', loader, body);
+    expect(first.statusCode, first.body).toBe(200);
+    const q = first.json();
+    expect(q).toMatchObject({ preview: true, kind: 'loss_cost' });
+    expect(q.lines).toHaveLength(60);
+    expect(q.perTraveller).toHaveLength(6);
+    expect(q.basis).toMatchObject({
+      basis: 'per_100_trip_cost',
+      unit: 'per $100 of trip cost',
+      approved: false,
+    });
+
+    // Without previews, nothing is published, so the quote is refused with the reason.
+    const refused = await send('POST', '/v1/rating/quote', loader, {
+      ...body,
+      previewManuals: undefined,
+    });
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json().errors[0].message).toContain('No published TCAN manual');
+
+    // Latency: 95% within 500 ms excluding network time (specification, non-functional requirements).
+    const times: number[] = [];
+    for (let i = 0; i < 30; i++) {
+      const started = performance.now();
+      const r = await send('POST', '/v1/rating/quote', loader, body);
+      times.push(performance.now() - started);
+      expect(r.statusCode).toBe(200);
+    }
+    times.sort((a, b) => a - b);
+    const p95 = times[Math.ceil(times.length * 0.95) - 1]!;
+    // Reported so each run records the measured latency.
+    console.warn(
+      `quote rating, 10 benefits x 6 travellers: median ${times[15]!.toFixed(0)} ms, p95 ${p95.toFixed(0)} ms`,
+    );
+    expect(p95).toBeLessThan(500);
+  });
+
   it('refuses illustrative manuals outside demonstration and sandbox, and checks table references', async () => {
     const illus = await send('POST', '/v1/rate-manuals', loader, {
       code: 'ILLUS-DE-TI',

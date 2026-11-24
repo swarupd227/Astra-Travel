@@ -3,7 +3,9 @@ import { z } from 'zod';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import {
   CreateManualRequestSchema,
+  CfarEligibilitySchema,
   ParityRunSchema,
+  QuoteRatingRequestSchema,
   RateManualPublished,
   RateManualSchema,
   RatingRequestSchema,
@@ -25,7 +27,15 @@ import {
   writeAudit,
   type Tx,
 } from '@astra/platform';
-import { parseParityCsv, rate, RatingError, runCase, type ManualForRating } from '@astra/rating';
+import {
+  parseParityCsv,
+  QuoteRatingError,
+  rate,
+  rateQuote,
+  RatingError,
+  runCase,
+  type ManualForRating,
+} from '@astra/rating';
 import { approvalFor } from '@astra/studio';
 import type { AppDeps } from '../app';
 import { commonErrors } from './shared';
@@ -726,6 +736,8 @@ export const ratingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
           manualId: z.uuid().optional(),
           request: RatingRequestSchema,
           store: z.boolean().default(false),
+          /** Required for CFAR manuals: CFAR is rated only when its eligibility rules pass. */
+          cfarEligibility: CfarEligibilitySchema.optional(),
         }),
         response: {
           200: RatingResultSchema.extend({
@@ -738,7 +750,7 @@ export const ratingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
     },
     async (request) =>
       withTx(deps.pool, request.ctx, async (tx) => {
-        const { manualId, request: req, store } = request.body;
+        const { manualId, request: req, store, cfarEligibility } = request.body;
         let m: ManualRow;
         if (manualId) {
           m = await findManual(tx, manualId);
@@ -764,6 +776,27 @@ export const ratingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
           }
           m = found;
         }
+        if (m.document.exposure.kind === 'per_100_cfar_insured_cost') {
+          if (!cfarEligibility) {
+            throw new AppError(
+              'validation_failed',
+              'CFAR is rated only with a CFAR eligibility decision.',
+              [
+                {
+                  code: 'cfar_eligibility',
+                  field: 'cfarEligibility',
+                  message: 'Give the eligibility decision',
+                },
+              ],
+            );
+          }
+          if (!cfarEligibility.passed) {
+            throw new AppError(
+              'precondition_failed',
+              `CFAR is not rated: ${cfarEligibility.reasons.join(' ') || 'its eligibility rules did not pass.'}`,
+            );
+          }
+        }
         const result = rateOrFail(m, req);
         let worksheetId: string | null = null;
         if (store) {
@@ -781,6 +814,107 @@ export const ratingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
           ).rows[0]!.id;
         }
         return { ...result, preview: !!manualId && m.status !== 'published', worksheetId };
+      }),
+  );
+
+  app.post(
+    '/v1/rating/quote',
+    {
+      config: { tenancy: 'platform', permission: 'rating:read' },
+      schema: {
+        tags: ['Rating'],
+        summary: 'Rate every selected benefit for every traveller in one request (E02-F05-S01)',
+        description:
+          'Each benefit uses the published manual for the state in effect on the rate date (or a labelled preview version from previewManuals). Totals per traveller, per benefit and per policy, and the amount on the billing basis when one is given. CFAR is rated only with a passed eligibility decision.',
+        body: QuoteRatingRequestSchema,
+        response: {
+          200: z.object({
+            kind: z.enum(['premium', 'loss_cost', 'mixed']),
+            illustrative: z.boolean(),
+            preview: z.boolean(),
+            lines: z.array(
+              z.object({
+                benefit: z.string(),
+                travellerId: z.string(),
+                result: RatingResultSchema,
+              }),
+            ),
+            notRated: z.array(z.object({ benefit: z.string(), reasons: z.array(z.string()) })),
+            perTraveller: z.array(z.object({ travellerId: z.string(), total: z.string() })),
+            perBenefit: z.array(z.object({ benefit: z.string(), total: z.string() })),
+            policyTotal: z.string(),
+            basis: z
+              .object({
+                basis: z.string(),
+                amount: z.string(),
+                unit: z.string(),
+                method: z.string(),
+                approved: z.boolean(),
+                fixedFeePerPolicy: z.string().nullable(),
+              })
+              .nullable(),
+          }),
+          ...commonErrors,
+        },
+      },
+    },
+    async (request) =>
+      withTx(deps.pool, request.ctx, async (tx) => {
+        const q = request.body;
+        const manuals = new Map<string, ManualRow>();
+        let preview = false;
+        for (const b of q.benefits) {
+          if (manuals.has(b.benefit)) continue;
+          const previewId = q.previewManuals?.[b.benefit];
+          let row: ManualRow | undefined;
+          if (previewId) {
+            row = await findManual(tx, previewId);
+            if (row.benefit !== b.benefit || row.state !== q.state)
+              throw new AppError(
+                'validation_failed',
+                `Preview manual for ${b.benefit} is a ${row.state} ${row.benefit} manual.`,
+              );
+            if (row.illustrative && !deps.config.ALLOW_ILLUSTRATIVE_RATING)
+              throw forbidden(
+                'Illustrative manuals are only rated in demonstration and sandbox environments.',
+              );
+            preview ||= row.status !== 'published';
+          } else {
+            row = (
+              await tx.query<ManualRow>(
+                `SELECT * FROM rating.manuals WHERE state = $1 AND benefit = $2 AND status = 'published'
+                    AND effective_from <= $3::date AND (effective_to IS NULL OR effective_to > $3::date)`,
+                [q.state, b.benefit, q.rateDate],
+              )
+            ).rows[0];
+          }
+          if (row) manuals.set(b.benefit, row);
+        }
+        try {
+          const result = rateQuote(q, (benefit) => {
+            const m = manuals.get(benefit);
+            if (!m)
+              throw new RatingError(
+                `No published ${benefit} manual is in effect in ${q.state} on ${q.rateDate}, so ${benefit} cannot be rated there.`,
+              );
+            return forRating(m);
+          });
+          return { ...result, preview };
+        } catch (err) {
+          if (err instanceof QuoteRatingError) {
+            throw new AppError(
+              'validation_failed',
+              err.problems.length === 1
+                ? err.problems[0]!.message
+                : `${err.problems.length} problems: the quote could not be rated.`,
+              err.problems
+                .slice(0, 100)
+                .map((p) => ({ code: 'rating', field: p.field ?? p.benefit, message: p.message })),
+            );
+          }
+          if (err instanceof RatingError) throw new AppError('validation_failed', err.message);
+          throw err;
+        }
       }),
   );
 

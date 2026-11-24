@@ -27,6 +27,9 @@ export const RATING_INPUTS = [
   'packageType',
   'penaltyDays',
   'productType',
+  'cfarPercent',
+  'cfarBasis',
+  'interruptionPercent',
 ] as const;
 export type RatingInput = (typeof RATING_INPUTS)[number];
 
@@ -45,6 +48,9 @@ export const RATING_INPUT_LABELS: Record<RatingInput, string> = {
   packageType: 'Package type',
   penaltyDays: 'Days before departure when the 100% penalty starts',
   productType: 'Product type',
+  cfarPercent: 'CFAR reimbursement percentage',
+  cfarBasis: 'CFAR basis (air or trip cost)',
+  interruptionPercent: 'Trip Interruption limit (% of trip cost)',
 };
 
 /** Keys of the peril and exclusion-waiver tables, which are read per covered reason or waived exclusion. */
@@ -88,8 +94,13 @@ export const ManualDocumentSchema = z.object({
   /** Base loss cost per exposure unit (per $100 of trip cost for Trip Cancellation). */
   baseLossCost: DecimalString,
   exposure: z.object({
-    kind: z.literal('per_100_trip_cost'),
-    /** The banded per-$100 trip cost table. */
+    /**
+     * What the base loss cost applies to, per $100: the trip cost (Trip Cancellation), the CFAR insured
+     * amount (the reimbursement percentage of the air or trip cost) or the Trip Interruption limit (its
+     * filed multiple of the trip cost).
+     */
+    kind: z.enum(['per_100_trip_cost', 'per_100_cfar_insured_cost', 'per_100_interruption_limit']),
+    /** The banded per-$100 table for the exposure amount. */
     table: z.string(),
   }),
   /** Trip costs from `from` to `to` rate as `ratesAs` (for example $1 to $500 rate as $500). */
@@ -183,6 +194,27 @@ export const COVERAGE_LEVEL_KEYS = [
   'host_at_destination',
 ] as const;
 
+/** Trip details shared by every benefit of a quote. */
+export const TripSchema = z.object({
+  costPerTraveller: DecimalString.optional(),
+  reservationTotal: DecimalString.optional(),
+  travellers: z.number().int().min(1).max(50).optional(),
+  purchaseDate: date,
+  departureDate: date,
+  returnDate: date,
+  initialDepositDate: date.nullable().optional(),
+  destinations: z
+    .array(
+      z.object({
+        region: z.string().max(40).nullable().optional(),
+        scope: z.enum(['domestic', 'international']).nullable().optional(),
+        days: z.number().int().min(1),
+      }),
+    )
+    .default([]),
+  penaltyDays: z.number().int().min(0).max(1000).nullable().optional(),
+});
+
 /** What a quote supplies for one traveller and one benefit. Missing values use unused/unknown factors or fail. */
 export const RatingRequestSchema = z.object({
   state: z.string().regex(/^[A-Z]{2}$/),
@@ -192,36 +224,15 @@ export const RatingRequestSchema = z.object({
     age: z.number().int().min(0).max(120).nullable().optional(),
     preExistingWaived: z.boolean().nullable().optional(),
   }),
-  trip: z
-    .object({
-      costPerTraveller: DecimalString.optional(),
-      reservationTotal: DecimalString.optional(),
-      travellers: z.number().int().min(1).max(50).optional(),
-      purchaseDate: date,
-      departureDate: date,
-      returnDate: date,
-      initialDepositDate: date.nullable().optional(),
-      destinations: z
-        .array(
-          z.object({
-            region: z.string().max(40).nullable().optional(),
-            scope: z.enum(['domestic', 'international']).nullable().optional(),
-            days: z.number().int().min(1),
-          }),
-        )
-        .default([]),
-      penaltyDays: z.number().int().min(0).max(1000).nullable().optional(),
-    })
-    .refine(
-      (t) =>
-        t.costPerTraveller !== undefined ||
-        (t.reservationTotal !== undefined && t.travellers !== undefined),
-      {
-        message:
-          'Give the cost per traveller, or the reservation total and the number of travellers',
-        path: ['costPerTraveller'],
-      },
-    ),
+  trip: TripSchema.refine(
+    (t) =>
+      t.costPerTraveller !== undefined ||
+      (t.reservationTotal !== undefined && t.travellers !== undefined),
+    {
+      message: 'Give the cost per traveller, or the reservation total and the number of travellers',
+      path: ['costPerTraveller'],
+    },
+  ),
   account: z.object({
     businessSegment: z.string().max(40).nullable().optional(),
     /** Variables the account does not collect: their tables' unused factors apply. */
@@ -243,9 +254,88 @@ export const RatingRequestSchema = z.object({
     supplemental: z
       .array(z.object({ code: z.string().max(40), amount: DecimalString }))
       .default([]),
+    /** Cancel for any reason: the plan's reimbursement percentage and basis (filed range 25% to 100%). */
+    cfar: z
+      .object({
+        percent: z.number().min(25).max(100),
+        basis: z.enum(['air', 'trip']),
+        /** Air cost per traveller, when the basis is air. */
+        airCost: DecimalString.optional(),
+      })
+      .refine((c) => c.basis === 'trip' || c.airCost !== undefined, {
+        message: 'Give the air cost when CFAR is on the air cost',
+        path: ['airCost'],
+      })
+      .optional(),
+    /** Trip Interruption: the plan's limit as a percentage of trip cost (for example 150). */
+    interruption: z.object({ limitPercent: z.number().min(1).max(1000) }).optional(),
   }),
 });
 export type RatingRequest = z.infer<typeof RatingRequestSchema>;
+
+/** CFAR is rated only when its eligibility rules pass (E02-F05-S02); the rules engine decides (Increment 7). */
+export const CfarEligibilitySchema = z.object({
+  passed: z.boolean(),
+  /** The rule set version or decision reference that made the decision. */
+  reference: z.string().min(1).max(200),
+  reasons: z.array(z.string()).default([]),
+});
+
+export const BILLING_BASES = [
+  'per_policy',
+  'per_100_trip_cost',
+  'per_100_limit',
+  'per_day',
+  'fixed_monthly',
+] as const;
+
+/** How a policy premium is expressed on the account's billing basis (E02-F06-S01). */
+export const BillingBasisSchema = z.object({
+  basis: z.enum(BILLING_BASES),
+  /** per_100_limit: the limit the rate is expressed against. */
+  limit: DecimalString.optional(),
+  /** fixed_monthly: the policies per month the actuarial method assumes. */
+  expectedPoliciesPerMonth: z.number().int().min(1).optional(),
+  /** A per-policy fee charged on top, with the remainder on the basis (combinations). */
+  fixedFeePerPolicy: DecimalString.optional(),
+  /** The approved conversion method: who approved it and when (stored with the account plan). */
+  approval: z.object({ approvedBy: z.string(), approvedOn: date }).nullable().default(null),
+});
+export type BillingBasis = z.infer<typeof BillingBasisSchema>;
+
+/** A quote's rating: several benefits for several travellers (E02-F05-S01). */
+export const QuoteRatingRequestSchema = z.object({
+  state: z.string().regex(/^[A-Z]{2}$/),
+  rateDate: date,
+  travellers: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(40),
+        age: z.number().int().min(0).max(120).nullable().optional(),
+        preExistingWaived: z.boolean().nullable().optional(),
+        /** Per-traveller cost when known; otherwise the reservation total is divided. */
+        costPerTraveller: DecimalString.optional(),
+      }),
+    )
+    .min(1)
+    .max(20),
+  trip: TripSchema.omit({ costPerTraveller: true, travellers: true }),
+  account: RatingRequestSchema.shape.account,
+  benefits: z
+    .array(
+      z.object({
+        benefit: z.string().regex(/^[A-Z]{2,8}$/),
+        plan: RatingRequestSchema.shape.plan,
+        cfarEligibility: CfarEligibilitySchema.optional(),
+      }),
+    )
+    .min(1)
+    .max(20),
+  billingBasis: BillingBasisSchema.optional(),
+  /** Preview unpublished manual versions by id (labelled); production quotes use published manuals only. */
+  previewManuals: z.record(z.string(), z.uuid()).optional(),
+});
+export type QuoteRatingRequest = z.infer<typeof QuoteRatingRequestSchema>;
 
 export const WorksheetStepSchema = z.object({
   step: z.string(),

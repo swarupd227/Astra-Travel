@@ -46,6 +46,13 @@ Decimal values are strings (`"1.4750"`), so nothing is lost to floating point.
 - **unknown**: the filed factor when the variable is collected but unknown, or matches no row.
 - **page**: the manual page, shown on every worksheet line that uses the table.
 
+## Exposure
+
+`exposure.kind` says what the base loss cost applies to, per $100: `per_100_trip_cost` (Trip
+Cancellation), `per_100_cfar_insured_cost` (the plan's CFAR reimbursement percentage of the air or trip
+cost) or `per_100_interruption_limit` (the plan's Trip Interruption limit as a percentage of trip cost).
+Tables can also be keyed by `cfarPercent`, `cfarBasis` and `interruptionPercent`.
+
 ## Formula
 
 `base loss cost × (trip cost / 100 × exposure factor) × variables × peril package × combined waivers +

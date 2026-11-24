@@ -190,8 +190,29 @@ export async function rateTrip(_prev: RateState, form: FormData): Promise<RateSt
             perils,
             waivedExclusions: list(text(form, 'waivedExclusions')),
             supplemental,
+            ...(text(form, 'cfarPercent')
+              ? {
+                  cfar: {
+                    percent: Number(text(form, 'cfarPercent')),
+                    basis: text(form, 'cfarBasis') === 'air' ? 'air' : 'trip',
+                    ...(text(form, 'airCost') ? { airCost: text(form, 'airCost') } : {}),
+                  },
+                }
+              : {}),
+            ...(text(form, 'interruptionPercent')
+              ? { interruption: { limitPercent: Number(text(form, 'interruptionPercent')) } }
+              : {}),
           },
         },
+        ...(text(form, 'cfarEligibility')
+          ? {
+              cfarEligibility: {
+                passed: text(form, 'cfarEligibility') === 'passed',
+                reference: text(form, 'cfarReference') || 'Entered in the rating calculator',
+                reasons: [],
+              },
+            }
+          : {}),
       },
     });
     return { status: 'success', message: 'Rated.', result, kept };

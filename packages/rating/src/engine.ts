@@ -159,6 +159,9 @@ export function deriveInputs(req: RatingRequest, sheet?: Sheet): RatingValues {
     packageType: req.plan.packageType,
     penaltyDays: t.penaltyDays ?? null,
     productType: req.plan.productType ?? null,
+    cfarPercent: req.plan.cfar?.percent ?? null,
+    cfarBasis: req.plan.cfar?.basis ?? null,
+    interruptionPercent: req.plan.interruption?.limitPercent ?? null,
   };
 }
 
@@ -273,9 +276,37 @@ export function rate(manual: ManualForRating, req: RatingRequest): RatingResult 
     values.tripCost = tripCost.toString();
   }
 
-  // Base loss cost x trip cost factor (E02-F03-S01).
+  // The exposure amount the base loss cost applies to (E02-F03-S01, E02-F05-S02, E02-F05-S03).
+  let exposureAmount = tripCost;
+  let exposureLabel = 'trip cost';
+  if (doc.exposure.kind === 'per_100_cfar_insured_cost') {
+    const cfar = req.plan.cfar;
+    if (!cfar)
+      throw new RatingError(
+        'This is a CFAR manual: give the plan\u2019s CFAR reimbursement percentage and basis.',
+        'plan.cfar',
+      );
+    const basisCost = cfar.basis === 'air' ? new D(cfar.airCost!) : tripCost;
+    exposureAmount = basisCost.mul(cfar.percent).div(100);
+    exposureLabel = 'CFAR insured amount';
+    sheet.add('derived.cfarInsuredAmount', 'CFAR insured amount', exposureAmount, {
+      note: `${cfar.percent}% of the ${cfar.basis} cost ${basisCost.toString()}`,
+    });
+  } else if (doc.exposure.kind === 'per_100_interruption_limit') {
+    const ti = req.plan.interruption;
+    if (!ti)
+      throw new RatingError(
+        'This is a Trip Interruption manual: give the plan\u2019s interruption limit as a percentage of trip cost.',
+        'plan.interruption',
+      );
+    exposureAmount = tripCost.mul(ti.limitPercent).div(100);
+    exposureLabel = 'Trip Interruption limit';
+    sheet.add('derived.interruptionLimit', 'Trip Interruption limit', exposureAmount, {
+      note: `${ti.limitPercent}% of the trip cost ${tripCost.toString()}`,
+    });
+  }
   const base = new D(doc.baseLossCost);
-  sheet.add('formula.baseLossCost', 'Base loss cost per $100 of trip cost', base);
+  sheet.add('formula.baseLossCost', `Base loss cost per $100 of ${exposureLabel}`, base);
   const exposure = tableById(doc, doc.exposure.table);
   const ex = lookup(exposure, values, notCollected);
   sheet.add(`table.${exposure.id}`, exposure.name, ex.factor, {
@@ -284,10 +315,13 @@ export function rate(manual: ManualForRating, req: RatingRequest): RatingResult 
     page: exposure.page,
     note: ex.why,
   });
-  const tripCostFactor = tripCost.div(100).mul(ex.factor);
-  sheet.add('formula.tripCostFactor', 'Trip cost factor', tripCostFactor, {
-    note: `${tripCost.toString()} / 100 x ${ex.factor.toString()}`,
-  });
+  const tripCostFactor = exposureAmount.div(100).mul(ex.factor);
+  sheet.add(
+    'formula.tripCostFactor',
+    exposureLabel === 'trip cost' ? 'Trip cost factor' : `Exposure factor (${exposureLabel})`,
+    tripCostFactor,
+    { note: `${exposureAmount.toString()} / 100 x ${ex.factor.toString()}` },
+  );
 
   // Rating variables, multiplied.
   let product = new D(1);

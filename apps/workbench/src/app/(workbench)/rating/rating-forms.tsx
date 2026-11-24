@@ -461,6 +461,63 @@ export function RatingCalculator({ manuals }: { manuals: { id: string; label: st
             )}
           </Field>
         </fieldset>
+        <fieldset className="grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-2">
+          <legend className="px-1 text-sm font-medium text-fg">
+            CFAR and Trip Interruption (when the manual needs them)
+          </legend>
+          <Field label="CFAR reimbursement (%)" hint="Filed range 25 to 100.">
+            {(f) => (
+              <Input
+                id={f.id}
+                name="cfarPercent"
+                inputMode="numeric"
+                defaultValue={k('cfarPercent')}
+                aria-describedby={f.describedBy}
+              />
+            )}
+          </Field>
+          <Field label="CFAR basis">
+            {(f) => (
+              <Select id={f.id} name="cfarBasis" defaultValue={k('cfarBasis', 'trip')}>
+                <option value="trip">Trip cost</option>
+                <option value="air">Air cost</option>
+              </Select>
+            )}
+          </Field>
+          <Field label="Air cost per traveller">
+            {(f) => (
+              <Input id={f.id} name="airCost" inputMode="decimal" defaultValue={k('airCost')} />
+            )}
+          </Field>
+          <Field
+            label="CFAR eligibility decision"
+            hint="From the CFAR eligibility rules (Increment 7)."
+          >
+            {(f) => (
+              <Select
+                id={f.id}
+                name="cfarEligibility"
+                defaultValue={k('cfarEligibility')}
+                aria-describedby={f.describedBy}
+              >
+                <option value="">Not given</option>
+                <option value="passed">Passed</option>
+                <option value="failed">Did not pass</option>
+              </Select>
+            )}
+          </Field>
+          <Field label="Trip Interruption limit (% of trip cost)" hint="For example 150.">
+            {(f) => (
+              <Input
+                id={f.id}
+                name="interruptionPercent"
+                inputMode="numeric"
+                defaultValue={k('interruptionPercent')}
+                aria-describedby={f.describedBy}
+              />
+            )}
+          </Field>
+        </fieldset>
         {state.status === 'error' ? <FormMessage state={state} /> : null}
         <SubmitButton pendingLabel="Rating…">
           <Calculator aria-hidden className="size-4" /> Rate
