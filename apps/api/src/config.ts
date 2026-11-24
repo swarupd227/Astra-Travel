@@ -28,6 +28,8 @@ const EnvSchema = z.object({
   AGENT_TOKEN_PUBLIC_KEY: z.string().optional(),
   /** Where uploaded files (eligibility feeds) are kept. Azure uses Blob Storage instead. */
   FILE_STORE_DIR: z.string().default('../../var/files'),
+  /** Demonstration and sandbox only: allows illustrative manuals (estimated loadings), always labelled. */
+  ALLOW_ILLUSTRATIVE_RATING: bool,
   /** Largest eligibility feed accepted, in bytes (default 4 GiB: about 50 million records). */
   CARD_FEED_MAX_BYTES: z.coerce
     .number()
@@ -46,6 +48,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   }
   if (parsed.data.NODE_ENV === 'production' && parsed.data.ALLOW_PRIVATE_WEBHOOK_TARGETS) {
     throw new Error('ALLOW_PRIVATE_WEBHOOK_TARGETS must not be enabled in production.');
+  }
+  if (parsed.data.NODE_ENV === 'production' && parsed.data.ALLOW_ILLUSTRATIVE_RATING) {
+    throw new Error(
+      'ALLOW_ILLUSTRATIVE_RATING must not be enabled in production: unfiled prices are never charged.',
+    );
   }
   return parsed.data;
 }

@@ -16,7 +16,9 @@ export type NavIcon =
   | 'check'
   | 'file'
   | 'stamp'
-  | 'database';
+  | 'database'
+  | 'table'
+  | 'calculator';
 
 export interface NavItem {
   href: string;
@@ -92,6 +94,25 @@ export const NAVIGATION: NavSection[] = [
         permission: 'refdata:read',
         description:
           'States, countries, regions, segments, prohibited destinations and tax tables, versioned.',
+      },
+    ],
+  },
+  {
+    label: 'Rating',
+    items: [
+      {
+        href: '/rating/manuals',
+        label: 'Rate manuals',
+        icon: 'table',
+        permission: 'rating:read',
+        description: 'Filed manuals, their tables and formula, parity and publication.',
+      },
+      {
+        href: '/rating/calculator',
+        label: 'Rating calculator',
+        icon: 'calculator',
+        permission: 'rating:read',
+        description: 'Rate a trip and see the full worksheet.',
       },
     ],
   },

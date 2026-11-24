@@ -11,6 +11,8 @@ export default tseslint.config(
       '**/playwright-report/**',
       '**/test-results/**',
       '**/next-env.d.ts',
+      // Local, git-ignored files (uploads, scratch tools).
+      'var/**',
     ],
   },
   js.configs.recommended,

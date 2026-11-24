@@ -110,6 +110,7 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
     SECRETS_KEK: randomBytes(32).toString('base64'),
     RATE_LIMIT_PER_MINUTE: 10_000,
     ALLOW_PRIVATE_WEBHOOK_TARGETS: false,
+    ALLOW_ILLUSTRATIVE_RATING: false,
     FILE_STORE_DIR: mkdtempSync(join(tmpdir(), 'astra-files-')),
     CARD_FEED_MAX_BYTES: 64 * 1024 * 1024,
     ...overrides,
@@ -118,7 +119,11 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
   const app = await buildApp({
     config,
     pool,
-    logger: createLogger('astra-api-test', 'fatal'),
+    // TEST_LOG_LEVEL=error shows server-side errors while debugging a test.
+    logger: createLogger(
+      'astra-api-test',
+      (process.env.TEST_LOG_LEVEL as 'error' | undefined) ?? 'fatal',
+    ),
     flags: new FeatureFlags(pool, 0),
     secrets: new SecretBox({ test: config.SECRETS_KEK }, 'test'),
     files,
@@ -162,7 +167,7 @@ export async function resetDatabase(): Promise<void> {
     await client.query(`TRUNCATE platform.event_deliveries, platform.outbox, platform.idempotency_keys,
                         platform.feature_flag_overrides, integration.webhook_subscriptions, card.feed_records, platform.people, platform.accounts CASCADE`);
     await client.query(`TRUNCATE refdata.entries, refdata.versions, compliance.filing_events, compliance.filings,
-                        studio.benefit_catalogues, studio.form_variables, studio.variable_maps, studio.form_editions CASCADE`);
+                        rating.worksheets, rating.parity_runs, rating.parity_cases, rating.manuals, studio.benefit_catalogues, studio.form_variables, studio.variable_maps, studio.form_editions CASCADE`);
     await client.query(`UPDATE platform.feature_flags SET enabled = true`);
   } finally {
     await client.end();

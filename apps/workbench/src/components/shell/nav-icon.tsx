@@ -1,6 +1,7 @@
 import {
   Activity,
   BadgeCheck,
+  Calculator,
   Bot,
   Building2,
   CreditCard,
@@ -13,6 +14,7 @@ import {
   ShieldCheck,
   Sparkles,
   Stamp,
+  Table2,
   UserRound,
   Webhook,
 } from 'lucide-react';
@@ -35,6 +37,8 @@ const ICONS = {
   file: FileText,
   stamp: Stamp,
   database: Database,
+  table: Table2,
+  calculator: Calculator,
 } as const;
 
 export function NavIcon({ name, className }: { name: NavIconName; className?: string }) {

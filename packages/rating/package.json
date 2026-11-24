@@ -1,0 +1,20 @@
+{
+  "name": "@astra/rating",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Rating engine: rate manual evaluation, worksheets and parity (M2, E02)",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fixtures": "./src/fixtures.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@astra/contracts": "0.1.0",
+    "@astra/platform": "0.1.0",
+    "@astra/studio": "0.1.0",
+    "decimal.js": "10.4.3"
+  }
+}

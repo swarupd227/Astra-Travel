@@ -9,3 +9,4 @@ export * from './refdata';
 export * from './compliance';
 export * from './studio';
 export * from './catalogue';
+export * from './rating';
