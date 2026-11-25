@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/primitives';
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
+import { ButtonLink } from '@/components/ui/button';
 import { ChangeStatusDialog } from '../account-forms';
 
 export const metadata = { title: 'Account' };
@@ -67,6 +68,9 @@ export default async function AccountPage({
         description={<span className="font-mono">{a.code}</span>}
         actions={
           <>
+            <ButtonLink href={`/accounts/${a.id}/setup`} variant="secondary">
+              Onboarding and configuration
+            </ButtonLink>
             <Badge tone={ACCOUNT_STATUS_TONES[a.status]}>{sentenceCase(a.status)}</Badge>
             {me.permissions.includes('accounts:manage') ? (
               <ChangeStatusDialog accountId={a.id} current={a.status} />

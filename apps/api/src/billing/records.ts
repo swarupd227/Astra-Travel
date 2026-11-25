@@ -83,9 +83,11 @@ function weights(t: Transaction): { benefits: Stored['benefits']; travellers: St
   return { benefits, travellers };
 }
 
-export async function recordTransaction(tx: Tx, t: Transaction, now: Date = new Date()): Promise<string> {
+export async function recordTransaction(tx: Tx, t: Transaction, now: Date = new Date()): Promise<string | null> {
+  const acc = (await tx.query<{ name: string; sandbox: boolean }>(`SELECT name, sandbox FROM platform.accounts WHERE id = $1`, [t.policy.accountId])).rows[0];
+  // A sandbox account's transactions are synthetic: they are never billed (docs/adr/0014).
+  if (acc?.sandbox) return null;
   await tx.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`billing:${t.policy.accountId}`]);
-  const acc = (await tx.query<{ name: string }>(`SELECT name FROM platform.accounts WHERE id = $1`, [t.policy.accountId])).rows[0];
   const w = weights(t);
   const charge = toCents(t.money.charge);
   const refund = toCents(t.money.refund);

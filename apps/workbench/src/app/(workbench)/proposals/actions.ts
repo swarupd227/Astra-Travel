@@ -125,3 +125,53 @@ export async function loadDraftManual(_prev: ActionState, form: FormData): Promi
   revalidatePath(`/proposals/${id}`);
   redirect(`/proposals/${id}?done=loaded&manual=${loaded.id}`);
 }
+
+const PROFILE_FIELDS = ['contractReference', 'contractSignedOn', 'states', 'plans', 'integrationMethod', 'rateBasis', 'settlement'] as const;
+const asList = (v: string) => v.split(/[\s,]+/).map((x) => x.trim()).filter(Boolean);
+
+/**
+ * Applies the onboarding fields a person accepted (with their corrections) through the ordinary APIs, so the same
+ * checks and approvals apply: the profile, a segment request for an underwriter, the collected variables. Then
+ * records what was accepted, corrected and rejected.
+ */
+export async function applyOnboardingDraft(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const id = text(form, 'proposalId');
+  const accountId = text(form, 'accountId');
+  const all = JSON.parse(text(form, 'items') || '[]') as { field: string; original: string }[];
+  const picked = all.filter((f) => form.get(`pick:${f.field}`) === 'on');
+  if (picked.length === 0) return { status: 'error', message: 'Choose at least one field to apply, or reject the proposal.', fieldErrors: {}, values: {} };
+  const value = (field: string) => text(form, `value:${field}`);
+  const profile: Record<string, unknown> = {};
+  try {
+    for (const f of picked) {
+      const v = value(f.field);
+      if ((PROFILE_FIELDS as readonly string[]).includes(f.field)) {
+        profile[f.field] = f.field === 'states' ? asList(v).map((x) => x.toUpperCase()) : f.field === 'plans' ? asList(v).map((x) => x.toUpperCase()) : f.field === 'rateBasis' || f.field === 'settlement' ? JSON.parse(v) : v;
+      }
+    }
+  } catch {
+    return { status: 'error', message: 'A billing basis or settlement value is not valid JSON. Correct it and try again.', fieldErrors: {}, values: {} };
+  }
+  try {
+    if (Object.keys(profile).length) await api(`/v1/accounts/${encodeURIComponent(accountId)}/profile`, { method: 'PUT', body: profile, idempotencyKey: randomUUID() });
+    const segment = picked.find((f) => f.field === 'segment');
+    if (segment) {
+      await api(`/v1/accounts/${encodeURIComponent(accountId)}/segment-changes`, { method: 'POST', body: { segment: value('segment'), effectiveFrom: new Date().toISOString().slice(0, 10), reason: 'Drafted from the contract by the Account Onboarding agent and approved by an account manager' }, idempotencyKey: randomUUID() });
+    }
+    const collected = picked.find((f) => f.field === 'notCollected');
+    if (collected) {
+      await api(`/v1/accounts/${encodeURIComponent(accountId)}/collected-variables`, { method: 'PUT', body: { notCollected: asList(value('notCollected')), reason: 'Drafted from the contract and approved by an account manager' }, idempotencyKey: randomUUID() });
+    }
+    const pickedIds = new Set(picked.map((f) => f.field));
+    await resolve(id, {
+      accepted: picked.filter((f) => value(f.field) === f.original).map((f) => f.field),
+      corrected: picked.filter((f) => value(f.field) !== f.original).map((f) => f.field),
+      rejected: all.filter((f) => !pickedIds.has(f.field)).map((f) => f.field),
+      note: text(form, 'note') || undefined,
+    });
+  } catch (err) {
+    return fromError(err, form);
+  }
+  revalidatePath(`/proposals/${id}`);
+  redirect(`/proposals/${id}?done=onboarding&account=${accountId}`);
+}

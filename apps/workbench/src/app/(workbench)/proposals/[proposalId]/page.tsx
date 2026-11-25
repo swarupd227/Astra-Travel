@@ -11,11 +11,23 @@ import { Badge, Card, CardHeader, DescriptionList, Notice, PageHeader } from '@/
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
 import { FindingsReview } from '../../documents/document-forms';
+import { OnboardingReview, type OnboardingItem } from '../onboarding-review';
 import { CloseProposalForm, ManualReview, MarkReviewedForm, VariableReview, type ManualTable, type VariableItem } from '../proposal-forms';
 
 export const metadata = { title: 'Agent proposal' };
 
 type Check = { item: string; ok: boolean; detail: string };
+const ONBOARDING_FIELD_LABELS: Record<string, string> = {
+  contractReference: 'Contract reference',
+  contractSignedOn: 'Contract signed on',
+  states: 'States the account sells in',
+  plans: 'Plans',
+  integrationMethod: 'Integration method',
+  rateBasis: 'Billing basis (JSON)',
+  settlement: 'Settlement terms (JSON)',
+  segment: 'Business segment',
+  notCollected: 'Rating variables not collected',
+};
 
 export default async function ProposalPage({ params, searchParams }: { params: Promise<{ proposalId: string }>; searchParams: Promise<{ done?: string; map?: string; manual?: string }> }) {
   const me = (await getMe())!;
@@ -29,17 +41,20 @@ export default async function ProposalPage({ params, searchParams }: { params: P
   const p = res.data;
   const names = await peopleNames([p.requestedBy, p.resolvedBy]);
   const open = p.status === 'open';
-  const canManage = me.permissions.includes(p.kind === 'variable_map' ? 'forms:manage' : p.kind === 'document_quality' ? 'documents:release' : 'rating:manage');
+  const canManage = me.permissions.includes(p.kind === 'variable_map' ? 'forms:manage' : p.kind === 'document_quality' ? 'documents:release' : p.kind === 'account_onboarding' ? 'accounts:manage' : 'rating:manage');
   const checks = new Map((p.verification as Check[]).map((c) => [c.item, c]));
   const content = p.content as {
     items?: { variable?: FormVariableInput; rationale?: string; caseId?: string; step?: string; explanation?: string; manualPage?: string; workbookCell?: { row: number; column: string } }[];
     manual?: { code: string; state: string; benefit: string; effectiveFrom: string; document: { tables: { id: string; name: string; page: string; rows: unknown[] }[] } };
     uncertainties?: string[];
     findings?: { quote: string; issue: string; severity?: 'hold' | 'note' }[];
+    fields?: { field: string; value: unknown; documentId: string; excerpt: string; note?: string }[];
   };
 
   const back =
-    p.subjectType === 'document_template'
+    p.subjectType === 'account'
+      ? { href: `/accounts/${p.subjectId}/setup`, label: 'Account setup' }
+      : p.subjectType === 'document_template'
       ? { href: `/documents/templates/${p.subjectId}`, label: 'Document template' }
       : p.subjectType === 'document'
         ? { href: `/documents/${p.subjectId}`, label: 'Document' }
@@ -47,6 +62,8 @@ export default async function ProposalPage({ params, searchParams }: { params: P
           ? { href: `/rating/manuals/${p.subjectId}`, label: 'Rate manual' }
           : { href: `/forms/${p.subjectId}`, label: p.kind === 'variable_map' ? 'Form edition' : 'Rate manual document' };
 
+  const accountDocs = p.kind === 'account_onboarding' ? await load(() => api<{ items: { id: string; fileName: string }[] }>(`/v1/accounts/${p.subjectId}/documents`)) : null;
+  const docName = (id: string) => accountDocs?.data?.items.find((d) => d.id === id)?.fileName ?? 'the document';
   const edition = p.subjectType === 'form_edition' ? await load(() => api<{ formNumber: string; edition: string; title: string; pageCount: number }>(`/v1/form-editions/${p.subjectId}`)) : null;
   const text = p.kind === 'variable_map' ? await load(() => api<{ text: string; pageStarts: number[] }>(`/v1/form-editions/${p.subjectId}/text`)) : null;
   const pageOf = (offset: number) => (text?.data ? text.data.pageStarts.filter((s) => s <= offset).length || 1 : null);
@@ -82,6 +99,14 @@ export default async function ProposalPage({ params, searchParams }: { params: P
             . A second analyst approves it, and it is published only after it is filed and every parity case matches.
           </Notice>
         ) : null}
+        {done === 'onboarding' ? (
+          <Notice tone="success" title="Applied">
+            The fields you ticked were saved through the ordinary checks.{' '}
+            <Link className="font-medium text-primary hover:underline" href={`/accounts/${p.subjectId}/setup`}>
+              Open the account setup
+            </Link>
+          </Notice>
+        ) : null}
         {done === 'rejected' ? <Notice tone="neutral" title="Proposal rejected">Nothing was saved. The decision is recorded for the agent’s review.</Notice> : null}
         {done === 'reviewed' ? <Notice tone="success" title="Marked as reviewed">The review is recorded.</Notice> : null}
         <Notice tone="neutral" title="Proposed by an agent, not saved">
@@ -91,7 +116,7 @@ export default async function ProposalPage({ params, searchParams }: { params: P
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <Card className="min-w-0">
-          <CardHeader title={p.kind === 'variable_map' ? 'Proposed variables' : p.kind === 'rate_manual' ? 'Drafted manual' : p.kind === 'document_quality' ? 'Findings' : 'Differences explained'} />
+          <CardHeader title={p.kind === 'variable_map' ? 'Proposed variables' : p.kind === 'rate_manual' ? 'Drafted manual' : p.kind === 'document_quality' ? 'Findings' : p.kind === 'account_onboarding' ? 'Drafted onboarding fields' : 'Differences explained'} />
           <div className="space-y-4 p-5">
             {p.kind === 'variable_map' ? (
               canManage || !open ? (
@@ -129,6 +154,21 @@ export default async function ProposalPage({ params, searchParams }: { params: P
                   tables={content.manual.document.tables.map<ManualTable>((t) => ({ id: t.id, name: t.name, page: t.page, rows: t.rows.length, ok: checks.get(t.id)?.ok ?? null, detail: checks.get(t.id)?.detail ?? '' }))}
                 />
               </>
+            ) : null}
+            {p.kind === 'account_onboarding' ? (
+              <OnboardingReview
+                proposalId={p.id}
+                accountId={p.subjectId}
+                open={open && canManage}
+                items={(content.fields ?? []).map<OnboardingItem>((f) => ({
+                  field: f.field,
+                  label: ONBOARDING_FIELD_LABELS[f.field] ?? f.field,
+                  value: Array.isArray(f.value) ? f.value.join(', ') : typeof f.value === 'object' && f.value !== null ? JSON.stringify(f.value) : String(f.value),
+                  documentName: docName(f.documentId),
+                  excerpt: f.excerpt,
+                  note: f.note ?? null,
+                }))}
+              />
             ) : null}
             {p.kind === 'document_quality' ? (
               open && canManage ? (
@@ -223,7 +263,7 @@ export default async function ProposalPage({ params, searchParams }: { params: P
               ) : null}
             </div>
           </Card>
-          {open && canManage && p.kind !== 'parity_explanation' && p.kind !== 'document_quality' ? (
+          {open && canManage && p.kind !== 'parity_explanation' && p.kind !== 'document_quality' && p.kind !== 'account_onboarding' ? (
             <Card>
               <CardHeader title="Not useful?" description="Rejecting records that nothing was taken from it." />
               <div className="p-5">

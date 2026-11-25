@@ -29,6 +29,7 @@ import { buildQuote, HELD_REASON, normalise, REFERRED_REASON, todayUtc, type Bui
 import { runEvaluation } from './underwriting-evaluate';
 import { issuePolicyDocuments } from '../documents/issue';
 import { recordTransaction } from '../billing/records';
+import { salesAllowed } from '../accounts/config';
 
 /** Quotes, bind, the policy record and cover verification (E04, E05). Design: docs/adr/0010. */
 
@@ -263,6 +264,8 @@ export const policyRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
             return conflict(`This quote is already bound as policy ${n?.number ?? ''}.`);
           }
           if (quote.status === 'expired') return conflict('This quote has expired; make a new one.');
+          const sale = await salesAllowed(tx, q.account_id, q.state, today);
+          if (!sale.allowed) return new AppError('precondition_failed', sale.reason!, [{ code: 'sales_blocked', field: 'state', message: sale.reason! }]);
           const bindErrors: { code: string; field: string; message: string }[] = [];
           // A referral or hold is handled below (it raises or checks a referral); everything else refuses the bind.
           const hard = quote.notBindable.filter((r) => r !== REFERRED_REASON && r !== HELD_REASON);

@@ -420,6 +420,53 @@ export const applyPolicyChange = defineTool({
   run: (i, api) => api.post(`/v1/policies/${i.policyId}/servicing`, { request: i.request, confirmAmount: i.confirmAmount, agentConfirmation: i.agentConfirmation }, { 'idempotency-key': `agent-${api.correlationId}-${i.policyId}` }),
 });
 
+export const getAccountProfile = defineTool({
+  name: 'get_account_profile',
+  description: 'Get an account’s onboarding profile (contract reference and date, states, plans, integration method, billing basis, settlement terms) and its onboarding checklist, so you propose only what is missing or different.',
+  input: z.strictObject({ accountId: z.uuid() }),
+  permission: 'accounts:read',
+  risk: 'read',
+  run: async (i, api) => ({ profile: await api.get(`/v1/accounts/${i.accountId}/profile`), onboarding: await api.get(`/v1/accounts/${i.accountId}/onboarding`) }),
+});
+
+export const listAccountDocuments = defineTool({
+  name: 'list_account_documents',
+  description: 'List the contract and term sheet uploaded for an account: id, kind, file name and page count.',
+  input: z.strictObject({ accountId: z.uuid() }),
+  permission: 'accounts:read',
+  risk: 'read',
+  run: (i, api) => api.get(`/v1/accounts/${i.accountId}/documents`),
+});
+
+export const readAccountDocument = defineTool({
+  name: 'read_account_document',
+  description: 'Read a contract or term sheet by page. Without a page it returns the page count and the first 160 characters of every page; with a page it returns that page’s text.',
+  input: z.strictObject({ documentId: z.uuid(), page: z.number().int().min(1).max(2000).optional() }),
+  permission: 'accounts:read',
+  risk: 'read',
+  run: async (i, api) => {
+    const t = await api.get<EditionText & { fileName: string; kind: string }>(`/v1/account-documents/${i.documentId}/text`);
+    const pages = t.pageStarts.length ? t.pageStarts.length : 1;
+    if (i.page === undefined) return { fileName: t.fileName, kind: t.kind, pages, outline: Array.from({ length: pages }, (_, n) => ({ page: n + 1, begins: pageSlice(t, n + 1)!.text.slice(0, 160) })) };
+    return pageSlice(t, i.page) ?? { error: `The document has ${pages} pages.` };
+  },
+});
+
+export const submitOnboardingDraft = defineTool({
+  name: 'submit_onboarding_draft',
+  description:
+    'Submit the onboarding fields you drafted from the account’s contract and term sheet. Each field needs the document it comes from and the exact wording (excerpt) that supports it; the platform checks the wording is in the document and the value is valid. Nothing is saved: an account manager approves, corrects or rejects every field. Fields: contractReference (text), contractSignedOn (YYYY-MM-DD), states (two-letter codes), plans (plan codes), integrationMethod (api, files, mulesoft or widget), rateBasis ({ basis, ... }), settlement ({ description, paymentDays }), segment (a code from the filed list), notCollected (rating inputs). Leave out any field the documents do not state.',
+  input: z.strictObject({
+    kind: z.literal('account_onboarding'),
+    accountId: z.uuid(),
+    summary: z.string().min(5).max(1000),
+    fields: z.array(z.strictObject({ field: z.string(), value: z.unknown(), documentId: z.uuid(), excerpt: z.string().min(3).max(800), note: z.string().max(500).optional() })).min(1).max(40),
+  }),
+  permission: 'proposals:create',
+  risk: 'propose',
+  run: (i, api) => api.post('/v1/agent-proposals', i),
+});
+
 export const TOOL_CATALOGUE: Record<string, ToolDefinition> = Object.fromEntries(
   [
     listAccounts,
@@ -449,6 +496,10 @@ export const TOOL_CATALOGUE: Record<string, ToolDefinition> = Object.fromEntries
     getPolicy,
     previewPolicyChange,
     applyPolicyChange,
+    getAccountProfile,
+    listAccountDocuments,
+    readAccountDocument,
+    submitOnboardingDraft,
   ].map((t) => [
     t.name,
     t as unknown as ToolDefinition,

@@ -91,6 +91,13 @@ export const NAVIGATION: NavSection[] = [
         description: 'Base, state and account plans: build, approve, test and publish.',
       },
       {
+        href: '/compliance/licences',
+        label: 'Licences',
+        icon: 'stamp',
+        permission: 'accounts:read',
+        description: 'Retailer registrations and producer licences by state, with expiry alerts.',
+      },
+      {
         href: '/compliance/filings',
         label: 'Filing register',
         icon: 'stamp',

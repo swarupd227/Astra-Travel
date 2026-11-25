@@ -7,6 +7,7 @@ const { createLogger, createPool, FeatureFlags, LocalFileStore, PeopleDirectory,
 const { loadConfig } = await import('./config');
 const { Authenticator, parseGroupRoleMap } = await import('./auth/authenticator');
 const { buildApp } = await import('./app');
+const { KeycloakIssuer } = await import('./accounts/credentials');
 const { AgentTokenVerifier } = await import('@astra/agents/agent-token');
 const { agentStatusChecker } = await import('./auth/agent-status');
 
@@ -30,6 +31,9 @@ const app = await buildApp({
   flags: new FeatureFlags(pool),
   secrets: SecretBox.fromEnv(),
   files: new LocalFileStore(config.FILE_STORE_DIR),
+  ...(config.IDP_ADMIN_URL && config.IDP_ADMIN_CLIENT_ID && config.IDP_ADMIN_CLIENT_SECRET
+    ? { credentials: new KeycloakIssuer({ url: config.IDP_ADMIN_URL, realm: config.IDP_REALM, adminClientId: config.IDP_ADMIN_CLIENT_ID, adminClientSecret: config.IDP_ADMIN_CLIENT_SECRET, audience: config.OIDC_AUDIENCE, partnerGroup: 'astra-partner-developer' }) }
+    : {}),
   people: new PeopleDirectory(pool, logger),
   authenticator: new Authenticator({
     issuer: config.OIDC_ISSUER,

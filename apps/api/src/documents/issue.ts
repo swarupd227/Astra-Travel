@@ -90,7 +90,9 @@ export async function issuePolicyDocuments(
   const wanted: DocumentKind[] = ['purchase_confirmation', 'schedule', ...(plan.policy_edition_id ? (['policy'] as const) : [])];
   const out: IssuedRef[] = [];
   const actor = ctx.principal.subject;
-  const email = p.snapshot.purchaser.email;
+  // A sandbox account's documents are made but never emailed.
+  const sandbox = (await tx.query<{ sandbox: boolean }>(`SELECT sandbox FROM platform.accounts WHERE id = $1`, [p.accountId])).rows[0]?.sandbox ?? false;
+  const email = sandbox ? null : p.snapshot.purchaser.email;
 
   for (const kind of wanted) {
     const existing = have.find((h) => h.kind === kind);
@@ -203,7 +205,7 @@ export async function issueNotice(tx: Tx, files: FileStore, ctx: RequestContext,
     source: `builder ${BUILDER_VERSION}`,
     version: null,
     model,
-    email: after.record.purchaser.email,
+    email: (await tx.query<{ sandbox: boolean }>(`SELECT sandbox FROM platform.accounts WHERE id = $1`, [pol.account_id])).rows[0]?.sandbox ? null : after.record.purchaser.email,
     actor: ctx.principal.subject,
   });
   await publishEvent(tx, ctx, DocumentIssued, { documentId: id, kind, policyId, policyNumber: after.record.number, status: 'issued' }, { accountId: pol.account_id });

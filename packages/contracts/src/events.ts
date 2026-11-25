@@ -311,7 +311,7 @@ export const AgentProposalRaised = defineEvent({
   source: 'astra.agents',
   schema: z.object({
     proposalId: z.uuid(),
-    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality']),
+    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality', 'account_onboarding']),
     agentId: z.string(),
     subjectId: z.uuid(),
     items: z.number().int(),
@@ -324,7 +324,7 @@ export const AgentProposalResolved = defineEvent({
   source: 'astra.agents',
   schema: z.object({
     proposalId: z.uuid(),
-    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality']),
+    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality', 'account_onboarding']),
     agentId: z.string(),
     accepted: z.number().int(),
     corrected: z.number().int(),
@@ -426,6 +426,14 @@ export const BillingBatchFailed = defineEvent({
   schema: z.object({ batchId: z.uuid(), number: z.number().int(), status: z.enum(['mismatch', 'unconfirmed', 'rejected']), reason: z.string() }),
 });
 
+/** Raised 60 and 30 days before a licence or registration expires (E07-F03-S01). */
+export const LicenceExpiring = defineEvent({
+  type: 'LicenceExpiring',
+  version: 1,
+  source: 'astra.accounts',
+  schema: z.object({ accountId: z.uuid(), licenceId: z.uuid(), kind: z.string(), state: z.string(), number: z.string(), expiresOn: z.string(), daysLeft: z.number().int(), threshold: z.number().int() }),
+});
+
 export const EVENT_CATALOGUE = [
   AccountRegistered,
   AccountStatusChanged,
@@ -464,6 +472,7 @@ export const EVENT_CATALOGUE = [
   BillingBatchCreated,
   BillingBatchConfirmed,
   BillingBatchFailed,
+  LicenceExpiring,
 ] as const;
 
 export type CatalogueEventType = (typeof EVENT_CATALOGUE)[number]['type'];

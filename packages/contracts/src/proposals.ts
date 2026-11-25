@@ -2,10 +2,11 @@ import { z } from 'zod';
 import { FormVariableInputSchema } from './studio';
 import { CreateManualRequestSchema } from './rating';
 import { DocumentFindingSchema } from './documents';
+import { OnboardingFieldProposalSchema } from './onboarding';
 
 /** Agent proposals (E01-F01-S03, E02-F01-S02, E02-F07-S03). Design: docs/adr/0009. */
 
-export const PROPOSAL_KINDS = ['variable_map', 'rate_manual', 'parity_explanation', 'document_quality'] as const;
+export const PROPOSAL_KINDS = ['variable_map', 'rate_manual', 'parity_explanation', 'document_quality', 'account_onboarding'] as const;
 export type ProposalKind = (typeof PROPOSAL_KINDS)[number];
 
 export const PROPOSAL_KIND_LABELS: Record<ProposalKind, string> = {
@@ -13,6 +14,7 @@ export const PROPOSAL_KIND_LABELS: Record<ProposalKind, string> = {
   rate_manual: 'Rate manual draft',
   parity_explanation: 'Parity explanation',
   document_quality: 'Document quality findings',
+  account_onboarding: 'Account onboarding draft',
 };
 
 // ---------------- What an agent submits ----------------
@@ -68,7 +70,15 @@ export const SubmitDocumentQualitySchema = z.object({
   findings: z.array(DocumentFindingSchema).max(100),
 });
 
-export const SubmitProposalSchema = z.discriminatedUnion('kind', [SubmitVariableMapSchema, SubmitRateManualSchema, SubmitParityExplanationSchema, SubmitDocumentQualitySchema]);
+export const SubmitAccountOnboardingSchema = z.object({
+  kind: z.literal('account_onboarding'),
+  accountId: z.uuid(),
+  summary: z.string().trim().min(5).max(1000),
+  /** Each field with the wording of the contract or term sheet it comes from. */
+  fields: z.array(OnboardingFieldProposalSchema).min(1).max(40),
+});
+
+export const SubmitProposalSchema = z.discriminatedUnion('kind', [SubmitVariableMapSchema, SubmitRateManualSchema, SubmitParityExplanationSchema, SubmitDocumentQualitySchema, SubmitAccountOnboardingSchema]);
 export type SubmitProposal = z.infer<typeof SubmitProposalSchema>;
 
 // ---------------- What is stored and shown ----------------
@@ -87,7 +97,7 @@ export const ProposalSchema = z.object({
   agentName: z.string(),
   runId: z.uuid().nullable(),
   requestedBy: z.string(),
-  subjectType: z.enum(['form_edition', 'rate_manual', 'document_template', 'document']),
+  subjectType: z.enum(['form_edition', 'rate_manual', 'document_template', 'document', 'account']),
   subjectId: z.uuid(),
   summary: z.string(),
   content: z.record(z.string(), z.unknown()),

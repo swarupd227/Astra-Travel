@@ -16,7 +16,8 @@ import {
   type Pool,
 } from '@astra/platform';
 import { defaultGroupForRole, type Role } from '@astra/contracts';
-import { buildApp } from '../src/app';
+import { buildApp, type AppDeps } from '../src/app';
+import type { CredentialIssuer } from '../src/accounts/credentials';
 import { Authenticator } from '../src/auth/authenticator';
 import type { ApiConfig } from '../src/config';
 
@@ -78,6 +79,8 @@ export interface TestContext {
   files: LocalFileStore;
   /** Moves the clock servicing reads (null returns to real time). */
   setNow: (d: Date | null) => void;
+  /** Sets (or removes) the identity-provider credential issuer the API uses for sandbox credentials. */
+  setCredentials: (issuer: CredentialIssuer | undefined) => void;
   close: () => Promise<void>;
 }
 
@@ -117,11 +120,12 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
     FILE_STORE_DIR: mkdtempSync(join(tmpdir(), 'astra-files-')),
     CARD_FEED_MAX_BYTES: 64 * 1024 * 1024,
     AGENT_SERVICING_MAX_AMOUNT: 500,
+    IDP_REALM: 'astra',
     ...overrides,
   };
   const files = new LocalFileStore(config.FILE_STORE_DIR);
   let fixedNow: Date | null = null;
-  const app = await buildApp({
+  const deps: AppDeps = {
     config,
     pool,
     // TEST_LOG_LEVEL=error shows server-side errors while debugging a test.
@@ -142,7 +146,8 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
       agentVerifier,
       isAgentActive: agentStatusChecker(pool, 0),
     }),
-  });
+  };
+  const app = await buildApp(deps);
   await app.ready();
   return {
     app,
@@ -152,6 +157,10 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
     files,
     setNow: (d) => {
       fixedNow = d;
+    },
+    setCredentials: (issuer) => {
+      if (issuer) deps.credentials = issuer;
+      else delete deps.credentials;
     },
     close: async () => {
       await app.close();

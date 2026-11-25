@@ -31,6 +31,11 @@ const EnvSchema = z.object({
   /** Demonstration and sandbox only: allows illustrative manuals (estimated loadings), always labelled. */
   ALLOW_ILLUSTRATIVE_RATING: bool,
   /** How long a quote stays open for bind (days). Assurant confirms the period. */
+  /** Keycloak admin access for issuing sandbox credentials (a service-account client that can manage clients). Without it, issuing is refused and says so. */
+  IDP_ADMIN_URL: z.url().optional(),
+  IDP_REALM: z.string().default('astra'),
+  IDP_ADMIN_CLIENT_ID: z.string().optional(),
+  IDP_ADMIN_CLIENT_SECRET: z.string().optional(),
   QUOTE_VALID_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   /** The largest charge or refund the servicing agent may confirm on its own; above it the request goes to a person. To be confirmed by Assurant. */
   AGENT_SERVICING_MAX_AMOUNT: z.coerce.number().min(0).max(100000).default(500),

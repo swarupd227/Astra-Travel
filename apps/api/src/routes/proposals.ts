@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import type {
+  ONBOARDING_FIELDS} from '@astra/contracts';
 import {
+  BillingBasisSchema,
+  INTEGRATION_METHODS,
+  RATING_INPUTS,
+  SettlementTermsSchema,
   AgentProposalRaised,
   AgentProposalResolved,
   ProposalSchema,
@@ -76,7 +82,7 @@ function refuse(problems: string[]): never {
 }
 
 interface Validated {
-  subjectType: 'form_edition' | 'rate_manual' | 'document_template' | 'document';
+  subjectType: 'form_edition' | 'rate_manual' | 'document_template' | 'document' | 'account';
   subjectId: string;
   summary: string;
   content: Record<string, unknown>;
@@ -210,7 +216,60 @@ async function validateDocumentQuality(tx: Tx, s: Extract<SubmitProposal, { kind
   return { subjectType: s.subjectType, subjectId: s.subjectId, summary: s.summary, content: { findings: s.findings }, checks, items: s.findings.length };
 }
 
+const FIELD_VALUES: Record<(typeof ONBOARDING_FIELDS)[number], z.ZodType> = {
+  contractReference: z.string().trim().min(2).max(100),
+  contractSignedOn: z.iso.date(),
+  states: z.array(z.string().regex(/^[A-Z]{2}$/)).min(1).max(60),
+  plans: z.array(z.string().regex(/^[A-Z0-9][A-Z0-9-]{2,39}$/)).min(1).max(60),
+  integrationMethod: z.enum(INTEGRATION_METHODS),
+  rateBasis: BillingBasisSchema,
+  settlement: SettlementTermsSchema,
+  segment: z.string().regex(/^[A-Z0-9_]{2,40}$/),
+  notCollected: z.array(z.enum(RATING_INPUTS)).max(RATING_INPUTS.length),
+};
+
+async function validateAccountOnboarding(tx: Tx, s: Extract<SubmitProposal, { kind: 'account_onboarding' }>): Promise<Validated> {
+  if (!(await tx.query(`SELECT 1 FROM platform.accounts WHERE id = $1`, [s.accountId])).rowCount) throw notFound('The account');
+  const docs = new Map((await tx.query<{ id: string; file_name: string; text: string; page_starts: number[] }>(`SELECT id, file_name, text, page_starts FROM onboarding.documents WHERE account_id = $1`, [s.accountId])).rows.map((d) => [d.id, d]));
+  const problems: string[] = [];
+  const checks: Check[] = [];
+  const seen = new Set<string>();
+  for (const f of s.fields) {
+    if (seen.has(f.field)) {
+      problems.push(`${f.field}: proposed twice.`);
+      continue;
+    }
+    seen.add(f.field);
+    const doc = docs.get(f.documentId);
+    if (!doc) {
+      problems.push(`${f.field}: the document ${f.documentId} is not one of this account’s.`);
+      continue;
+    }
+    const at = squash(doc.text).indexOf(squash(f.excerpt));
+    if (at < 0) {
+      problems.push(`${f.field}: the quoted wording is not in ${doc.file_name}: “${f.excerpt.slice(0, 80)}”. Quote it exactly.`);
+      continue;
+    }
+    const parsed = FIELD_VALUES[f.field].safeParse(f.value);
+    if (!parsed.success) {
+      problems.push(`${f.field}: ${parsed.error.issues[0]?.message ?? 'the value is not valid'} (${JSON.stringify(f.value).slice(0, 80)}).`);
+      continue;
+    }
+    if (f.field === 'segment') {
+      const listed = (await tx.query(`SELECT 1 FROM refdata.entries e JOIN refdata.versions v ON v.id = e.version_id WHERE v.dataset = 'business_segments' AND v.status = 'approved' AND e.key = $1`, [f.value])).rowCount;
+      if (!listed) {
+        problems.push(`segment: ${String(f.value)} is not in the filed list of business segments.`);
+        continue;
+      }
+    }
+    checks.push({ item: f.field, ok: true, detail: `From ${doc.file_name}: “${f.excerpt.length > 120 ? `${f.excerpt.slice(0, 120)}…` : f.excerpt}”.` });
+  }
+  if (problems.length) refuse(problems);
+  return { subjectType: 'account', subjectId: s.accountId, summary: s.summary, content: { fields: s.fields }, checks, items: s.fields.length };
+}
+
 const itemIds = (p: ProposalRow): string[] => {
+  if (p.kind === 'account_onboarding') return ((p.content as { fields?: { field: string }[] }).fields ?? []).map((f) => f.field);
   if (p.kind === 'document_quality') return ((p.content as { findings?: unknown[] }).findings ?? []).map((_f, i) => `f${i + 1}`);
   const c = p.content as { items?: { variable?: { key: string }; caseId?: string; step?: string }[]; manual?: { document: { tables: { id: string }[] } } };
   if (p.kind === 'variable_map') return (c.items ?? []).map((i) => i.variable!.key);
@@ -218,7 +277,7 @@ const itemIds = (p: ProposalRow): string[] => {
   return (c.items ?? []).map((i) => `${i.caseId}:${i.step}`);
 };
 
-const MANAGE: Record<ProposalKind, 'forms:manage' | 'rating:manage' | 'documents:release'> = { variable_map: 'forms:manage', rate_manual: 'rating:manage', parity_explanation: 'rating:manage', document_quality: 'documents:release' };
+const MANAGE: Record<ProposalKind, 'forms:manage' | 'rating:manage' | 'documents:release' | 'accounts:manage'> = { variable_map: 'forms:manage', rate_manual: 'rating:manage', parity_explanation: 'rating:manage', document_quality: 'documents:release', account_onboarding: 'accounts:manage' };
 
 export const proposalRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
   app.post(
@@ -243,7 +302,7 @@ export const proposalRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       const out = await withTx(deps.pool, request.ctx, async (tx) => {
         const run = (await tx.query<{ id: string; requested_by: string }>(`SELECT id, requested_by FROM agents.runs WHERE agent_id = $1 AND correlation_id = $2 ORDER BY created_at DESC LIMIT 1`, [agentId, request.ctx.correlationId])).rows[0];
         if (!run) throw forbidden('Proposals are submitted during an agent run.');
-        const v = s.kind === 'variable_map' ? await validateVariableMap(tx, s) : s.kind === 'rate_manual' ? await validateRateManual(tx, s) : s.kind === 'document_quality' ? await validateDocumentQuality(tx, s) : await validateParity(tx, s);
+        const v = s.kind === 'variable_map' ? await validateVariableMap(tx, s) : s.kind === 'rate_manual' ? await validateRateManual(tx, s) : s.kind === 'document_quality' ? await validateDocumentQuality(tx, s) : s.kind === 'account_onboarding' ? await validateAccountOnboarding(tx, s) : await validateParity(tx, s);
         // A new proposal for the same subject from the same run replaces the earlier open one.
         await tx.query(
           `UPDATE agents.proposals SET status = 'withdrawn', resolved_by = $4, resolved_at = now(), resolution = '{"reason":"replaced by a newer proposal in the same run"}'
@@ -272,7 +331,7 @@ export const proposalRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       schema: {
         tags: ['Agent proposals'],
         summary: 'Agent proposals, newest first',
-        querystring: z.object({ subjectId: z.uuid().optional(), kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality']).optional(), status: z.enum(['open', 'resolved', 'withdrawn']).optional() }),
+        querystring: z.object({ subjectId: z.uuid().optional(), kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality', 'account_onboarding']).optional(), status: z.enum(['open', 'resolved', 'withdrawn']).optional() }),
         response: { 200: z.object({ items: z.array(ProposalSchema.omit({ content: true })) }), ...commonErrors },
       },
     },

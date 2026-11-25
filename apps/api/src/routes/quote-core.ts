@@ -15,6 +15,7 @@ import { planToQuote } from '@astra/plans';
 import { QuoteRatingError, rateQuote, RatingError, type ManualForRating } from '@astra/rating';
 import { versionInForce } from '@astra/studio';
 import { runEvaluation } from './underwriting-evaluate';
+import { notCollectedFor, salesAllowed, segmentOn } from '../accounts/config';
 
 /**
  * Builds a quote (E04-F01): the published plan version, rule set and manuals in effect, eligibility, the
@@ -144,6 +145,18 @@ export async function buildQuote(
   const cat = (await tx.query<{ document: CatalogueDocument }>(`SELECT document FROM studio.benefit_catalogues WHERE id = $1`, [pv.catalogue_id])).rows[0]!.document;
   const doc = pv.document;
 
+  // ---- The account: where it may sell, its segment in force and the rating variables it collects (E07).
+  if (!pinned) {
+    const sale = await salesAllowed(tx, req.accountId, req.state, purchaseDate);
+    if (!sale.allowed) fail(sale.reason!, [problem('state', sale.reason!, 'sales_blocked')]);
+  }
+  const configuredSegment = await segmentOn(tx, req.accountId, purchaseDate);
+  if (configuredSegment && req.businessSegment && req.businessSegment !== configuredSegment) {
+    fail(`The account’s approved business segment is ${configuredSegment}, not ${req.businessSegment}.`, [problem('businessSegment', `The account’s segment is ${configuredSegment}; the segment is not taken from the request.`, 'segment_mismatch')]);
+  }
+  const businessSegment = configuredSegment ?? req.businessSegment;
+  const notCollected = await notCollectedFor(tx, req.accountId);
+
   // ---- Selection: packaged benefits are in; optional ones when chosen.
   const optional = doc.benefits.filter((b) => b.packaging !== 'packaged');
   const unknown = req.selection.filter((c) => !optional.some((b) => b.code === c));
@@ -169,7 +182,7 @@ export async function buildQuote(
     insuredPercent: req.insuredPercent,
     // The price assumes the traveller will confirm they are able to travel; bind requires the confirmation itself.
     ableToTravel: true,
-    businessSegment: req.businessSegment,
+    businessSegment,
     term: plan.term,
     benefits: selectedCodes,
     cfarRequested: selectedCodes.some((c) => ratingOf(c) === 'CFAR'),
@@ -207,7 +220,7 @@ export async function buildQuote(
       destinations: await regionsFor(tx, req.trip.destinations, purchaseDate, tripDays),
       penaltyDays: req.trip.penaltyDays ?? null,
     },
-    account: { businessSegment: req.businessSegment ?? null, notCollected: [] },
+    account: { businessSegment: businessSegment ?? null, notCollected },
     cfarEligibility: { passed: evaluation.cfar.passed, reference: evaluation.cfar.reference, reasons: evaluation.cfar.reasons },
   });
   const ratedBenefits = new Set(selectedCodes.map(ratingOf).filter((b): b is string => !!b));

@@ -210,6 +210,15 @@ const PROBES: Record<string, Probe[]> = {
   'GET /v1/programme-premium-rules': [{ method: 'GET', url: () => '/v1/programme-premium-rules' }, { method: 'GET', url: () => `/v1/programme-premium-rules?programmeId=${programmeA}` }],
   'POST /v1/programme-premium-rules/:id/approve': [{ method: 'POST', url: () => `/v1/programme-premium-rules/${ABSENT}/approve`, payload: () => ({}) }],
   'POST /v1/programme-premium': [{ method: 'POST', url: () => '/v1/programme-premium', payload: () => ({ programmeId: programmeA, month: '2026-03' }) }],
+  'GET /v1/accounts/:id/profile': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/profile` }],
+  'GET /v1/accounts/:id/onboarding': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/onboarding` }],
+  'GET /v1/accounts/:id/segment-changes': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/segment-changes` }],
+  'GET /v1/segment-changes': [{ method: 'GET', url: () => '/v1/segment-changes' }],
+  'GET /v1/accounts/:id/collected-variables': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/collected-variables` }],
+  'GET /v1/licences': [{ method: 'GET', url: () => '/v1/licences' }, { method: 'GET', url: () => `/v1/licences?accountId=${accountA}` }],
+  'GET /v1/accounts/:id/documents': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/documents` }],
+  'GET /v1/account-documents/:id/text': [{ method: 'GET', url: () => `/v1/account-documents/${ABSENT}/text` }],
+  'GET /v1/accounts/:id/sandbox': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/sandbox` }],
 };
 
 describe('route catalogue', () => {

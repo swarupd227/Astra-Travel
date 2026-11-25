@@ -49,6 +49,8 @@ import { proposalRoutes } from './routes/proposals';
 import { policyRoutes } from './routes/policies';
 import { documentRoutes } from './routes/documents';
 import { servicingRoutes } from './routes/servicing';
+import type { CredentialIssuer } from './accounts/credentials';
+import { accountConfigRoutes } from './routes/account-config';
 import { billingRoutes } from './routes/billing';
 
 export interface AppDeps {
@@ -61,6 +63,8 @@ export interface AppDeps {
   files: FileStore;
   /** The clock servicing reads; tests move it to reach the end of a review period. */
   now?: () => Date;
+  /** Issues sandbox credentials through the identity provider; absent when it is not configured. */
+  credentials?: CredentialIssuer;
   /** Records display names of signed-in principals; optional so tests can leave it out. */
   people?: PeopleDirectory;
 }
@@ -241,6 +245,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(documentRoutes, deps);
   await app.register(servicingRoutes, deps);
   await app.register(billingRoutes, deps);
+  await app.register(accountConfigRoutes, deps);
 
   return app;
 }
