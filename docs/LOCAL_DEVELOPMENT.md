@@ -56,7 +56,7 @@ curl -s -d grant_type=client_credentials -d client_id=astra-partner-a -d "client
 ```
 
 `astra-partner-a` is bound to *Sandbox Airline (synthetic)* and `astra-partner-b` to *Sandbox Bank (synthetic)*.
-`astra-claims` is the claims system's client: it has only the `cover_verifier` role, for
+`astra-billing` is the billing system's client (role `billing_system`, only for confirming premium record batches); it needs `BILLING_CLIENT_SECRET` in `.env` and a realm re-import. `astra-claims` is the claims system's client: it has only the `cover_verifier` role, for
 `POST /v1/cover-verifications`.
 
 Keycloak reads the realm file only when the realm is first created. After pulling a change that adds

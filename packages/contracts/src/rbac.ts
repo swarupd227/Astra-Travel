@@ -26,7 +26,7 @@ export const EXTERNAL_ROLES = ['partner_developer'] as const;
  * Roles held by Assurant systems rather than people (client-credentials clients). They act platform-wide
  * but only within their permissions, and are audited as `system` actors.
  */
-export const SYSTEM_ROLES = ['cover_verifier'] as const;
+export const SYSTEM_ROLES = ['cover_verifier', 'billing_system'] as const;
 
 export const ROLES = [...STAFF_ROLES, ...EXTERNAL_ROLES, ...SYSTEM_ROLES] as const;
 export type Role = (typeof ROLES)[number];
@@ -46,6 +46,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   platform_admin: 'Platform administrator',
   partner_developer: 'Account integration developer',
   cover_verifier: 'Cover verification system (claims)',
+  billing_system: 'Assurant billing system (confirmations)',
 };
 
 export const PERMISSIONS = {
@@ -91,6 +92,10 @@ export const PERMISSIONS = {
   'quotes:create': 'Create quotes, change their selections and bind them to policies',
   'quotes:read': 'View quotes',
   'policies:read': 'View policies, their history and their record at any date',
+  'billing:read': 'View premium records, batches, commission rules and their status',
+  'billing:manage': 'Create commission and programme rules, send batches, recalculate held records and retry',
+  'billing:approve': 'Approve commission and programme rules made by someone else',
+  'billing:confirm': 'Confirm receipt of batches and the payment and refund of their records (the billing system)',
   'servicing:execute': 'Preview and make changes, cancellations and corrections on policies',
   'servicing:review': 'Review the sample of changes made by the servicing agent',
   'documents:read': 'View document templates, issued documents and their delivery',
@@ -116,6 +121,7 @@ const STAFF_BASE: Permission[] = [
   'quotes:read',
   'policies:read',
   'documents:read',
+  'billing:read',
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
@@ -139,7 +145,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'servicing:execute',
   ],
   service_rep: [...STAFF_BASE, 'card:read', 'cover:verify', 'quotes:create', 'servicing:execute'],
-  finance_analyst: [...STAFF_BASE, 'card:read'],
+  finance_analyst: [...STAFF_BASE, 'card:read', 'billing:manage'],
   card_programme_manager: [
     ...STAFF_BASE,
     'webhooks:read',
@@ -168,6 +174,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'documents:manage',
     'documents:release',
     'proposals:create',
+    'billing:approve',
   ],
   ops_supervisor: [
     ...STAFF_BASE,
@@ -201,8 +208,10 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'policies:read',
     'documents:read',
     'servicing:execute',
+    'billing:read',
   ],
   cover_verifier: ['cover:verify'],
+  billing_system: ['billing:confirm'],
 };
 
 export function isSystemRole(role: Role): boolean {

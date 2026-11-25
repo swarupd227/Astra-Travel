@@ -404,6 +404,28 @@ export const PolicyCancelled = defineEvent({
   schema: z.object({ policyId: z.uuid(), number: z.string(), refund: z.string(), basis: z.string(), reason: z.string() }),
 });
 
+export const BillingBatchCreated = defineEvent({
+  type: 'BillingBatchCreated',
+  version: 1,
+  source: 'astra.billing',
+  schema: z.object({ batchId: z.uuid(), number: z.number().int(), count: z.number().int(), premium: z.string(), commission: z.string(), tax: z.string() }),
+});
+
+export const BillingBatchConfirmed = defineEvent({
+  type: 'BillingBatchConfirmed',
+  version: 1,
+  source: 'astra.billing',
+  schema: z.object({ batchId: z.uuid(), number: z.number().int(), accepted: z.number().int(), rejected: z.number().int() }),
+});
+
+/** Raised when a batch did not go well: totals differ, billing did not answer, or it was rejected. */
+export const BillingBatchFailed = defineEvent({
+  type: 'BillingBatchFailed',
+  version: 1,
+  source: 'astra.billing',
+  schema: z.object({ batchId: z.uuid(), number: z.number().int(), status: z.enum(['mismatch', 'unconfirmed', 'rejected']), reason: z.string() }),
+});
+
 export const EVENT_CATALOGUE = [
   AccountRegistered,
   AccountStatusChanged,
@@ -439,6 +461,9 @@ export const EVENT_CATALOGUE = [
   DocumentDeliveryFailed,
   PolicyChanged,
   PolicyCancelled,
+  BillingBatchCreated,
+  BillingBatchConfirmed,
+  BillingBatchFailed,
 ] as const;
 
 export type CatalogueEventType = (typeof EVENT_CATALOGUE)[number]['type'];

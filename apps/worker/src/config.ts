@@ -29,6 +29,13 @@ const EnvSchema = z.object({
   SMTP_URL: z.string().optional(),
   /** The sender address of emailed documents; required with SMTP_URL. */
   MAIL_FROM: z.string().optional(),
+  /** Where billing batches are dropped as files, or the URL they are pushed to (signed with BILLING_SIGNING_SECRET). Neither set: batches wait. */
+  BILLING_DROP_DIR: z.string().optional(),
+  BILLING_URL: z.url().optional(),
+  BILLING_SIGNING_SECRET: z.string().min(16).optional(),
+  /** How long to wait for billing's confirmation of a batch before sending it again. */
+  BILLING_CONFIRM_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(900_000),
+  BILLING_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
 });
 
 export type WorkerConfig = z.infer<typeof EnvSchema>;
@@ -39,6 +46,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
     throw new Error(`Invalid worker configuration: ${issues}`);
   }
+  if (parsed.data.BILLING_URL && !parsed.data.BILLING_SIGNING_SECRET) throw new Error('Invalid worker configuration: BILLING_SIGNING_SECRET is required with BILLING_URL.');
   if (parsed.data.SMTP_URL && !parsed.data.MAIL_FROM) throw new Error('Invalid worker configuration: MAIL_FROM is required with SMTP_URL.');
   if (parsed.data.NODE_ENV === 'production' && parsed.data.ALLOW_PRIVATE_WEBHOOK_TARGETS) {
     throw new Error('ALLOW_PRIVATE_WEBHOOK_TARGETS must not be enabled in production.');

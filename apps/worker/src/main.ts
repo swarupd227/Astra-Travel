@@ -11,6 +11,7 @@ const { Loop } = await import('./loops');
 const { startAgentLoops } = await import('./agents');
 const { cardFeedLoop } = await import('./card-feeds');
 const { documentDeliveryLoop } = await import('./documents');
+const { billingSendLoop } = await import('./billing');
 
 const {
   CompositeRegistry,
@@ -130,7 +131,8 @@ const cardFeeds = cardFeedLoop(pool, config, logger);
 listener.on('notification', () => cardFeeds.wake());
 const documentDelivery = documentDeliveryLoop(pool, new LocalFileStore(config.FILE_STORE_DIR), config, logger);
 listener.on('notification', () => documentDelivery.wake());
-const loops = [relay, dispatch, sealer, housekeeping, cardFeeds, documentDelivery, ...agentLoops];
+const billingSend = billingSendLoop(pool, new LocalFileStore(config.FILE_STORE_DIR), config, logger);
+const loops = [relay, dispatch, sealer, housekeeping, cardFeeds, documentDelivery, billingSend, ...agentLoops];
 for (const loop of loops) loop.start();
 
 const health = createServer((req, res) => {

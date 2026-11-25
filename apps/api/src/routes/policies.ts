@@ -28,6 +28,7 @@ import { commonErrors, idempotencyHeaders, idempotencyKey } from './shared';
 import { buildQuote, HELD_REASON, normalise, REFERRED_REASON, todayUtc, type BuiltQuote, type NormalisedQuoteRequest, type Pinned } from './quote-core';
 import { runEvaluation } from './underwriting-evaluate';
 import { issuePolicyDocuments } from '../documents/issue';
+import { recordTransaction } from '../billing/records';
 
 /** Quotes, bind, the policy record and cover verification (E04, E05). Design: docs/adr/0010. */
 
@@ -90,7 +91,7 @@ export async function policyView(tx: Tx, id: string, asOf?: string): Promise<Pol
   return { id: p.id, number: p.number, accountId: p.account_id, status: projected.status, asOf: asOf ?? null, record: projected.record, history };
 }
 
-async function storeWorksheets(tx: Tx, actor: string, built: { worksheets: { benefit: string; travellerId: string; manualId: string; inputsHash: string; request: unknown; result: unknown }[] }) {
+export async function storeWorksheets(tx: Tx, actor: string, built: { worksheets: { benefit: string; travellerId: string; manualId: string; inputsHash: string; request: unknown; result: unknown }[] }) {
   const ids: Record<string, string> = {};
   for (const w of built.worksheets) {
     const row = (
@@ -362,7 +363,7 @@ export const policyRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
               [number, q.account_id, q.id, q.plan_id, q.plan_version_id, q.rule_set_id, q.state, snapshot.purchasedOn, cover.term.start, cover.term.end, snapshot.premium.total, b.payment.reference, principal.subject],
             )
           ).rows[0]!;
-          await tx.query(`INSERT INTO policies.policy_events (policy_id, account_id, type, actor, actor_name, reason, data) VALUES ($1, $2, 'bound', $3, $4, NULL, $5)`, [policy.id, q.account_id, principal.subject, principal.name, JSON.stringify(snapshot)]);
+          const boundSeq = Number((await tx.query<{ seq: string }>(`INSERT INTO policies.policy_events (policy_id, account_id, type, actor, actor_name, reason, data) VALUES ($1, $2, 'bound', $3, $4, NULL, $5) RETURNING seq`, [policy.id, q.account_id, principal.subject, principal.name, JSON.stringify(snapshot)])).rows[0]!.seq);
           for (const t of snapshot.travellers) {
             await tx.query(`INSERT INTO policies.policy_travellers (policy_id, account_id, traveller_id, first_name, last_name, date_of_birth) VALUES ($1, $2, $3, $4, $5, $6)`, [policy.id, q.account_id, t.id, t.firstName, t.lastName, t.dateOfBirth]);
             // The duplicate-cover check reads this register; an annual policy covers its whole term.
@@ -386,6 +387,8 @@ export const policyRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
             accountId: q.account_id,
             data: { number, quoteId: q.id, premium: snapshot.premium.total, paymentReference: b.payment.reference, disclosureVersion: b.acknowledgement.disclosureVersion, ruleSet: quote.ruleSet, manuals: quote.manuals },
           });
+          // The premium record is written with the policy (E08-F01-S01), so a bind without one cannot exist.
+          await recordTransaction(tx, { kind: 'bind', policy: { id: policy.id, number, accountId: q.account_id }, eventSeq: boundSeq, before: null, after: snapshot, money: { charge: snapshot.premium.total, refund: '0.00', retained: '0.00' }, worksheetIds: (quote.premium?.lines ?? []).map((l) => l.worksheetId) });
           // The documents exist the moment the policy does (E04-F02-S03); one that cannot be produced is recorded, not hidden.
           await issuePolicyDocuments(tx, deps.files, request.ctx, { policyId: policy.id, accountId: q.account_id, snapshot, planVersionId: q.plan_version_id });
           return { status: 201, body: await policyView(tx, policy.id) };

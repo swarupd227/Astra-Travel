@@ -16,3 +16,4 @@ export * from './proposals';
 export * from './policies';
 export * from './documents';
 export * from './servicing';
+export * from './billing';

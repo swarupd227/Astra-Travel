@@ -49,6 +49,7 @@ import { proposalRoutes } from './routes/proposals';
 import { policyRoutes } from './routes/policies';
 import { documentRoutes } from './routes/documents';
 import { servicingRoutes } from './routes/servicing';
+import { billingRoutes } from './routes/billing';
 
 export interface AppDeps {
   config: ApiConfig;
@@ -239,6 +240,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(policyRoutes, deps);
   await app.register(documentRoutes, deps);
   await app.register(servicingRoutes, deps);
+  await app.register(billingRoutes, deps);
 
   return app;
 }

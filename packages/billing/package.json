@@ -1,0 +1,17 @@
+{
+  "name": "@astra/billing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Premium records: allocation by entity, premium tax, commission with clawback, control totals and the batch format",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@astra/contracts": "0.1.0",
+    "@astra/policies": "0.1.0"
+  }
+}

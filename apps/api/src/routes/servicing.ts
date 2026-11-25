@@ -8,7 +8,8 @@ import { issueNotice } from '../documents/issue';
 import { planServicing, type Planned } from '../servicing/engine';
 import type { AppDeps } from '../app';
 import { commonErrors, idempotencyHeaders, idempotencyKey } from './shared';
-import { policyView } from './policies';
+import { policyView, storeWorksheets } from './policies';
+import { recordTransaction } from '../billing/records';
 
 /** Previewing and making changes, cancellations and corrections on a policy (E06). Design: docs/adr/0012. */
 
@@ -119,6 +120,7 @@ export const servicingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
               ).rows[0]!.seq,
             );
             await tx.query(`UPDATE policies.policies SET status = 'cancelled' WHERE id = $1`, [policy.id]);
+            await recordTransaction(tx, { kind: 'cancellation', policy, eventSeq: seq, before, after: before, money, worksheetIds: [] }, clock());
             await tx.query(`UPDATE underwriting.cover_register SET status = 'cancelled' WHERE policy_ref = $1 AND status = 'active'`, [policy.number]);
             await publishEvent(tx, ctx, PolicyCancelled, { policyId: policy.id, number: policy.number, refund: money.refund, basis: money.basis, reason: req.reason }, { accountId: policy.accountId });
           } else {
@@ -131,6 +133,8 @@ export const servicingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
               ).rows[0]!.seq,
             );
             await syncTables(tx, planned, planned.after!, policy.accountId, policy.id);
+            const ids = await storeWorksheets(tx, principal.subject, { worksheets: planned.worksheets });
+            await recordTransaction(tx, { kind: 'change', policy, eventSeq: seq, before, after: planned.after!, money, worksheetIds: Object.values(ids) }, clock());
             await publishEvent(tx, ctx, PolicyChanged, { policyId: policy.id, number: policy.number, transaction: req.type, premiumTotal: planned.after!.premium.total, charge: money.charge, refund: money.refund }, { accountId: policy.accountId });
           }
           await writeAudit(tx, ctx, {

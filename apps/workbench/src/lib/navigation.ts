@@ -134,6 +134,32 @@ export const NAVIGATION: NavSection[] = [
     ],
   },
   {
+    label: 'Billing',
+    items: [
+      {
+        href: '/billing',
+        label: 'Premium records',
+        icon: 'table',
+        permission: 'billing:read',
+        description: 'A record for every bind, change and cancellation, with commission, tax and entity split.',
+      },
+      {
+        href: '/billing/batches',
+        label: 'Billing batches',
+        icon: 'layers',
+        permission: 'billing:read',
+        description: 'Batches sent to the billing system, their control totals and confirmations.',
+      },
+      {
+        href: '/billing/rules',
+        label: 'Commission and programme rules',
+        icon: 'stamp',
+        permission: 'billing:read',
+        description: 'How each account’s commission and each card programme’s premium is calculated.',
+      },
+    ],
+  },
+  {
     label: 'Documents',
     items: [
       {

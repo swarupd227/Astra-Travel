@@ -121,6 +121,14 @@
           "Cover verification system (claims); machine clients only"
         ]
       }
+    },
+    {
+      "name": "astra-billing-system",
+      "attributes": {
+        "description": [
+          "Assurant billing system (batch confirmations); machine clients only"
+        ]
+      }
     }
   ],
   "users": [
@@ -532,6 +540,48 @@
           "config": {
             "claim.name": "groups",
             "claim.value": "[\"astra-cover-verifier\"]",
+            "jsonType.label": "JSON",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "astra-billing",
+      "name": "Billing system: confirmations of premium record batches",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${BILLING_CLIENT_SECRET}",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "attributes": {
+        "access.token.lifespan": "300"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-astra-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "astra-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "billing-system-group",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "config": {
+            "claim.name": "groups",
+            "claim.value": "[\"astra-billing-system\"]",
             "jsonType.label": "JSON",
             "access.token.claim": "true",
             "id.token.claim": "false",

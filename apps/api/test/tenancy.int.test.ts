@@ -199,6 +199,17 @@ const PROBES: Record<string, Probe[]> = {
   'GET /v1/card-programmes/:programmeId/guides': [{ method: 'GET', url: () => `/v1/card-programmes/${programmeA}/guides` }],
   'POST /v1/policies/:policyId/servicing/preview': [{ method: 'POST', url: () => `/v1/policies/${ABSENT}/servicing/preview`, payload: () => ({ type: 'cancel', reason: 'Probe', noLoss: true }) }],
   'POST /v1/policies/:policyId/servicing': [{ method: 'POST', url: () => `/v1/policies/${ABSENT}/servicing`, payload: () => ({ request: { type: 'cancel', reason: 'Probe', noLoss: true }, confirmAmount: '0.00' }) }],
+  'GET /v1/premium-records': [{ method: 'GET', url: () => '/v1/premium-records' }, { method: 'GET', url: () => `/v1/premium-records?accountId=${accountA}` }],
+  'GET /v1/premium-records/:id': [{ method: 'GET', url: () => `/v1/premium-records/${ABSENT}` }],
+  'GET /v1/policies/:policyId/premium-records': [{ method: 'GET', url: () => `/v1/policies/${ABSENT}/premium-records` }],
+  'POST /v1/premium-records/:id/recalculate': [{ method: 'POST', url: () => `/v1/premium-records/${ABSENT}/recalculate`, payload: () => ({}) }],
+  'POST /v1/commission-rules': [{ method: 'POST', url: () => '/v1/commission-rules', payload: () => ({ accountId: accountA, effectiveFrom: '2026-01-01', document: { kind: 'none' } }) }],
+  'GET /v1/commission-rules': [{ method: 'GET', url: () => '/v1/commission-rules' }, { method: 'GET', url: () => `/v1/commission-rules?accountId=${accountA}` }],
+  'POST /v1/commission-rules/:id/approve': [{ method: 'POST', url: () => `/v1/commission-rules/${ABSENT}/approve`, payload: () => ({}) }],
+  'POST /v1/programme-premium-rules': [{ method: 'POST', url: () => '/v1/programme-premium-rules', payload: () => ({ programmeId: programmeA, effectiveFrom: '2026-01-01', rate: '1.0000' }) }],
+  'GET /v1/programme-premium-rules': [{ method: 'GET', url: () => '/v1/programme-premium-rules' }, { method: 'GET', url: () => `/v1/programme-premium-rules?programmeId=${programmeA}` }],
+  'POST /v1/programme-premium-rules/:id/approve': [{ method: 'POST', url: () => `/v1/programme-premium-rules/${ABSENT}/approve`, payload: () => ({}) }],
+  'POST /v1/programme-premium': [{ method: 'POST', url: () => '/v1/programme-premium', payload: () => ({ programmeId: programmeA, month: '2026-03' }) }],
 };
 
 describe('route catalogue', () => {

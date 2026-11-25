@@ -12,6 +12,7 @@ import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
 import { PolicyDocuments } from '../../documents/policy-documents';
 import { ServicingPanel } from './servicing-panel';
+import { PolicyPremium } from '../../billing/policy-premium';
 
 export const metadata = { title: 'Policy' };
 
@@ -154,6 +155,7 @@ export default async function PolicyPage({ params, searchParams }: { params: Pro
           </div>
         </Card>
       ) : null}
+      {!asOfIso && me.permissions.includes('billing:read') ? <PolicyPremium policyId={p.id} /> : null}
       {!asOfIso && me.permissions.includes('documents:read') ? <PolicyDocuments policyId={p.id} canManage={me.permissions.includes('documents:manage')} /> : null}
 
       <Card className="mb-6">
