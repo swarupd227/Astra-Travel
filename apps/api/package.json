@@ -15,6 +15,7 @@
     "@astra/agents": "0.1.0",
     "@astra/card": "0.1.0",
     "@astra/contracts": "0.1.0",
+    "@astra/documents": "0.1.0",
     "@astra/platform": "0.1.0",
     "@astra/plans": "0.1.0",
     "@astra/policies": "0.1.0",

@@ -33,7 +33,7 @@ interface ProposalRow {
   agent_name: string;
   run_id: string | null;
   requested_by: string;
-  subject_type: 'form_edition' | 'rate_manual';
+  subject_type: 'form_edition' | 'rate_manual' | 'document_template' | 'document';
   subject_id: string;
   summary: string;
   content: Record<string, unknown>;
@@ -76,7 +76,7 @@ function refuse(problems: string[]): never {
 }
 
 interface Validated {
-  subjectType: 'form_edition' | 'rate_manual';
+  subjectType: 'form_edition' | 'rate_manual' | 'document_template' | 'document';
   subjectId: string;
   summary: string;
   content: Record<string, unknown>;
@@ -185,14 +185,40 @@ async function validateParity(tx: Tx, s: Extract<SubmitProposal, { kind: 'parity
   return { subjectType: 'rate_manual', subjectId: s.manualId, summary: s.summary, content: { items: s.items }, checks, items: s.items.length };
 }
 
+const squash = (t: string) => t.replace(/\s+/g, ' ').trim();
+
+async function validateDocumentQuality(tx: Tx, s: Extract<SubmitProposal, { kind: 'document_quality' }>): Promise<Validated> {
+  let text: string | null;
+  if (s.subjectType === 'document_template') {
+    const t = (await tx.query<{ text: string }>(`SELECT text FROM documents.templates WHERE id = $1`, [s.subjectId])).rows[0];
+    if (!t) throw notFound('The document template');
+    text = t.text;
+  } else {
+    const d = (await tx.query<{ text: string | null }>(`SELECT text FROM documents.documents WHERE id = $1`, [s.subjectId])).rows[0];
+    if (!d) throw notFound('The document');
+    text = d.text;
+    if (text === null) refuse(['That document was not produced, so there is no text to check.']);
+  }
+  const hay = squash(text!);
+  const problems: string[] = [];
+  const checks: Check[] = s.findings.map((f, i) => {
+    const at = hay.indexOf(squash(f.quote));
+    if (at < 0) problems.push(`f${i + 1}: the quoted text is not in the document: “${f.quote.slice(0, 80)}”. Quote the document exactly.`);
+    return { item: `f${i + 1}`, ok: at >= 0, detail: `${f.severity === 'hold' ? 'Holds release' : 'Note'}: ${f.issue} (quoted text found in the document).` };
+  });
+  if (problems.length) refuse(problems);
+  return { subjectType: s.subjectType, subjectId: s.subjectId, summary: s.summary, content: { findings: s.findings }, checks, items: s.findings.length };
+}
+
 const itemIds = (p: ProposalRow): string[] => {
+  if (p.kind === 'document_quality') return ((p.content as { findings?: unknown[] }).findings ?? []).map((_f, i) => `f${i + 1}`);
   const c = p.content as { items?: { variable?: { key: string }; caseId?: string; step?: string }[]; manual?: { document: { tables: { id: string }[] } } };
   if (p.kind === 'variable_map') return (c.items ?? []).map((i) => i.variable!.key);
   if (p.kind === 'rate_manual') return (c.manual?.document.tables ?? []).map((t) => t.id);
   return (c.items ?? []).map((i) => `${i.caseId}:${i.step}`);
 };
 
-const MANAGE: Record<ProposalKind, 'forms:manage' | 'rating:manage'> = { variable_map: 'forms:manage', rate_manual: 'rating:manage', parity_explanation: 'rating:manage' };
+const MANAGE: Record<ProposalKind, 'forms:manage' | 'rating:manage' | 'documents:release'> = { variable_map: 'forms:manage', rate_manual: 'rating:manage', parity_explanation: 'rating:manage', document_quality: 'documents:release' };
 
 export const proposalRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
   app.post(
@@ -217,7 +243,7 @@ export const proposalRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       const out = await withTx(deps.pool, request.ctx, async (tx) => {
         const run = (await tx.query<{ id: string; requested_by: string }>(`SELECT id, requested_by FROM agents.runs WHERE agent_id = $1 AND correlation_id = $2 ORDER BY created_at DESC LIMIT 1`, [agentId, request.ctx.correlationId])).rows[0];
         if (!run) throw forbidden('Proposals are submitted during an agent run.');
-        const v = s.kind === 'variable_map' ? await validateVariableMap(tx, s) : s.kind === 'rate_manual' ? await validateRateManual(tx, s) : await validateParity(tx, s);
+        const v = s.kind === 'variable_map' ? await validateVariableMap(tx, s) : s.kind === 'rate_manual' ? await validateRateManual(tx, s) : s.kind === 'document_quality' ? await validateDocumentQuality(tx, s) : await validateParity(tx, s);
         // A new proposal for the same subject from the same run replaces the earlier open one.
         await tx.query(
           `UPDATE agents.proposals SET status = 'withdrawn', resolved_by = $4, resolved_at = now(), resolution = '{"reason":"replaced by a newer proposal in the same run"}'
@@ -246,7 +272,7 @@ export const proposalRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       schema: {
         tags: ['Agent proposals'],
         summary: 'Agent proposals, newest first',
-        querystring: z.object({ subjectId: z.uuid().optional(), kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation']).optional(), status: z.enum(['open', 'resolved', 'withdrawn']).optional() }),
+        querystring: z.object({ subjectId: z.uuid().optional(), kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality']).optional(), status: z.enum(['open', 'resolved', 'withdrawn']).optional() }),
         response: { 200: z.object({ items: z.array(ProposalSchema.omit({ content: true })) }), ...commonErrors },
       },
     },

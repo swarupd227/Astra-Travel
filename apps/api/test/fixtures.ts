@@ -55,6 +55,7 @@ export interface Stack {
   dates: { purchase: string; deposit: string; departure: string; return: string };
   /** One traveller with a 4200 trip: TCAN 84.00, TINT 42.00. */
   quoteBody: (over?: Record<string, unknown>) => Record<string, unknown>;
+  scheduleTemplateId: string;
 }
 
 export async function publishedStack(t: TestContext): Promise<Stack> {
@@ -191,6 +192,12 @@ export async function publishedStack(t: TestContext): Promise<Stack> {
   expect((await s('POST', `/v1/rule-sets/${ruleSetId}/test-runs`, tokens.uw1)).json(), 'rule tests').toMatchObject({ total: 3, passed: 3 });
   ok(await s('POST', `/v1/rule-sets/${ruleSetId}/publish`, tokens.uw2), 'publish rule set');
 
+  // ---- The schedule assembled from the filed form, released by a second person (E09-F01-S01, E09-F02-S01).
+  const tpl = await s('POST', '/v1/document-templates', tokens.product, { planVersionId, kind: 'schedule' });
+  ok(tpl, 'assemble schedule', 201);
+  expect(tpl.json().problems, 'schedule assembly').toEqual([]);
+  ok(await s('POST', `/v1/document-templates/${tpl.json().id}/release`, tokens.compliance, { note: 'Checked against the filed schedule.' }), 'release schedule');
+
   const quoteBody = (over: Record<string, unknown> = {}) => ({
     accountId,
     planCode: 'Q-DE',
@@ -199,5 +206,5 @@ export async function publishedStack(t: TestContext): Promise<Stack> {
     trip: { purchaseDate: dates.purchase, initialDepositDate: dates.deposit, departureDate: dates.departure, returnDate: dates.return, destinations: [{ country: 'FR', region: 'Europe' }] },
     ...over,
   });
-  return { t, tokens, accountId, accountBId, planCode: 'Q-DE', planId, planVersionId, ruleSetId, disclosureVersion, dates, quoteBody };
+  return { t, tokens, accountId, accountBId, planCode: 'Q-DE', planId, planVersionId, ruleSetId, disclosureVersion, dates, quoteBody, scheduleTemplateId: tpl.json().id as string };
 }

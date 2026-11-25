@@ -91,6 +91,9 @@ export const PERMISSIONS = {
   'quotes:create': 'Create quotes, change their selections and bind them to policies',
   'quotes:read': 'View quotes',
   'policies:read': 'View policies, their history and their record at any date',
+  'documents:read': 'View document templates, issued documents and their delivery',
+  'documents:manage': 'Assemble document templates, issue notices and guides, and retry failed deliveries',
+  'documents:release': 'Release document templates assembled by someone else, and resolve document quality findings',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -110,10 +113,11 @@ const STAFF_BASE: Permission[] = [
   'proposals:read',
   'quotes:read',
   'policies:read',
+  'documents:read',
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  product_manager: [...STAFF_BASE, 'forms:manage', 'plans:manage', 'plans:approve', 'proposals:create'],
+  product_manager: [...STAFF_BASE, 'forms:manage', 'plans:manage', 'plans:approve', 'proposals:create', 'documents:manage'],
   rating_analyst: [
     ...STAFF_BASE,
     'forms:manage',
@@ -140,6 +144,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'card:manage',
     'card:feeds',
     'cover:verify',
+    'documents:manage',
   ],
   compliance_officer: [
     ...STAFF_BASE,
@@ -157,9 +162,13 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'underwriting:manage',
     'underwriting:approve',
     'referrals:decide',
+    'documents:manage',
+    'documents:release',
+    'proposals:create',
   ],
   ops_supervisor: [
     ...STAFF_BASE,
+    'documents:manage',
     'events:read',
     'events:replay',
     'webhooks:read',
@@ -186,6 +195,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'quotes:create',
     'quotes:read',
     'policies:read',
+    'documents:read',
   ],
   cover_verifier: ['cover:verify'],
 };

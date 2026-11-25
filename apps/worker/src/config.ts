@@ -25,6 +25,10 @@ const EnvSchema = z.object({
   AGENT_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(2),
   /** Where uploaded files (eligibility feeds) are kept; must be the API's FILE_STORE_DIR. */
   FILE_STORE_DIR: z.string().default('../../var/files'),
+  /** Mail server for emailing documents, as smtp://user:password@host:587. Without it email deliveries fail with that reason. */
+  SMTP_URL: z.string().optional(),
+  /** The sender address of emailed documents; required with SMTP_URL. */
+  MAIL_FROM: z.string().optional(),
 });
 
 export type WorkerConfig = z.infer<typeof EnvSchema>;
@@ -35,6 +39,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
     throw new Error(`Invalid worker configuration: ${issues}`);
   }
+  if (parsed.data.SMTP_URL && !parsed.data.MAIL_FROM) throw new Error('Invalid worker configuration: MAIL_FROM is required with SMTP_URL.');
   if (parsed.data.NODE_ENV === 'production' && parsed.data.ALLOW_PRIVATE_WEBHOOK_TARGETS) {
     throw new Error('ALLOW_PRIVATE_WEBHOOK_TARGETS must not be enabled in production.');
   }

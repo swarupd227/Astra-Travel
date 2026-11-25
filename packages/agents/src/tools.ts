@@ -324,6 +324,62 @@ export const submitParityExplanation = defineTool({
   risk: 'propose',
   run: (i, api) => api.post('/v1/agent-proposals', i),
 });
+const templateId = z.uuid().describe('The document template UUID.');
+
+export const getPlanVersion = defineTool({
+  name: 'get_plan_version',
+  description:
+    'Get a plan version: its benefits, packaging, the values the plan gives to the variables of its schedule and policy form (keyed schedule:key or policy:key), its settings and its timing. This is the configuration a document must reflect.',
+  input: z.strictObject({ planVersionId: z.uuid().describe('The plan version UUID.') }),
+  permission: 'plans:read',
+  risk: 'read',
+  run: (i, api) => api.get(`/v1/plan-versions/${i.planVersionId}`),
+});
+
+export const getDocumentTemplate = defineTool({
+  name: 'get_document_template',
+  description:
+    'Get a document template: the plan version, the filed form edition and approved variable map version it was assembled from, the assembled text, the problems and checks of the assembly, and any findings that already hold it.',
+  input: z.strictObject({ templateId }),
+  permission: 'documents:read',
+  risk: 'read',
+  run: (i, api) => api.get(`/v1/document-templates/${i.templateId}`),
+});
+
+export const listPolicyDocuments = defineTool({
+  name: 'list_policy_documents',
+  description: 'List the documents issued for a policy (kind, status, template, hash and delivery status). Use get_issued_document to read one.',
+  input: z.strictObject({ policyId: z.uuid() }),
+  permission: 'documents:read',
+  risk: 'read',
+  run: (i, api) => api.get(`/v1/policies/${i.policyId}/documents`),
+});
+
+export const getIssuedDocument = defineTool({
+  name: 'get_issued_document',
+  description: 'Get an issued document with its full text, the template or builder version that produced it and its delivery status.',
+  input: z.strictObject({ documentId: z.uuid() }),
+  permission: 'documents:read',
+  risk: 'read',
+  run: (i, api) => api.get(`/v1/documents/${i.documentId}`),
+});
+
+export const submitDocumentFindings = defineTool({
+  name: 'submit_document_findings',
+  description:
+    'Submit what you found wrong in a document template or an issued document. Each finding quotes the exact text it is about (the platform checks the quote is in the document) and says what is wrong and why, with severity "hold" for a defect that must stop the template being released and "note" for something a person should know. Submit once, with every finding; if nothing is wrong, submit an empty list so the check is on record. A person reviews every finding.',
+  input: z.strictObject({
+    kind: z.literal('document_quality'),
+    subjectType: z.enum(['document_template', 'document']),
+    subjectId: z.uuid(),
+    summary: z.string().min(5).max(1000),
+    findings: z.array(z.strictObject({ quote: z.string().min(3).max(500), issue: z.string().min(5).max(1000), severity: z.enum(['hold', 'note']).optional() })).max(100),
+  }),
+  permission: 'proposals:create',
+  risk: 'propose',
+  run: (i, api) => api.post('/v1/agent-proposals', i),
+});
+
 export const TOOL_CATALOGUE: Record<string, ToolDefinition> = Object.fromEntries(
   [
     listAccounts,
@@ -344,6 +400,11 @@ export const TOOL_CATALOGUE: Record<string, ToolDefinition> = Object.fromEntries
     submitVariableMap,
     submitRateManual,
     submitParityExplanation,
+    getPlanVersion,
+    getDocumentTemplate,
+    listPolicyDocuments,
+    getIssuedDocument,
+    submitDocumentFindings,
   ].map((t) => [
     t.name,
     t as unknown as ToolDefinition,

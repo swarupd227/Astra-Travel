@@ -27,6 +27,7 @@ import type { AppDeps } from '../app';
 import { commonErrors, idempotencyHeaders, idempotencyKey } from './shared';
 import { buildQuote, HELD_REASON, normalise, REFERRED_REASON, todayUtc, type BuiltQuote, type NormalisedQuoteRequest, type Pinned } from './quote-core';
 import { runEvaluation } from './underwriting-evaluate';
+import { issuePolicyDocuments } from '../documents/issue';
 
 /** Quotes, bind, the policy record and cover verification (E04, E05). Design: docs/adr/0010. */
 
@@ -385,6 +386,8 @@ export const policyRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
             accountId: q.account_id,
             data: { number, quoteId: q.id, premium: snapshot.premium.total, paymentReference: b.payment.reference, disclosureVersion: b.acknowledgement.disclosureVersion, ruleSet: quote.ruleSet, manuals: quote.manuals },
           });
+          // The documents exist the moment the policy does (E04-F02-S03); one that cannot be produced is recorded, not hidden.
+          await issuePolicyDocuments(tx, deps.files, request.ctx, { policyId: policy.id, accountId: q.account_id, snapshot, planVersionId: q.plan_version_id });
           return { status: 201, body: await policyView(tx, policy.id) };
         });
       });

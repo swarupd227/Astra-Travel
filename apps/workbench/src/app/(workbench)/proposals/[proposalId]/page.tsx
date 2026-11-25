@@ -10,6 +10,7 @@ import { ErrorPanel, load } from '@/components/error-panel';
 import { Badge, Card, CardHeader, DescriptionList, Notice, PageHeader } from '@/components/ui/primitives';
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
+import { FindingsReview } from '../../documents/document-forms';
 import { CloseProposalForm, ManualReview, MarkReviewedForm, VariableReview, type ManualTable, type VariableItem } from '../proposal-forms';
 
 export const metadata = { title: 'Agent proposal' };
@@ -28,18 +29,23 @@ export default async function ProposalPage({ params, searchParams }: { params: P
   const p = res.data;
   const names = await peopleNames([p.requestedBy, p.resolvedBy]);
   const open = p.status === 'open';
-  const canManage = me.permissions.includes(p.kind === 'variable_map' ? 'forms:manage' : 'rating:manage');
+  const canManage = me.permissions.includes(p.kind === 'variable_map' ? 'forms:manage' : p.kind === 'document_quality' ? 'documents:release' : 'rating:manage');
   const checks = new Map((p.verification as Check[]).map((c) => [c.item, c]));
   const content = p.content as {
     items?: { variable?: FormVariableInput; rationale?: string; caseId?: string; step?: string; explanation?: string; manualPage?: string; workbookCell?: { row: number; column: string } }[];
     manual?: { code: string; state: string; benefit: string; effectiveFrom: string; document: { tables: { id: string; name: string; page: string; rows: unknown[] }[] } };
     uncertainties?: string[];
+    findings?: { quote: string; issue: string; severity?: 'hold' | 'note' }[];
   };
 
   const back =
-    p.subjectType === 'rate_manual'
-      ? { href: `/rating/manuals/${p.subjectId}`, label: 'Rate manual' }
-      : { href: `/forms/${p.subjectId}`, label: p.kind === 'variable_map' ? 'Form edition' : 'Rate manual document' };
+    p.subjectType === 'document_template'
+      ? { href: `/documents/templates/${p.subjectId}`, label: 'Document template' }
+      : p.subjectType === 'document'
+        ? { href: `/documents/${p.subjectId}`, label: 'Document' }
+        : p.subjectType === 'rate_manual'
+          ? { href: `/rating/manuals/${p.subjectId}`, label: 'Rate manual' }
+          : { href: `/forms/${p.subjectId}`, label: p.kind === 'variable_map' ? 'Form edition' : 'Rate manual document' };
 
   const edition = p.subjectType === 'form_edition' ? await load(() => api<{ formNumber: string; edition: string; title: string; pageCount: number }>(`/v1/form-editions/${p.subjectId}`)) : null;
   const text = p.kind === 'variable_map' ? await load(() => api<{ text: string; pageStarts: number[] }>(`/v1/form-editions/${p.subjectId}/text`)) : null;
@@ -85,7 +91,7 @@ export default async function ProposalPage({ params, searchParams }: { params: P
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <Card className="min-w-0">
-          <CardHeader title={p.kind === 'variable_map' ? 'Proposed variables' : p.kind === 'rate_manual' ? 'Drafted manual' : 'Differences explained'} />
+          <CardHeader title={p.kind === 'variable_map' ? 'Proposed variables' : p.kind === 'rate_manual' ? 'Drafted manual' : p.kind === 'document_quality' ? 'Findings' : 'Differences explained'} />
           <div className="space-y-4 p-5">
             {p.kind === 'variable_map' ? (
               canManage || !open ? (
@@ -123,6 +129,35 @@ export default async function ProposalPage({ params, searchParams }: { params: P
                   tables={content.manual.document.tables.map<ManualTable>((t) => ({ id: t.id, name: t.name, page: t.page, rows: t.rows.length, ok: checks.get(t.id)?.ok ?? null, detail: checks.get(t.id)?.detail ?? '' }))}
                 />
               </>
+            ) : null}
+            {p.kind === 'document_quality' ? (
+              open && canManage ? (
+                <FindingsReview
+                  proposalId={p.id}
+                  items={(content.findings ?? []).map((f, i) => ({ id: `f${i + 1}`, quote: f.quote, issue: f.issue, severity: f.severity ?? 'hold' }))}
+                />
+              ) : (
+                <>
+                  {(content.findings ?? []).length === 0 ? <p className="text-sm text-muted">The agent found nothing wrong.</p> : null}
+                  <ul className="space-y-3">
+                    {(content.findings ?? []).map((f, i) => {
+                      const accepted = ((p.resolution?.accepted as string[] | undefined) ?? []).includes(`f${i + 1}`);
+                      return (
+                        <li key={i} className="rounded-lg border border-border p-3 text-sm">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-fg">{f.issue}</span>
+                            {p.status === 'resolved' ? <Badge tone={accepted ? 'danger' : 'neutral'}>{accepted ? 'Accepted as a defect' : 'Not an issue'}</Badge> : <Badge tone="warning">{f.severity === 'note' ? 'Note' : 'Holds release'}</Badge>}
+                          </span>
+                          <span className="mt-1 block text-muted">
+                            Quoted: <q className="font-mono text-xs text-fg">{f.quote}</q>
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {open && !canManage ? <Notice tone="neutral">You need the documents:release permission to review these findings.</Notice> : null}
+                </>
+              )
             ) : null}
             {p.kind === 'parity_explanation' ? (
               <>
@@ -188,7 +223,7 @@ export default async function ProposalPage({ params, searchParams }: { params: P
               ) : null}
             </div>
           </Card>
-          {open && canManage && p.kind !== 'parity_explanation' ? (
+          {open && canManage && p.kind !== 'parity_explanation' && p.kind !== 'document_quality' ? (
             <Card>
               <CardHeader title="Not useful?" description="Rejecting records that nothing was taken from it." />
               <div className="p-5">

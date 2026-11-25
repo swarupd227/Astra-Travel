@@ -1,16 +1,18 @@
 import { z } from 'zod';
 import { FormVariableInputSchema } from './studio';
 import { CreateManualRequestSchema } from './rating';
+import { DocumentFindingSchema } from './documents';
 
 /** Agent proposals (E01-F01-S03, E02-F01-S02, E02-F07-S03). Design: docs/adr/0009. */
 
-export const PROPOSAL_KINDS = ['variable_map', 'rate_manual', 'parity_explanation'] as const;
+export const PROPOSAL_KINDS = ['variable_map', 'rate_manual', 'parity_explanation', 'document_quality'] as const;
 export type ProposalKind = (typeof PROPOSAL_KINDS)[number];
 
 export const PROPOSAL_KIND_LABELS: Record<ProposalKind, string> = {
   variable_map: 'Variable map',
   rate_manual: 'Rate manual draft',
   parity_explanation: 'Parity explanation',
+  document_quality: 'Document quality findings',
 };
 
 // ---------------- What an agent submits ----------------
@@ -57,7 +59,16 @@ export const SubmitParityExplanationSchema = z.object({
   items: z.array(ParityExplanationItemSchema).min(1).max(200),
 });
 
-export const SubmitProposalSchema = z.discriminatedUnion('kind', [SubmitVariableMapSchema, SubmitRateManualSchema, SubmitParityExplanationSchema]);
+export const SubmitDocumentQualitySchema = z.object({
+  kind: z.literal('document_quality'),
+  subjectType: z.enum(['document_template', 'document']),
+  subjectId: z.uuid(),
+  summary: z.string().trim().min(5).max(1000),
+  /** Empty when the agent found nothing wrong: the proposal then records that the document was checked. */
+  findings: z.array(DocumentFindingSchema).max(100),
+});
+
+export const SubmitProposalSchema = z.discriminatedUnion('kind', [SubmitVariableMapSchema, SubmitRateManualSchema, SubmitParityExplanationSchema, SubmitDocumentQualitySchema]);
 export type SubmitProposal = z.infer<typeof SubmitProposalSchema>;
 
 // ---------------- What is stored and shown ----------------
@@ -76,7 +87,7 @@ export const ProposalSchema = z.object({
   agentName: z.string(),
   runId: z.uuid().nullable(),
   requestedBy: z.string(),
-  subjectType: z.enum(['form_edition', 'rate_manual']),
+  subjectType: z.enum(['form_edition', 'rate_manual', 'document_template', 'document']),
   subjectId: z.uuid(),
   summary: z.string(),
   content: z.record(z.string(), z.unknown()),

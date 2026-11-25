@@ -311,7 +311,7 @@ export const AgentProposalRaised = defineEvent({
   source: 'astra.agents',
   schema: z.object({
     proposalId: z.uuid(),
-    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation']),
+    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality']),
     agentId: z.string(),
     subjectId: z.uuid(),
     items: z.number().int(),
@@ -324,7 +324,7 @@ export const AgentProposalResolved = defineEvent({
   source: 'astra.agents',
   schema: z.object({
     proposalId: z.uuid(),
-    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation']),
+    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality']),
     agentId: z.string(),
     accepted: z.number().int(),
     corrected: z.number().int(),
@@ -361,6 +361,27 @@ export const PolicyBound = defineEvent({
   }),
 });
 
+export const DocumentTemplateReleased = defineEvent({
+  type: 'DocumentTemplateReleased',
+  version: 1,
+  source: 'astra.documents',
+  schema: z.object({ templateId: z.uuid(), planCode: z.string(), kind: z.enum(['schedule', 'policy']), version: z.number().int() }),
+});
+
+export const DocumentIssued = defineEvent({
+  type: 'DocumentIssued',
+  version: 1,
+  source: 'astra.documents',
+  schema: z.object({ documentId: z.uuid(), kind: z.string(), policyId: z.uuid().nullable(), policyNumber: z.string().nullable(), status: z.enum(['issued', 'failed']) }),
+});
+
+export const DocumentDeliveryFailed = defineEvent({
+  type: 'DocumentDeliveryFailed',
+  version: 1,
+  source: 'astra.documents',
+  schema: z.object({ deliveryId: z.uuid(), documentId: z.uuid(), channel: z.string(), reason: z.string(), attempts: z.number().int() }),
+});
+
 export const EVENT_CATALOGUE = [
   AccountRegistered,
   AccountStatusChanged,
@@ -391,6 +412,9 @@ export const EVENT_CATALOGUE = [
   AgentProposalResolved,
   QuoteIssued,
   PolicyBound,
+  DocumentTemplateReleased,
+  DocumentIssued,
+  DocumentDeliveryFailed,
 ] as const;
 
 export type CatalogueEventType = (typeof EVENT_CATALOGUE)[number]['type'];

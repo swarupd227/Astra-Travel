@@ -188,6 +188,15 @@ const PROBES: Record<string, Probe[]> = {
     { method: 'GET', url: () => `/v1/policies?accountId=${accountA}` },
   ],
   'GET /v1/policies/:policyId': [{ method: 'GET', url: () => `/v1/policies/${ABSENT}` }],
+  'GET /v1/policies/:policyId/documents': [{ method: 'GET', url: () => `/v1/policies/${ABSENT}/documents` }],
+  'POST /v1/policies/:policyId/documents/issue': [{ method: 'POST', url: () => `/v1/policies/${ABSENT}/documents/issue`, payload: () => ({}) }],
+  'POST /v1/policies/:policyId/notices': [{ method: 'POST', url: () => `/v1/policies/${ABSENT}/notices`, payload: () => ({ eventSeq: 1 }) }],
+  'GET /v1/documents/:id': [{ method: 'GET', url: () => `/v1/documents/${ABSENT}` }],
+  'GET /v1/documents/:id/file': [{ method: 'GET', url: () => `/v1/documents/${ABSENT}/file` }],
+  'GET /v1/document-failures': [{ method: 'GET', url: () => '/v1/document-failures' }],
+  'POST /v1/document-deliveries/:id/retry': [{ method: 'POST', url: () => `/v1/document-deliveries/${ABSENT}/retry`, payload: () => ({}) }],
+  'POST /v1/card-programmes/:programmeId/guides': [{ method: 'POST', url: () => `/v1/card-programmes/${programmeA}/guides`, payload: () => ({ planCode: 'ANY-PLAN' }) }],
+  'GET /v1/card-programmes/:programmeId/guides': [{ method: 'GET', url: () => `/v1/card-programmes/${programmeA}/guides` }],
 };
 
 describe('route catalogue', () => {

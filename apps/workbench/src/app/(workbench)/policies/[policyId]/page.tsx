@@ -10,6 +10,7 @@ import { ErrorPanel, load } from '@/components/error-panel';
 import { Badge, Card, CardHeader, DescriptionList, Notice, PageHeader } from '@/components/ui/primitives';
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
+import { PolicyDocuments } from '../../documents/policy-documents';
 
 export const metadata = { title: 'Policy' };
 
@@ -124,6 +125,8 @@ export default async function PolicyPage({ params, searchParams }: { params: Pro
           </ul>
         </Card>
       </div>
+
+      {!asOfIso && me.permissions.includes('documents:read') ? <PolicyDocuments policyId={p.id} canManage={me.permissions.includes('documents:manage')} /> : null}
 
       <Card className="mb-6">
         <CardHeader title="Benefits" description="Cover dates by benefit, with the underwriting arrangement premium and documents follow." />

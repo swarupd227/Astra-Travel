@@ -13,6 +13,7 @@ import { LocalTime } from '@/components/ui/time';
 import { PlanBuilder, type BuilderVariable } from '../../builder';
 import { ApproveVersionForm, PublishVersionForm, RunTestsForm } from '../../plan-forms';
 import { VERSION_TONES } from '../../tones';
+import { VersionTemplates } from '../../../documents/version-templates';
 
 export const metadata = { title: 'Plan version' };
 
@@ -124,6 +125,9 @@ export default async function VersionPage({
         </div>
 
         <div className="space-y-6">
+          {me.permissions.includes('documents:read') && plan.kind !== 'base' ? (
+            <VersionTemplates versionId={v.id} hasPolicyForm={!!plan.policyEditionId} canManage={me.permissions.includes('documents:manage')} assemblable={v.status === 'approved' || v.status === 'published'} />
+          ) : null}
           <Card>
             <CardHeader title={plan.kind === 'base' ? 'Approval' : 'Ready to publish?'} />
             <div className="space-y-4 p-5">

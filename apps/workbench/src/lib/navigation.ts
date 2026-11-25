@@ -127,6 +127,25 @@ export const NAVIGATION: NavSection[] = [
     ],
   },
   {
+    label: 'Documents',
+    items: [
+      {
+        href: '/documents',
+        label: 'Document templates',
+        icon: 'file',
+        permission: 'documents:read',
+        description: 'Schedules and policies assembled from filed forms, checked and released by a second person.',
+      },
+      {
+        href: '/documents/failures',
+        label: 'Failed documents',
+        icon: 'alert',
+        permission: 'documents:read',
+        description: 'Documents that could not be produced and emails that could not be delivered.',
+      },
+    ],
+  },
+  {
     label: 'Underwriting',
     items: [
       {

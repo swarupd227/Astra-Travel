@@ -10,6 +10,7 @@ const { webhookSource } = await import('./webhooks');
 const { Loop } = await import('./loops');
 const { startAgentLoops } = await import('./agents');
 const { cardFeedLoop } = await import('./card-feeds');
+const { documentDeliveryLoop } = await import('./documents');
 
 const {
   CompositeRegistry,
@@ -17,6 +18,7 @@ const {
   createPool,
   dispatchDue,
   FeatureFlags,
+  LocalFileStore,
   purgeExpiredIdempotencyKeys,
   relayOutbox,
   sealAudit,
@@ -126,7 +128,9 @@ const agentLoops = await startAgentLoops(pool, config, logger);
 const cardFeeds = cardFeedLoop(pool, config, logger);
 // A new feed is announced through the outbox, so the same notification wakes feed processing.
 listener.on('notification', () => cardFeeds.wake());
-const loops = [relay, dispatch, sealer, housekeeping, cardFeeds, ...agentLoops];
+const documentDelivery = documentDeliveryLoop(pool, new LocalFileStore(config.FILE_STORE_DIR), config, logger);
+listener.on('notification', () => documentDelivery.wake());
+const loops = [relay, dispatch, sealer, housekeeping, cardFeeds, documentDelivery, ...agentLoops];
 for (const loop of loops) loop.start();
 
 const health = createServer((req, res) => {
