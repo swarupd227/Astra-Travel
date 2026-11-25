@@ -229,7 +229,9 @@ describe('bind (E04-F02) and the policy record (E05)', () => {
       await db(`INSERT INTO policies.policy_events (policy_id, account_id, type, actor, actor_name, reason, data) VALUES ($1, $2, 'status_changed', 'service-1', 'Sam Service', 'Traveller cancelled in the review period', $3)`, [p.id, st.accountId, JSON.stringify({ to: 'cancelled' })]);
     });
     await expect(asPlatform((db) => db(`UPDATE policies.policies SET status = 'active' WHERE id = $1`, [p.id]))).rejects.toThrow(/cannot become/);
-    await expect(asPlatform((db) => db(`UPDATE policies.policies SET premium_total = 1 WHERE id = $1`, [p.id]))).rejects.toThrow(/changes through events/);
+    await expect(asPlatform((db) => db(`UPDATE policies.policies SET payment_reference = 'x' WHERE id = $1`, [p.id]))).rejects.toThrow(/changes through events/);
+    // The premium follows the record only while the policy is active (servicing, Increment 11).
+    await expect(asPlatform((db) => db(`UPDATE policies.policies SET premium_total = 1 WHERE id = $1`, [p.id]))).rejects.toThrow(/cannot change/);
     await expect(asPlatform((db) => db(`UPDATE policies.policy_events SET reason = 'x' WHERE policy_id = $1`, [p.id]))).rejects.toThrow(/append-only|permission denied/);
     await expect(asPlatform((db) => db(`DELETE FROM policies.policies WHERE id = $1`, [p.id]))).rejects.toThrow(/cannot be deleted|permission denied/);
 

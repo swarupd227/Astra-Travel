@@ -47,6 +47,7 @@ export const REVIEW_KIND_LABELS: Record<string, string> = {
   budget: 'Budget',
   run_failed: 'Run failed',
   model_refusal: 'Model declined',
+  servicing_request: 'Servicing request for a person',
 };
 
 export function usd(value: string | number, digits = 4): string {

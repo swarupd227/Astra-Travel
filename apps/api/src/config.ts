@@ -32,6 +32,8 @@ const EnvSchema = z.object({
   ALLOW_ILLUSTRATIVE_RATING: bool,
   /** How long a quote stays open for bind (days). Assurant confirms the period. */
   QUOTE_VALID_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+  /** The largest charge or refund the servicing agent may confirm on its own; above it the request goes to a person. To be confirmed by Assurant. */
+  AGENT_SERVICING_MAX_AMOUNT: z.coerce.number().min(0).max(100000).default(500),
   /** Largest eligibility feed accepted, in bytes (default 4 GiB: about 50 million records). */
   CARD_FEED_MAX_BYTES: z.coerce
     .number()

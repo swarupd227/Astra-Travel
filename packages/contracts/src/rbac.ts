@@ -91,6 +91,8 @@ export const PERMISSIONS = {
   'quotes:create': 'Create quotes, change their selections and bind them to policies',
   'quotes:read': 'View quotes',
   'policies:read': 'View policies, their history and their record at any date',
+  'servicing:execute': 'Preview and make changes, cancellations and corrections on policies',
+  'servicing:review': 'Review the sample of changes made by the servicing agent',
   'documents:read': 'View document templates, issued documents and their delivery',
   'documents:manage': 'Assemble document templates, issue notices and guides, and retry failed deliveries',
   'documents:release': 'Release document templates assembled by someone else, and resolve document quality findings',
@@ -134,8 +136,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'webhooks:manage',
     'card:read',
     'quotes:create',
+    'servicing:execute',
   ],
-  service_rep: [...STAFF_BASE, 'card:read', 'cover:verify', 'quotes:create'],
+  service_rep: [...STAFF_BASE, 'card:read', 'cover:verify', 'quotes:create', 'servicing:execute'],
   finance_analyst: [...STAFF_BASE, 'card:read'],
   card_programme_manager: [
     ...STAFF_BASE,
@@ -175,6 +178,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'agents:read',
     'agents:pause',
     'agents:review',
+    'servicing:review',
   ],
   ai_governance_lead: [
     ...STAFF_BASE,
@@ -196,6 +200,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'quotes:read',
     'policies:read',
     'documents:read',
+    'servicing:execute',
   ],
   cover_verifier: ['cover:verify'],
 };

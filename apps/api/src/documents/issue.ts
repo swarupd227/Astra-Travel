@@ -162,6 +162,10 @@ const toEvent = (e: { seq: string | number; type: PolicyEvent['type']; occurred_
   data: e.data,
 });
 
+export async function loadEvents(tx: Tx, policyId: string): Promise<PolicyEvent[]> {
+  return (await tx.query<Parameters<typeof toEvent>[0]>(`SELECT seq, type, occurred_at, actor, actor_name, reason, data FROM policies.policy_events WHERE policy_id = $1 ORDER BY seq`, [policyId])).rows.map(toEvent);
+}
+
 /**
  * The notice for one change to a policy: what changed for a change of details, or the end of cover for a
  * cancellation or expiry (E09-F01-S03). One notice per event.
@@ -169,7 +173,7 @@ const toEvent = (e: { seq: string | number; type: PolicyEvent['type']; occurred_
 export async function issueNotice(tx: Tx, files: FileStore, ctx: RequestContext, policyId: string, eventSeq: number): Promise<IssuedRef> {
   const pol = (await tx.query<{ id: string; account_id: string }>(`SELECT id, account_id FROM policies.policies WHERE id = $1`, [policyId])).rows[0];
   if (!pol) throw notFound('The policy');
-  const events = (await tx.query<Parameters<typeof toEvent>[0]>(`SELECT seq, type, occurred_at, actor, actor_name, reason, data FROM policies.policy_events WHERE policy_id = $1 ORDER BY seq`, [policyId])).rows.map(toEvent);
+  const events = await loadEvents(tx, policyId);
   const ev = events.find((e) => e.seq === eventSeq);
   if (!ev) throw notFound('That event of the policy');
   if (ev.type === 'bound') throw new AppError('validation_failed', 'The purchase confirmation covers the bind; a notice is for a change or a cancellation.');

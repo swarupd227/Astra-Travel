@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
-import { ARRANGEMENT_LABELS, type Policy } from '@astra/contracts';
+import { ARRANGEMENT_LABELS, SERVICING_LABELS, type CatalogueDocument, type Policy, type PlanVersion } from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
 import { sentenceCase } from '@/lib/format';
 import { nameOf, peopleNames } from '@/lib/people';
@@ -11,17 +11,18 @@ import { Badge, Card, CardHeader, DescriptionList, Notice, PageHeader } from '@/
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
 import { PolicyDocuments } from '../../documents/policy-documents';
+import { ServicingPanel } from './servicing-panel';
 
 export const metadata = { title: 'Policy' };
 
 const TONES = { active: 'success', cancelled: 'neutral', expired: 'neutral' } as const;
 const when = (s: string) => s.replace('T', ' ');
 
-export default async function PolicyPage({ params, searchParams }: { params: Promise<{ policyId: string }>; searchParams: Promise<{ asOf?: string }> }) {
+export default async function PolicyPage({ params, searchParams }: { params: Promise<{ policyId: string }>; searchParams: Promise<{ asOf?: string; serviced?: string }> }) {
   const me = (await getMe())!;
   if (!me.permissions.includes('policies:read')) return <AccessDenied permission="policies:read" />;
   const { policyId } = await params;
-  const { asOf } = await searchParams;
+  const { asOf, serviced } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(policyId)) notFound();
   // The date and time field gives a local time; the record is asked for at that instant.
   const asOfIso = asOf && !Number.isNaN(Date.parse(asOf)) ? new Date(asOf).toISOString() : null;
@@ -45,6 +46,18 @@ export default async function PolicyPage({ params, searchParams }: { params: Pro
   const p = res.data;
   const r = p.record;
   const names = await peopleNames(p.history.map((h) => h.actor));
+  const canService = !asOfIso && p.status === 'active' && me.permissions.includes('servicing:execute');
+  // The optional benefits the policy does not have yet, for the "add a benefit" choice.
+  let optionalBenefits: { code: string; name: string }[] = [];
+  if (canService) {
+    const pv = await load(() => api<PlanVersion>(`/v1/plan-versions/${r.plan.versionId}`));
+    if (pv.data) {
+      const cat = await load(() => api<{ document: CatalogueDocument }>(`/v1/benefit-catalogues/${pv.data!.catalogueId}`));
+      optionalBenefits = pv.data.document.benefits
+        .filter((b) => b.packaging !== 'packaged' && !r.benefits.some((x) => x.code === b.code))
+        .map((b) => ({ code: b.code, name: cat.data?.document.benefits.find((c) => c.code === b.code)?.name ?? b.code }));
+    }
+  }
   return (
     <>
       <Link href="/policies" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg">
@@ -126,6 +139,21 @@ export default async function PolicyPage({ params, searchParams }: { params: Pro
         </Card>
       </div>
 
+      {serviced ? (
+        <div className="mb-6">
+          <Notice tone="success" title="Done">
+            {SERVICING_LABELS[serviced as keyof typeof SERVICING_LABELS] ?? 'The change'} was made and recorded in the history below. A notice has been issued with the policy’s documents.
+          </Notice>
+        </div>
+      ) : null}
+      {canService ? (
+        <Card className="mb-6">
+          <CardHeader title="Service this policy" description="Changes are re-rated and re-screened with the versions the policy was bound with. You see the price before you confirm." />
+          <div className="p-5">
+            <ServicingPanel policyId={p.id} travellers={r.travellers.map((t) => ({ id: t.id, name: `${t.firstName} ${t.lastName}` }))} optionalBenefits={optionalBenefits} />
+          </div>
+        </Card>
+      ) : null}
       {!asOfIso && me.permissions.includes('documents:read') ? <PolicyDocuments policyId={p.id} canManage={me.permissions.includes('documents:manage')} /> : null}
 
       <Card className="mb-6">

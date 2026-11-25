@@ -29,6 +29,7 @@ export const REVIEW_KINDS = [
   'budget',
   'run_failed',
   'model_refusal',
+  'servicing_request',
 ] as const;
 
 const permissionEnum = z.enum(Object.keys(PERMISSIONS) as [Permission, ...Permission[]]);

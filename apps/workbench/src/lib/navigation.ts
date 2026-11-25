@@ -124,6 +124,13 @@ export const NAVIGATION: NavSection[] = [
         permission: 'policies:read',
         description: 'One record per policy, with history and the record as it was at any date.',
       },
+      {
+        href: '/servicing/agent-sample',
+        label: 'Agent changes',
+        icon: 'clipboard',
+        permission: 'servicing:review',
+        description: 'A weekly random sample of the changes the servicing agent made, to review.',
+      },
     ],
   },
   {

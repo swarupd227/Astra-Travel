@@ -15,3 +15,4 @@ export * from './underwriting';
 export * from './proposals';
 export * from './policies';
 export * from './documents';
+export * from './servicing';

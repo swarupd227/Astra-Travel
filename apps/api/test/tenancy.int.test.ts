@@ -197,6 +197,8 @@ const PROBES: Record<string, Probe[]> = {
   'POST /v1/document-deliveries/:id/retry': [{ method: 'POST', url: () => `/v1/document-deliveries/${ABSENT}/retry`, payload: () => ({}) }],
   'POST /v1/card-programmes/:programmeId/guides': [{ method: 'POST', url: () => `/v1/card-programmes/${programmeA}/guides`, payload: () => ({ planCode: 'ANY-PLAN' }) }],
   'GET /v1/card-programmes/:programmeId/guides': [{ method: 'GET', url: () => `/v1/card-programmes/${programmeA}/guides` }],
+  'POST /v1/policies/:policyId/servicing/preview': [{ method: 'POST', url: () => `/v1/policies/${ABSENT}/servicing/preview`, payload: () => ({ type: 'cancel', reason: 'Probe', noLoss: true }) }],
+  'POST /v1/policies/:policyId/servicing': [{ method: 'POST', url: () => `/v1/policies/${ABSENT}/servicing`, payload: () => ({ request: { type: 'cancel', reason: 'Probe', noLoss: true }, confirmAmount: '0.00' }) }],
 };
 
 describe('route catalogue', () => {

@@ -382,6 +382,28 @@ export const DocumentDeliveryFailed = defineEvent({
   schema: z.object({ deliveryId: z.uuid(), documentId: z.uuid(), channel: z.string(), reason: z.string(), attempts: z.number().int() }),
 });
 
+export const PolicyChanged = defineEvent({
+  type: 'PolicyChanged',
+  version: 1,
+  source: 'astra.policies',
+  schema: z.object({
+    policyId: z.uuid(),
+    number: z.string(),
+    transaction: z.string(),
+    premiumTotal: z.string(),
+    /** Premium charged for the change, and refund due, for billing to act on. */
+    charge: z.string(),
+    refund: z.string(),
+  }),
+});
+
+export const PolicyCancelled = defineEvent({
+  type: 'PolicyCancelled',
+  version: 1,
+  source: 'astra.policies',
+  schema: z.object({ policyId: z.uuid(), number: z.string(), refund: z.string(), basis: z.string(), reason: z.string() }),
+});
+
 export const EVENT_CATALOGUE = [
   AccountRegistered,
   AccountStatusChanged,
@@ -415,6 +437,8 @@ export const EVENT_CATALOGUE = [
   DocumentTemplateReleased,
   DocumentIssued,
   DocumentDeliveryFailed,
+  PolicyChanged,
+  PolicyCancelled,
 ] as const;
 
 export type CatalogueEventType = (typeof EVENT_CATALOGUE)[number]['type'];

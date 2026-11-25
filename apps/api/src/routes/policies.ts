@@ -78,7 +78,7 @@ const toEvent = (e: { seq: string | number; type: PolicyEvent['type']; occurred_
 });
 
 /** The policy as it is now, or as it was at a moment (E05-F01-S02). */
-async function policyView(tx: Tx, id: string, asOf?: string): Promise<Policy> {
+export async function policyView(tx: Tx, id: string, asOf?: string): Promise<Policy> {
   const p = (await tx.query<{ id: string; number: string; account_id: string }>(`SELECT id, number, account_id FROM policies.policies WHERE id = $1`, [id])).rows[0];
   if (!p) throw notFound('The policy');
   const events = (

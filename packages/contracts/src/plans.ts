@@ -112,6 +112,20 @@ export const PlanValueSchema = z.union([
 ]);
 export type PlanValue = z.infer<typeof PlanValueSchema>;
 
+/**
+ * What servicing may do after bind (Increment 11, ADR 0012). Everything here defaults to the filed sample
+ * form's rule; a state whose rule differs, and the time limits Assurant has yet to confirm, are set per plan.
+ */
+export const ServicingRulesSchema = z.object({
+  /** Refund when cancelling after the review period: none (the sample form) or pro rata by unexpired days. */
+  postReviewRefund: z.enum(['none', 'pro_rata']).default('none'),
+  /** Days after purchase within which additional trip cost may be insured; null until confirmed. */
+  additionalCostDays: z.number().int().min(0).max(3650).nullable().default(null),
+  /** Days after purchase within which a benefit or upgrade may be added; null means only what the rules engine allows. */
+  addBenefitDays: z.number().int().min(0).max(3650).nullable().default(null),
+});
+export type ServicingRules = z.infer<typeof ServicingRulesSchema>;
+
 export const PlanDocumentSchema = z.object({
   benefits: z
     .array(
@@ -152,6 +166,7 @@ export const PlanDocumentSchema = z.object({
   productType: z.string().max(40).nullable().default(null),
   /** Cover start and end per benefit group (or per benefit, which wins), keyed by group or benefit code. */
   timing: z.record(z.string().regex(/^[a-z][a-z0-9_]{1,63}$/), TimingSchema).default({}),
+  servicing: ServicingRulesSchema.default({ postReviewRefund: 'none', additionalCostDays: null, addBenefitDays: null }),
 });
 export type PlanDocument = z.infer<typeof PlanDocumentSchema>;
 

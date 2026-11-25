@@ -76,6 +76,8 @@ export interface TestContext {
   agentSigner: AgentTokenSigner;
   /** The file store the test app writes uploads to (a temporary directory). */
   files: LocalFileStore;
+  /** Moves the clock servicing reads (null returns to real time). */
+  setNow: (d: Date | null) => void;
   close: () => Promise<void>;
 }
 
@@ -114,9 +116,11 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
     QUOTE_VALID_DAYS: 30,
     FILE_STORE_DIR: mkdtempSync(join(tmpdir(), 'astra-files-')),
     CARD_FEED_MAX_BYTES: 64 * 1024 * 1024,
+    AGENT_SERVICING_MAX_AMOUNT: 500,
     ...overrides,
   };
   const files = new LocalFileStore(config.FILE_STORE_DIR);
+  let fixedNow: Date | null = null;
   const app = await buildApp({
     config,
     pool,
@@ -128,6 +132,7 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
     flags: new FeatureFlags(pool, 0),
     secrets: new SecretBox({ test: config.SECRETS_KEK }, 'test'),
     files,
+    now: () => fixedNow ?? new Date(),
     people: new PeopleDirectory(pool, createLogger('astra-people-test', 'fatal'), 0),
     authenticator: new Authenticator({
       issuer: ISSUER,
@@ -145,6 +150,9 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
     idp,
     agentSigner,
     files,
+    setNow: (d) => {
+      fixedNow = d;
+    },
     close: async () => {
       await app.close();
       await pool.end();

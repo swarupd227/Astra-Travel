@@ -11,8 +11,8 @@
  * Assurant has filed, and it is never created in production.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestApp, type TestContext } from './helpers';
-import { publishedStack, send } from './fixtures';
+import { createTestApp, insertAccount, type TestContext } from './helpers';
+import { addDays, publishedStack, send, today, type Stack } from './fixtures';
 
 const enabled = process.env.SEED_SYNTHETIC_STACK === 'true';
 let t: TestContext;
@@ -26,7 +26,24 @@ afterAll(async () => {
 
 describe.skipIf(!enabled)('seed the synthetic stack', () => {
   it('publishes plan Q-DE, binds one policy and leaves one quote open', async () => {
-    const st = await publishedStack(t);
+    // A database that already holds the stack gets only its policy and quote, on a new account.
+    const st = await publishedStack(t).catch(async (): Promise<Stack> => {
+      const stamp = Date.now().toString(36).toUpperCase();
+      const accountId = await insertAccount(t.pool, `SEED-${stamp}`);
+      const partner = await t.idp.token({ roles: ['partner_developer'], accountId, sub: `svc-seed-${stamp}` });
+      const dates = { purchase: today(), deposit: addDays(today(), -10), departure: addDays(today(), 20), return: addDays(today(), 29) };
+      const body = (over: Record<string, unknown> = {}) => ({
+        accountId,
+        planCode: 'Q-DE',
+        state: 'DE',
+        travellers: [{ firstName: 'Pat', lastName: 'Sample', dateOfBirth: '1980-05-05', costPerTraveller: '4200' }],
+        trip: { purchaseDate: dates.purchase, initialDepositDate: dates.deposit, departureDate: dates.departure, returnDate: dates.return, destinations: [{ country: 'FR', region: 'Europe' }] },
+        ...over,
+      });
+      const probe = await send(t, 'POST', '/v1/quotes', partner, body());
+      expect(probe.statusCode, probe.body).toBe(201);
+      return { t, tokens: { partner } as Stack['tokens'], accountId, disclosureVersion: probe.json().disclosure.version, quoteBody: body } as unknown as Stack;
+    });
     const q1 = await send(t, 'POST', '/v1/quotes', st.tokens.partner, st.quoteBody({ selection: ['trip_interruption'] }));
     expect(q1.statusCode, q1.body).toBe(201);
     const bound = await send(t, 'POST', `/v1/quotes/${q1.json().id}/bind`, st.tokens.partner, {

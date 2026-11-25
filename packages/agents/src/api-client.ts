@@ -20,7 +20,7 @@ export class AgentApiClient {
   constructor(
     private readonly baseUrl: string,
     private readonly token: string,
-    private readonly correlationId: string,
+    readonly correlationId: string,
     private readonly fetchImpl?: typeof fetch,
   ) {}
 
@@ -62,7 +62,7 @@ export class AgentApiClient {
   }
 
   /** Posts JSON. Used only by tools that submit proposals; a person applies anything an agent proposes. */
-  async post<T>(path: string, body: unknown): Promise<T> {
+  async post<T>(path: string, body: unknown, headers: Record<string, string> = {}): Promise<T> {
     const url = new URL(path, this.baseUrl);
     const res = await outboundFetch(
       url.toString(),
@@ -73,6 +73,7 @@ export class AgentApiClient {
           accept: 'application/json',
           'content-type': 'application/json',
           'x-correlation-id': this.correlationId,
+          ...headers,
         },
         body: JSON.stringify(body),
       },

@@ -11,3 +11,4 @@ export * from './catalogue';
 export { AG10 } from './catalogue/ag-10-operations-copilot';
 export { AG01, AG02, AG03 } from './catalogue/configuration-agents';
 export { AG07 } from './catalogue/document-quality';
+export { AG06 } from './catalogue/policy-servicing';

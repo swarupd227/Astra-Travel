@@ -380,6 +380,46 @@ export const submitDocumentFindings = defineTool({
   run: (i, api) => api.post('/v1/agent-proposals', i),
 });
 
+const servicingRequest = z.record(z.string(), z.unknown()).describe('The change: { type, reason, ... } where type is cancel, change_dates, change_cost, add_traveller, remove_traveller, change_destinations, add_benefits or correct, with the fields that type needs.');
+
+export const findPolicy = defineTool({
+  name: 'find_policy',
+  description: 'Find policies by number or traveller name. Returns id, number, status, plan, cover dates, premium and traveller names.',
+  input: z.strictObject({ query: z.string().min(2).max(100), limit }),
+  permission: 'policies:read',
+  risk: 'read',
+  run: (i, api) => api.get('/v1/policies', { q: i.query, limit: i.limit ?? 10 }),
+});
+
+export const getPolicy = defineTool({
+  name: 'get_policy',
+  description: 'Get a policy: status, review period, travellers, trip, benefits with limits and cover dates, premium, and its history.',
+  input: z.strictObject({ policyId: z.uuid() }),
+  permission: 'policies:read',
+  risk: 'read',
+  run: (i, api) => api.get(`/v1/policies/${i.policyId}`),
+});
+
+export const previewPolicyChange = defineTool({
+  name: 'preview_policy_change',
+  description:
+    'Preview a change, cancellation or correction without making it. Returns whether it is allowed (and why not), what would change, the premium before and after, what is charged or refunded and the rule behind it, whether the review period is running, and confirmAmount. Always preview first and tell the person the change and the price.',
+  input: z.strictObject({ policyId: z.uuid(), request: servicingRequest }),
+  permission: 'servicing:execute',
+  risk: 'read',
+  run: (i, api) => api.post(`/v1/policies/${i.policyId}/servicing/preview`, i.request),
+});
+
+export const applyPolicyChange = defineTool({
+  name: 'apply_policy_change',
+  description:
+    'Make a change, cancellation or correction that you have previewed. Only after the person has confirmed the change and its price in their own words: put those words in agentConfirmation exactly as they wrote them, and pass the confirmAmount from the preview. The platform refuses if the person has not confirmed, if the price has moved, or if the request is outside your limits (it is then queued for a person).',
+  input: z.strictObject({ policyId: z.uuid(), request: servicingRequest, confirmAmount: z.string().regex(/^-?\d+(\.\d{1,2})?$/), agentConfirmation: z.string().min(2).max(500) }),
+  permission: 'servicing:execute',
+  risk: 'write',
+  run: (i, api) => api.post(`/v1/policies/${i.policyId}/servicing`, { request: i.request, confirmAmount: i.confirmAmount, agentConfirmation: i.agentConfirmation }, { 'idempotency-key': `agent-${api.correlationId}-${i.policyId}` }),
+});
+
 export const TOOL_CATALOGUE: Record<string, ToolDefinition> = Object.fromEntries(
   [
     listAccounts,
@@ -405,6 +445,10 @@ export const TOOL_CATALOGUE: Record<string, ToolDefinition> = Object.fromEntries
     listPolicyDocuments,
     getIssuedDocument,
     submitDocumentFindings,
+    findPolicy,
+    getPolicy,
+    previewPolicyChange,
+    applyPolicyChange,
   ].map((t) => [
     t.name,
     t as unknown as ToolDefinition,

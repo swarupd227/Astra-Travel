@@ -48,6 +48,7 @@ import { underwritingRoutes } from './routes/underwriting';
 import { proposalRoutes } from './routes/proposals';
 import { policyRoutes } from './routes/policies';
 import { documentRoutes } from './routes/documents';
+import { servicingRoutes } from './routes/servicing';
 
 export interface AppDeps {
   config: ApiConfig;
@@ -57,6 +58,8 @@ export interface AppDeps {
   secrets: SecretBox;
   logger: Logger;
   files: FileStore;
+  /** The clock servicing reads; tests move it to reach the end of a review period. */
+  now?: () => Date;
   /** Records display names of signed-in principals; optional so tests can leave it out. */
   people?: PeopleDirectory;
 }
@@ -235,6 +238,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(proposalRoutes, deps);
   await app.register(policyRoutes, deps);
   await app.register(documentRoutes, deps);
+  await app.register(servicingRoutes, deps);
 
   return app;
 }

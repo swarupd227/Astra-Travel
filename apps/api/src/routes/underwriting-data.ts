@@ -125,7 +125,8 @@ export async function coversFor(tx: Tx, input: EvaluationInput): Promise<{ cover
   const { rows } = await tx.query<{ first_name: string; last_name: string; date_of_birth: string; policy_ref: string; trip_start: string; trip_end: string; term: 'single_trip' | 'annual' }>(
     `SELECT first_name, last_name, date_of_birth::text, policy_ref, trip_start::text, trip_end::text, term
        FROM underwriting.cover_register
-      WHERE status = 'active' AND date_of_birth = ANY ($1::date[]) AND trip_start <= $3::date AND trip_end >= $2::date`,
+      WHERE status = 'active' AND date_of_birth = ANY ($1::date[]) AND trip_start <= $3::date AND trip_end >= $2::date
+        AND policy_ref <> coalesce(nullif(current_setting('app.ignore_cover_ref', true), ''), '')`,
     [births, input.trip.departureDate, input.trip.returnDate],
   );
   return {
