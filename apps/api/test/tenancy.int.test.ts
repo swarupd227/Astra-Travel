@@ -93,7 +93,7 @@ beforeEach(async () => {
 /** A well-formed ID that exists nowhere: the cross-account answer must be the same as for a missing resource. */
 const ABSENT = '00000000-0000-4000-8000-0000000000aa';
 
-type Probe = { method: 'GET' | 'POST' | 'PUT' | 'DELETE'; url: () => string; payload?: () => unknown };
+type Probe = { method: 'GET' | 'POST' | 'PUT' | 'DELETE'; url: () => string; payload?: () => unknown; headers?: Record<string, string> };
 
 /** Partner B attacking partner A's data, one probe per account-scoped route. */
 const PROBES: Record<string, Probe[]> = {
@@ -219,6 +219,13 @@ const PROBES: Record<string, Probe[]> = {
   'GET /v1/accounts/:id/documents': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/documents` }],
   'GET /v1/account-documents/:id/text': [{ method: 'GET', url: () => `/v1/account-documents/${ABSENT}/text` }],
   'GET /v1/accounts/:id/sandbox': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/sandbox` }],
+  'GET /v1/accounts/:id/channels': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/channels` }],
+  'POST /v1/quotes/:quoteId/widget-sessions': [{ method: 'POST', url: () => `/v1/quotes/${ABSENT}/widget-sessions`, payload: () => ({}) }],
+  'GET /v1/quotes/:quoteId/offer': [{ method: 'GET', url: () => `/v1/quotes/${ABSENT}/offer` }],
+  'GET /v1/quotes/:quoteId/wording': [{ method: 'GET', url: () => `/v1/quotes/${ABSENT}/wording` }],
+  'POST /v1/booking-files': [{ method: 'POST', url: () => `/v1/booking-files?fileName=probe.csv&accountId=${accountA}`, payload: () => 'booking_ref\nX\n', headers: { 'content-type': 'text/csv' } }],
+  'GET /v1/booking-files': [{ method: 'GET', url: () => '/v1/booking-files' }, { method: 'GET', url: () => `/v1/booking-files?accountId=${accountA}` }],
+  'GET /v1/booking-files/:id/result': [{ method: 'GET', url: () => `/v1/booking-files/${ABSENT}/result` }],
 };
 
 describe('route catalogue', () => {
@@ -246,6 +253,7 @@ describe('cross-account access', () => {
           headers: {
             ...bearer(tokenB),
             'idempotency-key': `probe-${Math.random().toString(36).slice(2)}`,
+            ...probe.headers,
           },
           ...(probe.payload ? { payload: probe.payload() as object } : {}),
         });
@@ -257,7 +265,7 @@ describe('cross-account access', () => {
           expect(body, route).not.toContain(programmeA);
           expect(body, route).not.toContain(feedA);
         } else {
-          expect([403, 404], `${route} answered ${res.statusCode}`).toContain(res.statusCode);
+          expect([403, 404], `${route} answered ${res.statusCode} ${body.slice(0, 300)}`).toContain(res.statusCode);
         }
       }
     }

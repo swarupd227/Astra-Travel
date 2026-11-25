@@ -71,6 +71,9 @@ export default async function AccountPage({
             <ButtonLink href={`/accounts/${a.id}/setup`} variant="secondary">
               Onboarding and configuration
             </ButtonLink>
+            <ButtonLink href={`/accounts/${a.id}/channels`} variant="secondary">
+              Sales channels
+            </ButtonLink>
             <Badge tone={ACCOUNT_STATUS_TONES[a.status]}>{sentenceCase(a.status)}</Badge>
             {me.permissions.includes('accounts:manage') ? (
               <ChangeStatusDialog accountId={a.id} current={a.status} />

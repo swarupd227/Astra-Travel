@@ -91,6 +91,7 @@ export const PERMISSIONS = {
   'proposals:create': 'Submit proposals for forms, manuals and parity (used by agents acting for a person)',
   'quotes:create': 'Create quotes, change their selections and bind them to policies',
   'quotes:read': 'View quotes',
+  'quotes:reselect': 'Change the optional benefits of one quote (held by a widget in a traveller’s browser; it cannot create or bind)',
   'policies:read': 'View policies, their history and their record at any date',
   'licences:manage': 'Record and revoke travel retailer registrations and producer licences',
   'onboarding:sandbox': 'Create an account’s sandbox and issue its sandbox credentials',

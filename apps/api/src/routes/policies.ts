@@ -21,7 +21,7 @@ import {
   type PolicyVerification,
   type Quote,
 } from '@astra/contracts';
-import { AppError, canSeeAccount, conflict, forbidden, notFound, preconditionFailed, publishEvent, withIdempotency, withTx, writeAudit, type Tx } from '@astra/platform';
+import { AppError, canSeeAccount, conflict, forbidden, hasPermission, notFound, preconditionFailed, publishEvent, withIdempotency, withTx, writeAudit, type Tx } from '@astra/platform';
 import { benefitLimits, CoverageError, inForce, policyCoverage, policyNumber, project, reviewPeriodEnd } from '@astra/policies';
 import type { AppDeps } from '../app';
 import { commonErrors, idempotencyHeaders, idempotencyKey } from './shared';
@@ -197,7 +197,8 @@ export const policyRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
   app.put(
     '/v1/quotes/:quoteId/selection',
     {
-      config: { tenancy: 'account', permission: 'quotes:create' },
+      // Creating a quote and changing its options are separate rights, so a widget in a browser can hold only the second.
+      config: { tenancy: 'account' },
       schema: {
         tags: ['Quotes'],
         summary: 'Add or remove optional benefits and re-rate the same quote (E04-F01-S02)',
@@ -207,8 +208,9 @@ export const policyRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
         response: { 200: QuoteSchema, ...commonErrors },
       },
     },
-    async (request) =>
-      withTx(deps.pool, request.ctx, async (tx) => {
+    async (request) => {
+      if (!hasPermission(request.ctx.principal, 'quotes:create') && !hasPermission(request.ctx.principal, 'quotes:reselect')) throw forbidden('This action needs the quotes:create or quotes:reselect permission.');
+      return withTx(deps.pool, request.ctx, async (tx) => {
         const q = await findQuote(tx, request.params.quoteId, true);
         if (q.status !== 'open') throw conflict(`This quote is ${q.status}.`);
         if (q.expires_at.getTime() < Date.now()) throw conflict('This quote has expired; make a new one.');
@@ -224,7 +226,8 @@ export const policyRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
         ).rows[0]!;
         await writeAudit(tx, request.ctx, { action: 'quote.reselected', resourceType: 'quote', resourceId: q.id, accountId: q.account_id, data: { revision: row.revision, selection: req.selection, total: body.premium?.total ?? null } });
         return toQuote(row);
-      }),
+      });
+    },
   );
 
   // ---------------- Bind ----------------
@@ -264,6 +267,10 @@ export const policyRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) =>
             return conflict(`This quote is already bound as policy ${n?.number ?? ''}.`);
           }
           if (quote.status === 'expired') return conflict('This quote has expired; make a new one.');
+          // A hosted journey takes payment through a provider; none is set up, so only a sandbox account's test payment is allowed.
+          if (principal.subject.startsWith('channel:journey:') && !(await tx.query<{ sandbox: boolean }>(`SELECT sandbox FROM platform.accounts WHERE id = $1`, [q.account_id])).rows[0]?.sandbox) {
+            return new AppError('precondition_failed', 'Payment is not set up for the hosted journey, so it cannot complete a purchase for this account.', [{ code: 'payment_not_configured', field: 'payment', message: 'No payment provider is configured' }]);
+          }
           const sale = await salesAllowed(tx, q.account_id, q.state, today);
           if (!sale.allowed) return new AppError('precondition_failed', sale.reason!, [{ code: 'sales_blocked', field: 'state', message: sale.reason! }]);
           const bindErrors: { code: string; field: string; message: string }[] = [];

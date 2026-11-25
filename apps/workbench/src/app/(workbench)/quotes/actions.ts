@@ -65,3 +65,30 @@ export async function changeSelection(_prev: ActionState, form: FormData): Promi
   revalidatePath(`/quotes/${id}`);
   return { status: 'success', message: 'Re-rated. The quote keeps its number.' };
 }
+
+/**
+ * Binds a quote on the traveller's behalf (E04-F03-S03): the payment system's reference and amount, the purchaser,
+ * and the traveller's acknowledgement of the disclosure. The API checks all of it as for any caller, and the policy
+ * records the staff user who issued it.
+ */
+export async function issuePolicy(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const quoteId = text(form, 'quoteId');
+  let policyId: string;
+  try {
+    const policy = await api<{ id: string }>(`/v1/quotes/${encodeURIComponent(quoteId)}/bind`, {
+      method: 'POST',
+      idempotencyKey: text(form, 'key') || randomUUID(),
+      body: {
+        ableToTravel: form.get('able') === 'on',
+        acknowledgement: { disclosureVersion: text(form, 'disclosureVersion'), acknowledgedBy: text(form, 'acknowledgedBy') },
+        payment: { reference: text(form, 'paymentReference'), amount: text(form, 'paymentAmount') },
+        purchaser: { name: text(form, 'purchaserName'), ...(text(form, 'purchaserEmail') ? { email: text(form, 'purchaserEmail') } : {}) },
+      },
+    });
+    policyId = policy.id;
+  } catch (err) {
+    return fromError(err, form);
+  }
+  revalidatePath('/policies');
+  redirect(`/policies/${policyId}?issued=1`);
+}

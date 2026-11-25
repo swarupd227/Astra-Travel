@@ -5,7 +5,8 @@
   "type": "module",
   "description": "API, event and access-control contracts shared by every Astra Travel service and app",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./channel-token": "./src/channel-token.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"

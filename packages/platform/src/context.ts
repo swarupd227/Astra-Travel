@@ -11,6 +11,8 @@ export interface Principal {
   roles: Role[];
   permissions: Permission[];
   accountScope: AccountScope;
+  /** A browser-held channel token is limited to one quote; the API refuses any other. */
+  quoteId?: string;
 }
 
 export interface RequestContext {

@@ -10,7 +10,8 @@ import { Badge, Card, CardHeader, DescriptionList, Notice, PageHeader } from '@/
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
 import { EvaluationView } from '../../underwriting/uw-forms';
-import { SelectionForm } from '../quote-forms';
+import { randomUUID } from 'node:crypto';
+import { IssueForm, SelectionForm } from '../quote-forms';
 
 export const metadata = { title: 'Quote' };
 
@@ -72,6 +73,14 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          {q.bindable && canEdit ? (
+            <Card>
+              <CardHeader title="Issue the policy" description="For a traveller or account that cannot do it themselves, such as by phone. Uses the same rules and rating as the API." />
+              <div className="p-5">
+                <IssueForm quote={q} keyId={randomUUID()} />
+              </div>
+            </Card>
+          ) : null}
           <Card>
             <CardHeader title="Price" description="Per benefit, per traveller and in total, with the worksheet behind every line." />
             {q.premium ? (

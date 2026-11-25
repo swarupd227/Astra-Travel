@@ -36,6 +36,10 @@ const EnvSchema = z.object({
   IDP_REALM: z.string().default('astra'),
   IDP_ADMIN_CLIENT_ID: z.string().optional(),
   IDP_ADMIN_CLIENT_SECRET: z.string().optional(),
+  /** Signs the short tokens sales channels hold (widget, hosted journey). Channel tokens are refused without it; at least 32 characters. */
+  CHANNEL_SIGNING_SECRET: z.string().min(32).optional(),
+  /** The public base URL of this API, used in widget snippets and links. */
+  PUBLIC_API_URL: z.url().default('http://localhost:4000'),
   QUOTE_VALID_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   /** The largest charge or refund the servicing agent may confirm on its own; above it the request goes to a person. To be confirmed by Assurant. */
   AGENT_SERVICING_MAX_AMOUNT: z.coerce.number().min(0).max(100000).default(500),

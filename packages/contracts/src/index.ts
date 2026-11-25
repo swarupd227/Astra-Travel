@@ -18,3 +18,4 @@ export * from './documents';
 export * from './servicing';
 export * from './billing';
 export * from './onboarding';
+export * from './channels';

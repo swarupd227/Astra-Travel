@@ -38,6 +38,7 @@ const app = await buildApp({
   authenticator: new Authenticator({
     issuer: config.OIDC_ISSUER,
     audience: config.OIDC_AUDIENCE,
+    ...(config.CHANNEL_SIGNING_SECRET ? { channelSecret: config.CHANNEL_SIGNING_SECRET } : {}),
     maxTokenLifetimeSeconds: config.OIDC_MAX_TOKEN_LIFETIME_SECONDS,
     groupRoleMap: parseGroupRoleMap(config.OIDC_GROUP_ROLE_MAP),
     agentVerifier,

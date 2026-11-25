@@ -84,6 +84,9 @@ export interface TestContext {
   close: () => Promise<void>;
 }
 
+/** The secret the test API verifies channel tokens with. */
+export const CHANNEL_SECRET = 'test-channel-signing-secret-0123456789abcdef';
+
 export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise<TestContext> {
   const pool = createPool(requireEnv('TEST_DATABASE_URL'), {
     max: 5,
@@ -121,6 +124,8 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
     CARD_FEED_MAX_BYTES: 64 * 1024 * 1024,
     AGENT_SERVICING_MAX_AMOUNT: 500,
     IDP_REALM: 'astra',
+    PUBLIC_API_URL: 'http://localhost:4000',
+    CHANNEL_SIGNING_SECRET: CHANNEL_SECRET,
     ...overrides,
   };
   const files = new LocalFileStore(config.FILE_STORE_DIR);
@@ -142,6 +147,7 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
       issuer: ISSUER,
       audience: AUDIENCE,
       maxTokenLifetimeSeconds: config.OIDC_MAX_TOKEN_LIFETIME_SECONDS,
+      channelSecret: CHANNEL_SECRET,
       keys: idp.keys,
       agentVerifier,
       isAgentActive: agentStatusChecker(pool, 0),

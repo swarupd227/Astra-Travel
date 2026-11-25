@@ -45,5 +45,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|api/auth|signed-out).*)'],
+  // The hosted journey (/j/) is public: travellers do not sign in to the workbench.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|api/auth|signed-out|j/).*)'],
 };

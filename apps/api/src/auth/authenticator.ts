@@ -17,6 +17,7 @@ import {
 } from '@astra/contracts';
 import { AppError, type Principal } from '@astra/platform';
 import { AGENT_TOKEN_ISSUER, type AgentTokenVerifier } from '@astra/agents/agent-token';
+import { CHANNEL_TOKEN_ISSUER, ChannelTokenError, verifyChannelToken } from '@astra/contracts/channel-token';
 import { ALL_PERMISSIONS, type Permission } from '@astra/contracts';
 
 /**
@@ -37,6 +38,8 @@ export interface AuthenticatorOptions {
   keys?: JWTVerifyGetKey;
   /** Verifies run tokens minted by the agent runtime. Agent tokens are refused without it. */
   agentVerifier?: AgentTokenVerifier;
+  /** Verifies the short signed tokens sales channels hold (docs/adr/0015). Channel tokens are refused without it. */
+  channelSecret?: string;
   /** Kill switch: an agent token is refused as soon as its agent is no longer active. */
   isAgentActive?: (agentId: string) => Promise<boolean>;
 }
@@ -85,6 +88,7 @@ export class Authenticator {
       throw new AppError('unauthenticated', 'Send an OAuth 2.0 bearer access token.');
 
     if (this.issuerOf(match[1]) === AGENT_TOKEN_ISSUER) return this.authenticateAgent(match[1]);
+    if (this.issuerOf(match[1]) === CHANNEL_TOKEN_ISSUER) return this.authenticateChannel(match[1]);
 
     let payload: Claims;
     try {
@@ -119,6 +123,29 @@ export class Authenticator {
     } catch {
       return undefined;
     }
+  }
+
+  /** Channel principals: one account, the permissions their scope allows, and for a browser one quote. */
+  private authenticateChannel(token: string): Principal {
+    if (!this.opts.channelSecret) throw new AppError('unauthenticated', 'Channel tokens are not accepted here.');
+    let claims;
+    try {
+      claims = verifyChannelToken(this.opts.channelSecret, token);
+    } catch (err) {
+      throw new AppError('unauthenticated', err instanceof ChannelTokenError ? err.message : 'The channel token is not valid.');
+    }
+    if (!UUID.test(claims.accountId)) throw new AppError('unauthenticated', 'The channel token is not valid.');
+    const known = new Set<string>(ALL_PERMISSIONS);
+    return {
+      kind: 'partner',
+      subject: `channel:${claims.scope}:${claims.sub}`,
+      name: `${claims.scope} channel`,
+      email: null,
+      roles: [],
+      permissions: claims.permissions.filter((p): p is Permission => known.has(p)),
+      accountScope: { type: 'accounts', accountIds: [claims.accountId.toLowerCase()] },
+      ...(claims.quoteId ? { quoteId: claims.quoteId } : {}),
+    };
   }
 
   /**

@@ -10,6 +10,8 @@ const EnvSchema = z.object({
     .string()
     .min(32, 'WORKBENCH_SESSION_SECRET must be at least 32 characters'),
   API_BASE_URL: z.url(),
+  /** Signs the short tokens the hosted journey uses to quote and buy; the same secret as the API's. The journey is off without it. */
+  CHANNEL_SIGNING_SECRET: z.string().min(32).optional(),
 });
 
 export type WorkbenchEnv = z.infer<typeof EnvSchema>;

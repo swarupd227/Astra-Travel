@@ -1,11 +1,11 @@
 'use client';
 
 import { useActionState } from 'react';
-import { Calculator, RefreshCw } from 'lucide-react';
+import { Calculator, FileCheck2, RefreshCw } from 'lucide-react';
 import type { Quote } from '@astra/contracts';
 import { Field, FormMessage, Input, Select, SubmitButton, Textarea } from '@/components/ui/form';
 import { idle, previous } from '@/lib/actions';
-import { changeSelection, createQuote } from './actions';
+import { changeSelection, createQuote, issuePolicy } from './actions';
 
 export interface PlanOption {
   code: string;
@@ -127,6 +127,35 @@ export function SelectionForm({ quote }: { quote: Quote }) {
       <SubmitButton pendingLabel="Re-rating…" variant="secondary">
         <RefreshCw aria-hidden className="size-4" /> Re-rate
       </SubmitButton>
+    </form>
+  );
+}
+
+/** Issue the policy on the traveller's behalf: the payment system's confirmation and the traveller's acknowledgement. */
+export function IssueForm({ quote, keyId }: { quote: Quote; keyId: string }) {
+  const [state, action] = useActionState(issuePolicy, idle);
+  const errors = state.status === 'error' ? state.fieldErrors : {};
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="quoteId" value={quote.id} />
+      <input type="hidden" name="key" value={keyId} />
+      <input type="hidden" name="disclosureVersion" value={quote.disclosure?.version ?? ''} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Purchaser’s name" required error={errors['purchaser.name']}>{(f) => <Input id={f.id} name="purchaserName" required aria-describedby={f.describedBy} />}</Field>
+        <Field label="Purchaser’s email" hint="Documents are emailed here." error={errors['purchaser.email']}>{(f) => <Input id={f.id} name="purchaserEmail" type="email" aria-describedby={f.describedBy} />}</Field>
+        <Field label="Payment reference" hint="From the payment system, once it has confirmed the premium." required error={errors['payment.reference']}>{(f) => <Input id={f.id} name="paymentReference" required aria-describedby={f.describedBy} />}</Field>
+        <Field label="Amount paid" hint={`Must equal the premium, ${quote.premium?.total ?? ''}.`} required error={errors['payment.amount']}>{(f) => <Input id={f.id} name="paymentAmount" inputMode="decimal" required defaultValue={quote.premium?.total ?? ''} aria-describedby={f.describedBy} />}</Field>
+        <Field label="Who acknowledged the disclosure" hint={`The traveller has been read “${quote.disclosure?.title ?? ''}”.`} required error={errors['acknowledgement.acknowledgedBy']}>{(f) => <Input id={f.id} name="acknowledgedBy" required aria-describedby={f.describedBy} />}</Field>
+      </div>
+      <label className="flex items-start gap-2 text-sm">
+        <input type="checkbox" name="able" className="mt-1" />
+        <span>The traveller confirms they are medically able to travel and are not under restricting treatment.</span>
+      </label>
+      <FormMessage state={state} />
+      <SubmitButton pendingLabel="Issuing…">
+        <FileCheck2 aria-hidden className="size-4" /> Issue the policy
+      </SubmitButton>
+      <p className="text-xs text-muted">The policy records you as the person who issued it. Eligibility, sanctions and payment are checked again exactly as for the API.</p>
     </form>
   );
 }
