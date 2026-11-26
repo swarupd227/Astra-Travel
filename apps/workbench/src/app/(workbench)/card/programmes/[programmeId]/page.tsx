@@ -1,3 +1,4 @@
+import { ButtonLink } from '@/components/ui/button';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronLeft, FileText } from 'lucide-react';
@@ -97,6 +98,9 @@ export default async function ProgrammePage({
         }
         actions={
           <>
+            <ButtonLink href={`/card/programmes/${p.id}/mapping`} variant="secondary">
+              Issuer file mapping
+            </ButtonLink>
             <Badge tone={PROGRAMME_STATUS_TONES[p.status]}>{sentenceCase(p.status)}</Badge>
             {canManage && p.status === 'draft' ? (
               <GoLiveDialog programmeId={p.id} testPassed={testPassed} />

@@ -23,3 +23,4 @@ export * from './workbench';
 export * from './reports';
 export * from './data';
 export * from './service-cloud';
+export * from './feed-mapping';

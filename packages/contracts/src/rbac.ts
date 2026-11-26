@@ -166,6 +166,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   finance_analyst: [...STAFF_BASE, 'card:read', 'billing:manage', 'reports:read', 'reports:statutory'],
   card_programme_manager: [
     ...STAFF_BASE,
+    'proposals:create',
     'webhooks:read',
     'card:read',
     'card:manage',

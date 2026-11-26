@@ -1,3 +1,4 @@
+import { previewMapping } from '@astra/card';
 import { z } from 'zod';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import type {
@@ -82,7 +83,7 @@ function refuse(problems: string[]): never {
 }
 
 interface Validated {
-  subjectType: 'form_edition' | 'rate_manual' | 'document_template' | 'document' | 'account';
+  subjectType: 'form_edition' | 'rate_manual' | 'document_template' | 'document' | 'account' | 'card_programme' | 'card_feed';
   subjectId: string;
   summary: string;
   content: Record<string, unknown>;
@@ -94,6 +95,37 @@ async function editionOf(tx: Tx, id: string) {
   const e = (await tx.query<{ kind: string; text: string; page_starts: number[]; form_number: string; edition: string }>(`SELECT kind, text, page_starts, form_number, edition FROM studio.form_editions WHERE id = $1`, [id])).rows[0];
   if (!e) throw notFound('The form edition');
   return e;
+}
+
+/** A mapping is stored only if the file has its columns and at least one record converts; what fails is listed. */
+async function validateFeedMapping(tx: Tx, s: Extract<SubmitProposal, { kind: 'feed_mapping' }>): Promise<Validated> {
+  const sample = (await tx.query<{ text: string; code: string }>(`SELECT s.text, p.code FROM card.feed_samples s JOIN card.programmes p ON p.id = s.programme_id WHERE s.id = $1 AND s.programme_id = $2`, [s.sampleId, s.programmeId])).rows[0];
+  if (!sample) throw notFound('The sample of this programme');
+  const preview = await previewMapping(sample.text, s.mapping, { programmeCode: sample.code, sequence: 1, kind: 'CHANGE', asOfDate: new Date().toISOString().slice(0, 10) });
+  if (preview.missingColumns.length) refuse([`The file has no column ${preview.missingColumns.join(', ')}.`]);
+  if (preview.converted === 0) refuse([`No record of the sample converts: ${preview.problems.slice(0, 5).map((p) => `line ${p.line}: ${p.message}`).join(' ')}`]);
+  const checks: Check[] = [{ item: 'mapping', ok: preview.rejected === 0, detail: `${preview.converted} of ${preview.records} sample records convert${preview.rejected ? `; ${preview.rejected} would be rejected` : ''}.` }];
+  return { subjectType: 'card_programme', subjectId: s.programmeId, summary: s.summary, content: { sampleId: s.sampleId, mapping: s.mapping, preview }, checks, items: 1 };
+}
+
+/** Explanations may only be about codes the feed really rejected records with; each carries how many. */
+async function validateFeedRejections(tx: Tx, s: Extract<SubmitProposal, { kind: 'feed_rejections' }>): Promise<Validated> {
+  const feed = (await tx.query(`SELECT 1 FROM card.feeds WHERE id = $1 AND programme_id = $2`, [s.feedId, s.programmeId])).rowCount;
+  if (!feed) throw notFound('The feed of this programme');
+  const counts = new Map(
+    (await tx.query<{ code: string; n: string }>(`SELECT code, count(*) AS n FROM card.feed_rejections WHERE feed_id = $1 GROUP BY code`, [s.feedId])).rows.map((r) => [r.code, Number(r.n)]),
+  );
+  if (counts.size === 0) refuse(['This feed rejected no records, so there is nothing to explain.']);
+  const problems: string[] = [];
+  const seen = new Set<string>();
+  for (const e of s.explanations) {
+    if (!counts.has(e.code)) problems.push(`No record of this feed was rejected with the code ${e.code}. The codes are ${[...counts.keys()].join(', ')}.`);
+    if (seen.has(e.code)) problems.push(`The code ${e.code} is explained twice.`);
+    seen.add(e.code);
+  }
+  if (problems.length) refuse(problems);
+  const checks: Check[] = [...counts].map(([code, n]) => ({ item: code, ok: seen.has(code), detail: seen.has(code) ? `${n} record(s) rejected with this code.` : `${n} record(s) rejected with this code are not explained.` }));
+  return { subjectType: 'card_feed', subjectId: s.feedId, summary: s.summary, content: { programmeId: s.programmeId, explanations: s.explanations, counts: Object.fromEntries(counts) }, checks, items: s.explanations.length };
 }
 
 async function validateVariableMap(tx: Tx, s: Extract<SubmitProposal, { kind: 'variable_map' }>): Promise<Validated> {
@@ -269,6 +301,8 @@ async function validateAccountOnboarding(tx: Tx, s: Extract<SubmitProposal, { ki
 }
 
 const itemIds = (p: ProposalRow): string[] => {
+  if (p.kind === 'feed_mapping') return ['mapping'];
+  if (p.kind === 'feed_rejections') return ((p.content as { explanations?: { code: string }[] }).explanations ?? []).map((e) => e.code);
   if (p.kind === 'account_onboarding') return ((p.content as { fields?: { field: string }[] }).fields ?? []).map((f) => f.field);
   if (p.kind === 'document_quality') return ((p.content as { findings?: unknown[] }).findings ?? []).map((_f, i) => `f${i + 1}`);
   const c = p.content as { items?: { variable?: { key: string }; caseId?: string; step?: string }[]; manual?: { document: { tables: { id: string }[] } } };
@@ -277,7 +311,7 @@ const itemIds = (p: ProposalRow): string[] => {
   return (c.items ?? []).map((i) => `${i.caseId}:${i.step}`);
 };
 
-const MANAGE: Record<ProposalKind, 'forms:manage' | 'rating:manage' | 'documents:release' | 'accounts:manage'> = { variable_map: 'forms:manage', rate_manual: 'rating:manage', parity_explanation: 'rating:manage', document_quality: 'documents:release', account_onboarding: 'accounts:manage' };
+const MANAGE: Record<ProposalKind, 'forms:manage' | 'rating:manage' | 'documents:release' | 'accounts:manage' | 'card:manage'> = { feed_mapping: 'card:manage', feed_rejections: 'card:manage', variable_map: 'forms:manage', rate_manual: 'rating:manage', parity_explanation: 'rating:manage', document_quality: 'documents:release', account_onboarding: 'accounts:manage' };
 
 export const proposalRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
   app.post(
@@ -302,7 +336,7 @@ export const proposalRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       const out = await withTx(deps.pool, request.ctx, async (tx) => {
         const run = (await tx.query<{ id: string; requested_by: string }>(`SELECT id, requested_by FROM agents.runs WHERE agent_id = $1 AND correlation_id = $2 ORDER BY created_at DESC LIMIT 1`, [agentId, request.ctx.correlationId])).rows[0];
         if (!run) throw forbidden('Proposals are submitted during an agent run.');
-        const v = s.kind === 'variable_map' ? await validateVariableMap(tx, s) : s.kind === 'rate_manual' ? await validateRateManual(tx, s) : s.kind === 'document_quality' ? await validateDocumentQuality(tx, s) : s.kind === 'account_onboarding' ? await validateAccountOnboarding(tx, s) : await validateParity(tx, s);
+        const v = s.kind === 'variable_map' ? await validateVariableMap(tx, s) : s.kind === 'rate_manual' ? await validateRateManual(tx, s) : s.kind === 'document_quality' ? await validateDocumentQuality(tx, s) : s.kind === 'account_onboarding' ? await validateAccountOnboarding(tx, s) : s.kind === 'feed_mapping' ? await validateFeedMapping(tx, s) : s.kind === 'feed_rejections' ? await validateFeedRejections(tx, s) : await validateParity(tx, s);
         // A new proposal for the same subject from the same run replaces the earlier open one.
         await tx.query(
           `UPDATE agents.proposals SET status = 'withdrawn', resolved_by = $4, resolved_at = now(), resolution = '{"reason":"replaced by a newer proposal in the same run"}'
@@ -331,7 +365,7 @@ export const proposalRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       schema: {
         tags: ['Agent proposals'],
         summary: 'Agent proposals, newest first',
-        querystring: z.object({ subjectId: z.uuid().optional(), kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality', 'account_onboarding']).optional(), status: z.enum(['open', 'resolved', 'withdrawn']).optional() }),
+        querystring: z.object({ subjectId: z.uuid().optional(), kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality', 'account_onboarding', 'feed_mapping', 'feed_rejections']).optional(), status: z.enum(['open', 'resolved', 'withdrawn']).optional() }),
         response: { 200: z.object({ items: z.array(ProposalSchema.omit({ content: true })) }), ...commonErrors },
       },
     },

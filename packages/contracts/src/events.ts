@@ -313,7 +313,7 @@ export const AgentProposalRaised = defineEvent({
   source: 'astra.agents',
   schema: z.object({
     proposalId: z.uuid(),
-    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality', 'account_onboarding']),
+    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality', 'account_onboarding', 'feed_mapping', 'feed_rejections']),
     agentId: z.string(),
     subjectId: z.uuid(),
     items: z.number().int(),
@@ -326,7 +326,7 @@ export const AgentProposalResolved = defineEvent({
   source: 'astra.agents',
   schema: z.object({
     proposalId: z.uuid(),
-    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality', 'account_onboarding']),
+    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality', 'account_onboarding', 'feed_mapping', 'feed_rejections']),
     agentId: z.string(),
     accepted: z.number().int(),
     corrected: z.number().int(),

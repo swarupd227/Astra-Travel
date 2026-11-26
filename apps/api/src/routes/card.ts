@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import type { Readable } from 'node:stream';
+import { createInterface } from 'node:readline';
+import { Readable } from 'node:stream';
 import { z } from 'zod';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import {
   CardProgrammeRegistered,
@@ -28,6 +30,7 @@ import {
   RejectFeedRequestSchema,
   type CardProgramme,
   type EligibilityFeed,
+  type FeedMappingDocument,
   type FeedStats,
   type MasterPolicy,
   type PaymentCondition,
@@ -47,7 +50,7 @@ import {
   writeAudit,
   type Tx,
 } from '@astra/platform';
-import { assertNotCardNumber, eligibilityOn, loadProgrammeById, verifyCover } from '@astra/card';
+import { assertNotCardNumber, convertLines, eligibilityOn, loadProgrammeById, verifyCover } from '@astra/card';
 import type { AppDeps } from '../app';
 import { commonErrors, idempotencyHeaders, idempotencyKey } from './shared';
 
@@ -173,7 +176,7 @@ const toFeed = (r: FeedRow): EligibilityFeed => ({
   durationMs: r.duration_ms,
 });
 
-async function findProgramme(tx: Tx, id: string): Promise<ProgrammeRow> {
+export async function findProgramme(tx: Tx, id: string): Promise<ProgrammeRow> {
   const { rows } = await tx.query<ProgrammeRow>(`${PROGRAMME_SELECT} WHERE p.id = $1`, [id]);
   if (!rows[0]) throw notFound('The card programme');
   return rows[0];
@@ -705,62 +708,100 @@ export const cardRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
         throw new AppError('validation_failed', 'The file is empty.');
       }
 
-      const { feed, created } = await withTx(deps.pool, request.ctx, async (tx) => {
-        const inserted = await tx.query<FeedRow>(
-          `INSERT INTO card.feeds (programme_id, account_id, mode, file_name, storage_key, sha256, size_bytes, received_by)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           ON CONFLICT (programme_id, mode, sha256) DO NOTHING
-           RETURNING ${FEED_COLUMNS}`,
-          [
-            programme.id,
-            programme.account_id,
-            mode,
-            fileName,
-            key,
-            stored.sha256,
-            stored.sizeBytes,
-            request.ctx.principal.subject,
-          ],
-        );
-        if (!inserted.rows[0]) {
-          const existing = await tx.query<FeedRow>(
-            `SELECT ${FEED_COLUMNS} FROM card.feeds WHERE programme_id = $1 AND mode = $2 AND sha256 = $3`,
-            [programme.id, mode, stored.sha256],
-          );
-          return { feed: existing.rows[0]!, created: false };
-        }
-        const row = inserted.rows[0];
-        await publishEvent(
-          tx,
-          request.ctx,
-          EligibilityFeedReceived,
-          { feedId: row.id, programmeId: programme.id, mode, sha256: stored.sha256 },
-          { accountId: programme.account_id },
-        );
-        await writeAudit(tx, request.ctx, {
-          action: 'eligibility_feed.received',
-          resourceType: 'eligibility_feed',
-          resourceId: row.id,
-          accountId: programme.account_id,
-          data: {
-            programme: programme.code,
-            mode,
-            fileName,
-            sha256: stored.sha256,
-            sizeBytes: stored.sizeBytes,
-          },
-        });
-        return { feed: row, created: true };
-      });
-      if (!created) {
-        await deps.files.remove(key);
-        reply.header('idempotent-replayed', 'true');
-        return reply.code(200).send(toFeed(feed));
+      return receive(request, reply, programme, { mode, fileName, key, stored, mappingId: null });
+    },
+  );
+
+  /** Records a stored feed file for processing, once per file and mode, and answers the caller. */
+  async function receive(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    programme: ProgrammeRow,
+    file: { mode: EligibilityFeed['mode']; fileName: string; key: string; stored: { sha256: string; sizeBytes: number }; mappingId: string | null },
+  ) {
+    const { mode, fileName, key, stored, mappingId } = file;
+    const { feed, created } = await withTx(deps.pool, request.ctx, async (tx) => {
+      const inserted = await tx.query<FeedRow>(
+        `INSERT INTO card.feeds (programme_id, account_id, mode, file_name, storage_key, sha256, size_bytes, received_by, mapping_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT (programme_id, mode, sha256) DO NOTHING
+         RETURNING ${FEED_COLUMNS}`,
+        [programme.id, programme.account_id, mode, fileName, key, stored.sha256, stored.sizeBytes, request.ctx.principal.subject, mappingId],
+      );
+      if (!inserted.rows[0]) {
+        const existing = await tx.query<FeedRow>(`SELECT ${FEED_COLUMNS} FROM card.feeds WHERE programme_id = $1 AND mode = $2 AND sha256 = $3`, [programme.id, mode, stored.sha256]);
+        return { feed: existing.rows[0]!, created: false };
       }
-      return reply
-        .code(202)
-        .header('location', `/v1/card-programmes/${programme.id}/feeds/${feed.id}`)
-        .send(toFeed(feed));
+      const row = inserted.rows[0];
+      await publishEvent(tx, request.ctx, EligibilityFeedReceived, { feedId: row.id, programmeId: programme.id, mode, sha256: stored.sha256 }, { accountId: programme.account_id });
+      await writeAudit(tx, request.ctx, {
+        action: 'eligibility_feed.received',
+        resourceType: 'eligibility_feed',
+        resourceId: row.id,
+        accountId: programme.account_id,
+        data: { programme: programme.code, mode, fileName, sha256: stored.sha256, sizeBytes: stored.sizeBytes, ...(mappingId ? { mappingId } : {}) },
+      });
+      return { feed: row, created: true };
+    });
+    if (!created) {
+      await deps.files.remove(key);
+      reply.header('idempotent-replayed', 'true');
+      return reply.code(200).send(toFeed(feed));
+    }
+    return reply.code(202).header('location', `/v1/card-programmes/${programme.id}/feeds/${feed.id}`).send(toFeed(feed));
+  }
+
+  app.post(
+    '/v1/card-programmes/:programmeId/mapped-feeds',
+    {
+      config: { tenancy: 'account', permission: 'card:feeds' },
+      bodyLimit: deps.config.CARD_FEED_MAX_BYTES,
+      schema: {
+        tags: ['Card-linked cover'],
+        summary: 'Upload the issuer’s own file; it is converted with the approved mapping into an eligibility feed (E21-F04-S01)',
+        description:
+          'Send the file as the request body with content type application/octet-stream, with the feed’s sequence, kind and as-of date. The converted feed is processed like any other: rejected records keep the line numbers of the file sent. Card numbers are not kept.',
+        params: programmeParams,
+        querystring: z.object({
+          mode: z.enum(FEED_MODES),
+          sequence: z.coerce.number().int().min(1),
+          kind: z.enum(['FULL', 'CHANGE']),
+          asOfDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          fileName: z.string().regex(FILE_NAME, 'Letters, digits, spaces and . _ ( ) -').default('issuer-file.csv'),
+        }),
+        response: { 200: EligibilityFeedSchema, 202: EligibilityFeedSchema, ...commonErrors, 412: z.any(), 413: z.any(), 415: z.any() },
+      },
+    },
+    async (request, reply) => {
+      const { programmeId } = request.params;
+      const { mode, fileName, sequence, kind, asOfDate } = request.query;
+      const { programme, mapping } = await withTx(deps.pool, request.ctx, async (tx) => {
+        const programme = await findProgramme(tx, programmeId);
+        const mapping = (await tx.query<{ id: string; document: FeedMappingDocument }>(`SELECT id, document FROM card.feed_mappings WHERE programme_id = $1 AND status = 'approved'`, [programmeId])).rows[0];
+        return { programme, mapping };
+      });
+      if (!request.headers['content-type']?.startsWith('application/octet-stream')) throw new AppError('validation_failed', 'Send the file with content type application/octet-stream.');
+      if (programme.status === 'closed') throw conflict('The programme is closed and accepts no feeds.');
+      if (mode === 'live' && programme.status === 'draft') throw preconditionFailed('The programme is in draft. Send test feeds until one passes, then take it live.');
+      if (!mapping) throw preconditionFailed('No mapping is approved for this programme, so the issuer’s own file cannot be read.');
+      const key = `card-feeds/${programme.id}/${randomUUID()}.txt`;
+      const converted = Readable.from(
+        (async function* () {
+          // The reader is made here: lines read before anything listens for them would be lost.
+          const lines = createInterface({ input: request.body as Readable, crlfDelay: Infinity });
+          for await (const line of convertLines(lines, mapping.document, { programmeCode: programme.code, sequence, kind, asOfDate })) yield Buffer.from(`${line}\n`, 'utf8');
+        })(),
+      );
+      let stored;
+      try {
+        stored = await deps.files.put(key, converted, deps.config.CARD_FEED_MAX_BYTES);
+      } catch (err) {
+        await deps.files.remove(key).catch(() => undefined);
+        if (err instanceof FileTooLargeError) throw new AppError('payload_too_large', `Feed files are limited to ${deps.config.CARD_FEED_MAX_BYTES} bytes.`);
+        if (err instanceof Error && err.message.startsWith('The file')) throw new AppError('validation_failed', err.message);
+        throw err;
+      }
+      return receive(request, reply, programme, { mode, fileName, key, stored, mappingId: mapping.id });
     },
   );
 

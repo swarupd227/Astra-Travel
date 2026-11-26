@@ -500,6 +500,77 @@ export const submitReferralSummary = defineTool({
   run: (i, api) => api.post(`/v1/referrals/${i.referralId}/summaries`, { summary: i.summary, rulesCited: i.rulesCited, suggested: i.suggested }),
 });
 
+export const getCardProgramme = defineTool({
+  name: 'get_card_programme',
+  description: 'Get a card programme: code, name, card product, states, dates and rules.',
+  input: z.strictObject({ programmeId: z.uuid() }),
+  permission: 'card:read',
+  risk: 'read',
+  run: (i, api) => api.get(`/v1/card-programmes/${i.programmeId}`),
+});
+
+export const getFeedSample = defineTool({
+  name: 'get_feed_sample',
+  description: 'Get the first lines of an issuer’s own file: the first line names the columns. Anything that looked like a card number has been replaced by a test number.',
+  input: z.strictObject({ programmeId: z.uuid(), sampleId: z.uuid() }),
+  permission: 'card:read',
+  risk: 'read',
+  run: (i, api) => api.get(`/v1/card-programmes/${i.programmeId}/samples/${i.sampleId}`),
+});
+
+export const previewFeedMapping = defineTool({
+  name: 'preview_feed_mapping',
+  description:
+    'Try a mapping on a sample: which columns are missing, how many records convert, example converted records, and each rejected line with its code and reason. The mapping is { delimiter, columns: { accountRef: { column }, productCode: { column, values } or { constant }, action: { column, values } or { constant: "A"|"U"|"D" }, eligibleFrom: { column, format }, eligibleTo: { column, format } or null } } with format one of YYYY-MM-DD, YYYYMMDD, MM/DD/YYYY, DD/MM/YYYY.',
+  input: z.strictObject({ programmeId: z.uuid(), sampleId: z.uuid(), mapping: z.record(z.string(), z.unknown()) }),
+  permission: 'card:read',
+  risk: 'read',
+  run: (i, api) => api.post(`/v1/card-programmes/${i.programmeId}/mapping-preview`, { sampleId: i.sampleId, document: i.mapping }),
+});
+
+export const submitFeedMapping = defineTool({
+  name: 'submit_feed_mapping',
+  description: 'Propose a mapping for the programme manager to approve. The platform refuses it if the sample lacks a column or nothing converts, and records how many sample records convert.',
+  input: z.strictObject({ kind: z.literal('feed_mapping'), programmeId: z.uuid(), sampleId: z.uuid(), summary: z.string().min(5).max(1000), mapping: z.record(z.string(), z.unknown()) }),
+  permission: 'proposals:create',
+  risk: 'propose',
+  run: (i, api) => api.post('/v1/agent-proposals', i),
+});
+
+export const getFeed = defineTool({
+  name: 'get_feed',
+  description: 'Get an eligibility feed and its processing result.',
+  input: z.strictObject({ programmeId: z.uuid(), feedId: z.uuid() }),
+  permission: 'card:read',
+  risk: 'read',
+  run: (i, api) => api.get(`/v1/card-programmes/${i.programmeId}/feeds/${i.feedId}`),
+});
+
+export const listFeedRejections = defineTool({
+  name: 'list_feed_rejections',
+  description: 'The records a feed rejected: line number, code and message.',
+  input: z.strictObject({ programmeId: z.uuid(), feedId: z.uuid(), code: z.string().max(40).optional(), limit }),
+  permission: 'card:read',
+  risk: 'read',
+  run: (i, api) => api.get(`/v1/card-programmes/${i.programmeId}/feeds/${i.feedId}/rejections`, { code: i.code, limit: i.limit ?? 30 }),
+});
+
+export const submitFeedRejections = defineTool({
+  name: 'submit_feed_rejection_explanations',
+  description:
+    'Propose, for each rejection code of a feed, a plain-language explanation and one fix for the programme manager to approve: { code, explanation, fix: { kind: "issuer", detail } or { kind: "mapping", detail, mapping } }. The platform refuses codes the feed did not use.',
+  input: z.strictObject({
+    kind: z.literal('feed_rejections'),
+    programmeId: z.uuid(),
+    feedId: z.uuid(),
+    summary: z.string().min(5).max(1000),
+    explanations: z.array(z.strictObject({ code: z.string().max(40), explanation: z.string().min(10).max(1000), fix: z.record(z.string(), z.unknown()) })).min(1).max(40),
+  }),
+  permission: 'proposals:create',
+  risk: 'propose',
+  run: (i, api) => api.post('/v1/agent-proposals', i),
+});
+
 export const TOOL_CATALOGUE: Record<string, ToolDefinition> = Object.fromEntries(
   [
     listAccounts,
@@ -530,6 +601,13 @@ export const TOOL_CATALOGUE: Record<string, ToolDefinition> = Object.fromEntries
     previewPolicyChange,
     applyPolicyChange,
     getReferral,
+    getCardProgramme,
+    getFeedSample,
+    previewFeedMapping,
+    submitFeedMapping,
+    getFeed,
+    listFeedRejections,
+    submitFeedRejections,
     getQuote,
     submitReferralSummary,
     getAccountProfile,

@@ -187,6 +187,12 @@ const PROBES: Record<string, Probe[]> = {
   'GET /v1/reports/accounts.csv': [{ method: 'GET', url: () => `/v1/reports/accounts.csv?from=2026-01-01&to=2026-12-31&accountId=${accountA}` }],
   'POST /v1/service/customer-view': [{ method: 'POST', url: () => '/v1/service/customer-view', payload: () => ({ lastName: 'Sample', dateOfBirth: '1980-05-05' }) }],
   'POST /v1/policies/:policyId/documents/resend': [{ method: 'POST', url: () => `/v1/policies/${ABSENT}/documents/resend`, payload: () => ({ reason: 'Probe' }) }],
+  'POST /v1/card-programmes/:programmeId/mapped-feeds': [{ method: 'POST', url: () => `/v1/card-programmes/${ABSENT}/mapped-feeds?mode=test&sequence=1&kind=CHANGE&asOfDate=2026-01-01`, payload: () => 'a\nb\n', headers: { 'content-type': 'application/octet-stream' } }],
+  'POST /v1/card-programmes/:programmeId/samples': [{ method: 'POST', url: () => `/v1/card-programmes/${ABSENT}/samples`, payload: () => 'a,b\n1,2\n', headers: { 'content-type': 'text/plain' } }],
+  'GET /v1/card-programmes/:programmeId/samples': [{ method: 'GET', url: () => `/v1/card-programmes/${ABSENT}/samples` }],
+  'GET /v1/card-programmes/:programmeId/samples/:sampleId': [{ method: 'GET', url: () => `/v1/card-programmes/${ABSENT}/samples/${ABSENT}` }],
+  'POST /v1/card-programmes/:programmeId/mapping-preview': [{ method: 'POST', url: () => `/v1/card-programmes/${ABSENT}/mapping-preview`, payload: () => ({ sampleId: ABSENT, document: { delimiter: ',', columns: { accountRef: { column: 'a' }, productCode: { constant: 'X' }, action: { constant: 'A' }, eligibleFrom: { column: 'b', format: 'YYYY-MM-DD' }, eligibleTo: null } } }) }],
+  'GET /v1/card-programmes/:programmeId/mappings': [{ method: 'GET', url: () => `/v1/card-programmes/${ABSENT}/mappings` }],
   'GET /v1/search': [{ method: 'GET', url: () => '/v1/search?q=ATP' }, { method: 'GET', url: () => '/v1/search?q=Sample' }],
   'GET /v1/policies': [
     { method: 'GET', url: () => '/v1/policies' },

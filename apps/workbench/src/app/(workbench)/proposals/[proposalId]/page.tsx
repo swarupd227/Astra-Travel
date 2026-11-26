@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { PROPOSAL_KIND_LABELS, type FormVariableInput, type Proposal } from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
@@ -39,6 +39,9 @@ export default async function ProposalPage({ params, searchParams }: { params: P
   if (res.error instanceof ApiProblem && res.error.problem.code === 'not_found') notFound();
   if (res.error) return <ErrorPanel error={res.error} />;
   const p = res.data;
+  // Feed proposals are judged where the programme manager works with the feed.
+  if (p.kind === 'feed_mapping') redirect(`/card/programmes/${p.subjectId}/mapping`);
+  if (p.kind === 'feed_rejections') redirect(`/card/programmes/${String((p.content as { programmeId?: string }).programmeId)}/feeds/${p.subjectId}`);
   const names = await peopleNames([p.requestedBy, p.resolvedBy]);
   const open = p.status === 'open';
   const canManage = me.permissions.includes(p.kind === 'variable_map' ? 'forms:manage' : p.kind === 'document_quality' ? 'documents:release' : p.kind === 'account_onboarding' ? 'accounts:manage' : 'rating:manage');

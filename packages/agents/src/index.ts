@@ -14,3 +14,4 @@ export { AG07 } from './catalogue/document-quality';
 export { AG06 } from './catalogue/policy-servicing';
 export { AG05 } from './catalogue/account-onboarding';
 export { AG04 } from './catalogue/underwriting-referral';
+export { AG09 } from './catalogue/eligibility-feed';
