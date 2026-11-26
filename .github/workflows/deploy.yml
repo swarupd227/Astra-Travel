@@ -1,0 +1,96 @@
+# Deploys one environment from a commit (E13-F01-S01, E13-F03). Run by hand; each GitHub environment holds its own
+# variables, secrets and required reviewers, so promotion to staging and production needs approval. Signing in to
+# Azure uses OpenID Connect: no Azure password is stored. This workflow has not yet been run against an Azure
+# subscription.
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy
+        type: choice
+        required: true
+        options: [dev, test, sandbox, uat, staging, prod]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      PARAMS: infra/azure/env/${{ inputs.environment }}.bicepparam
+      ASTRA_IMAGE_TAG: ${{ github.sha }}
+      ASTRA_OIDC_ISSUER: ${{ vars.OIDC_ISSUER }}
+      ASTRA_OIDC_AUDIENCE: ${{ vars.OIDC_AUDIENCE }}
+      ASTRA_OIDC_GROUP_ROLE_MAP: ${{ vars.OIDC_GROUP_ROLE_MAP }}
+      ASTRA_WORKBENCH_CLIENT_ID: ${{ vars.WORKBENCH_CLIENT_ID }}
+      ASTRA_API_PUBLIC_URL: ${{ vars.API_PUBLIC_URL }}
+      ASTRA_WORKBENCH_PUBLIC_URL: ${{ vars.WORKBENCH_PUBLIC_URL }}
+      ASTRA_MAIL_FROM: ${{ vars.MAIL_FROM }}
+      ASTRA_PRIMARY_DATABASE_ID: ${{ vars.PRIMARY_DATABASE_ID }}
+      ASTRA_DATABASE_ADMIN_PASSWORD: ${{ secrets.DATABASE_ADMIN_PASSWORD }}
+      ASTRA_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      ASTRA_DATABASE_OWNER_URL: ${{ secrets.DATABASE_OWNER_URL }}
+      ASTRA_DATABASE_OWNER_PASSWORD: ${{ secrets.DATABASE_OWNER_PASSWORD }}
+      ASTRA_DATABASE_APP_PASSWORD: ${{ secrets.DATABASE_APP_PASSWORD }}
+      ASTRA_SECRETS_KEK: ${{ secrets.SECRETS_KEK }}
+      ASTRA_CHANNEL_SIGNING_SECRET: ${{ secrets.CHANNEL_SIGNING_SECRET }}
+      ASTRA_AGENT_TOKEN_PUBLIC_KEY: ${{ secrets.AGENT_TOKEN_PUBLIC_KEY }}
+      ASTRA_AGENT_TOKEN_PRIVATE_KEY: ${{ secrets.AGENT_TOKEN_PRIVATE_KEY }}
+      ASTRA_ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ASTRA_WORKBENCH_CLIENT_SECRET: ${{ secrets.WORKBENCH_CLIENT_SECRET }}
+      ASTRA_WORKBENCH_SESSION_SECRET: ${{ secrets.WORKBENCH_SESSION_SECRET }}
+      ASTRA_SMTP_URL: ${{ secrets.SMTP_URL }}
+      ASTRA_BILLING_SIGNING_SECRET: ${{ secrets.BILLING_SIGNING_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Show what will change
+        run: ASTRA_DEPLOY_APPS=false az deployment group what-if -g "$RESOURCE_GROUP" --parameters "$PARAMS"
+      - name: Create or update the foundations
+        id: base
+        run: |
+          out=$(ASTRA_DEPLOY_APPS=false az deployment group create -g "$RESOURCE_GROUP" --name base-${{ github.run_id }} --parameters "$PARAMS" --query properties.outputs -o json)
+          echo "registry=$(echo "$out" | jq -r .registryName.value)" >> "$GITHUB_OUTPUT"
+      - name: Build the images in the registry
+        run: |
+          for target in api worker; do
+            az acr build -r "${{ steps.base.outputs.registry }}" -f infra/docker/Dockerfile --target "$target" -t "astra-$target:$ASTRA_IMAGE_TAG" .
+          done
+          az acr build -r "${{ steps.base.outputs.registry }}" -f infra/docker/Dockerfile --target workbench --build-arg OIDC_ISSUER="$ASTRA_OIDC_ISSUER" -t "astra-workbench:$ASTRA_IMAGE_TAG" .
+      - name: Deploy the applications
+        id: apps
+        run: |
+          out=$(ASTRA_DEPLOY_APPS=true az deployment group create -g "$RESOURCE_GROUP" --name apps-${{ github.run_id }} --parameters "$PARAMS" --query properties.outputs -o json)
+          echo "job=$(echo "$out" | jq -r .migrateJobName.value)" >> "$GITHUB_OUTPUT"
+          echo "roles=$(echo "$out" | jq -r .bootstrapJobName.value)" >> "$GITHUB_OUTPUT"
+          echo "api=$(echo "$out" | jq -r .apiEndpoint.value)" >> "$GITHUB_OUTPUT"
+      # Both jobs are safe to run on every deployment: the roles script sets what is missing, and migrations apply once.
+      - name: Create the database roles, then apply migrations
+        run: |
+          for job in "${{ steps.apps.outputs.roles }}" "${{ steps.apps.outputs.job }}"; do
+            run=$(az containerapp job start -g "$RESOURCE_GROUP" -n "$job" --query name -o tsv)
+            status=Running
+            for i in $(seq 1 120); do
+              status=$(az containerapp job execution show -g "$RESOURCE_GROUP" -n "$job" --job-execution-name "$run" --query properties.status -o tsv)
+              case "$status" in Succeeded|Failed|Degraded) break ;; esac
+              sleep 15
+            done
+            if [ "$status" != Succeeded ]; then echo "Job $job ended as $status"; exit 1; fi
+          done
+      # On the first deployment of an environment this waits until Front Door's private link has been approved.
+      - name: Check the API answers through Front Door
+        run: curl --fail --retry 30 --retry-delay 20 --retry-all-errors "https://${{ steps.apps.outputs.api }}/health/ready"

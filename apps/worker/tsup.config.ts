@@ -1,7 +1,8 @@
 import { defineConfig } from 'tsup';
 
-// Bundles the API with the workspace packages (which ship as TypeScript source); third-party
-// dependencies stay external and are installed in the container image.
+// Bundles the worker with the workspace packages (which ship as TypeScript source). Every third-party package,
+// including those the workspace packages depend on, stays external and is installed in the container image: bundling
+// a CommonJS library into an ES module fails at start-up.
 export default defineConfig({
   entry: ['src/main.ts'],
   format: ['esm'],
@@ -10,4 +11,5 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   noExternal: [/^@astra\//],
+  external: [/^(?!@astra\/)(?![A-Za-z]:)[@A-Za-z]/],
 });

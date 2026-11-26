@@ -91,3 +91,20 @@ jobs:
         with: { node-version: 24, cache: npm }
       - run: npm ci
       - run: npm run build
+
+  infrastructure:
+    name: Infrastructure templates and images
+    runs-on: ubuntu-latest
+    needs: [verify]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile the Azure templates and every environment's parameters
+        shell: pwsh
+        run: ./infra/azure/validate.ps1
+      - name: Build the API and worker images
+        run: |
+          docker build -f infra/docker/Dockerfile --target api -t astra-api:ci .
+          docker build -f infra/docker/Dockerfile --target worker -t astra-worker:ci .
+      - name: Build the workbench image
+        run: docker build -f infra/docker/Dockerfile --target workbench --build-arg OIDC_ISSUER=https://login.example.invalid/v2.0 -t astra-workbench:ci .
+

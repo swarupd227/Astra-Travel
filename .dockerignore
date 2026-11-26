@@ -1,0 +1,14 @@
+# Nothing local or secret goes into an image.
+**/node_modules
+**/dist
+**/.next
+**/coverage
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+var
+.git
+.claude
+playwright-report
+test-results
+docs
