@@ -104,6 +104,8 @@ export const PERMISSIONS = {
   'documents:read': 'View document templates, issued documents and their delivery',
   'documents:manage': 'Assemble document templates, issue notices and guides, and retry failed deliveries',
   'documents:release': 'Release document templates assembled by someone else, and resolve document quality findings',
+  'reports:read': 'View sales, premium, take-up, cancellation and refund reports for the accounts you can see',
+  'reports:statutory': 'View and export statutory and statistical data by state, entity and benefit',
   'tasks:read': 'See the work queue: referrals, agent proposals, agent reviews and failed deliveries, with their timers and owners',
   'tasks:work': 'Take work from the queue and hand it back',
   'tasks:assign': 'Assign work to other people and set how long each kind of work may wait',
@@ -145,6 +147,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   underwriter: [...STAFF_BASE, 'card:read', 'underwriting:evaluate', 'underwriting:manage', 'underwriting:approve', 'referrals:decide'],
   account_manager: [
     ...STAFF_BASE,
+    'reports:read',
     'accounts:manage',
     'webhooks:read',
     'webhooks:manage',
@@ -155,7 +158,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'proposals:create',
   ],
   service_rep: [...STAFF_BASE, 'card:read', 'cover:verify', 'quotes:create', 'servicing:execute'],
-  finance_analyst: [...STAFF_BASE, 'card:read', 'billing:manage'],
+  finance_analyst: [...STAFF_BASE, 'card:read', 'billing:manage', 'reports:read', 'reports:statutory'],
   card_programme_manager: [
     ...STAFF_BASE,
     'webhooks:read',
@@ -167,6 +170,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ],
   compliance_officer: [
     ...STAFF_BASE,
+    'reports:read',
+    'reports:statutory',
     'audit:read',
     'audit:verify',
     'events:read',
@@ -189,6 +194,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ],
   ops_supervisor: [
     ...STAFF_BASE,
+    'reports:read',
     'documents:manage',
     'events:read',
     'events:replay',

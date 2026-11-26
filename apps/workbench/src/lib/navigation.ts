@@ -112,6 +112,13 @@ export const NAVIGATION: NavSection[] = [
         description: 'Retailer registrations and producer licences by state, with expiry alerts.',
       },
       {
+        href: '/compliance/statutory',
+        label: 'Statutory data',
+        icon: 'table',
+        permission: 'reports:statutory',
+        description: 'Premium and policy data by state, entity and benefit, reconciled to the premium records.',
+      },
+      {
         href: '/compliance/filings',
         label: 'Filing register',
         icon: 'stamp',
@@ -151,6 +158,18 @@ export const NAVIGATION: NavSection[] = [
         icon: 'clipboard',
         permission: 'servicing:review',
         description: 'A weekly random sample of the changes the servicing agent made, to review.',
+      },
+    ],
+  },
+  {
+    label: 'Reports',
+    items: [
+      {
+        href: '/reports/accounts',
+        label: 'Account reports',
+        icon: 'activity',
+        permission: 'reports:read',
+        description: 'Sales, premium, take-up, cancellations and refunds by account, segment, state and benefit.',
       },
     ],
   },

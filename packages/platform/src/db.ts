@@ -13,6 +13,8 @@ pg.types.setTypeParser(pg.types.builtins.DATE, (v) => v);
 export interface PoolOptions {
   max?: number;
   applicationName?: string;
+  /** How long to wait for a connection before giving up; 5 seconds unless a caller (such as a test) allows more. */
+  connectionTimeoutMillis?: number;
 }
 
 export function createPool(connectionString: string, opts: PoolOptions = {}): Pool {
@@ -20,7 +22,7 @@ export function createPool(connectionString: string, opts: PoolOptions = {}): Po
     connectionString,
     max: opts.max ?? 20,
     idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 5_000,
+    connectionTimeoutMillis: opts.connectionTimeoutMillis ?? 5_000,
     application_name: opts.applicationName ?? 'astra',
   });
 }

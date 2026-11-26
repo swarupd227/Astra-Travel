@@ -37,13 +37,20 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
         title={d.title}
         description={d.status === 'failed' ? 'This document could not be produced.' : `${DOCUMENT_KIND_LABELS[d.kind]}. Issued as the policy record stood; it does not change.`}
         actions={
-          d.status === 'issued' ? (
+          <>
+          {me.permissions.includes('audit:read') ? (
+            <a href={`/api/trace/documents/${d.id}`} className={buttonClass('ghost')}>
+              Audit trace
+            </a>
+          ) : null}
+          {d.status === 'issued' ? (
             <a href={`/api/documents/${d.id}/file`} className={buttonClass('secondary')} target="_blank" rel="noreferrer">
               <Download aria-hidden className="size-4" /> Open the PDF
             </a>
           ) : (
             <Badge tone="danger">Failed</Badge>
-          )
+          )}
+          </>
         }
       />
       <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">

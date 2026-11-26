@@ -91,6 +91,8 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
   const pool = createPool(requireEnv('TEST_DATABASE_URL'), {
     max: 5,
     applicationName: 'astra-api-test',
+    // A developer machine under load can take longer than the production limit to open a connection.
+    connectionTimeoutMillis: 60_000,
   });
   const idp = await createTestIdp();
   const agentKeys = generateKeyPairSync('ed25519', {

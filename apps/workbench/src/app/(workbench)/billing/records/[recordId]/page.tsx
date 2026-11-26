@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Download } from 'lucide-react';
 import type { PremiumRecord } from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
 import { sentenceCase } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
 import { Badge, Card, CardHeader, DescriptionList, Notice, PageHeader } from '@/components/ui/primitives';
+import { buttonClass } from '@/components/ui/button';
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
 import { RecalculateForm } from '../../billing-forms';
@@ -35,7 +36,16 @@ export default async function RecordPage({ params, searchParams }: { params: Pro
         eyebrow={r.policyNumber ?? 'Card programme'}
         title={r.number}
         description={`${sentenceCase(r.type)}${r.period ? ` for ${r.period}` : ''}. ${Number(r.premium) < 0 ? 'A refund' : 'A charge'} of ${money(r.premium)}.`}
-        actions={<Badge tone={RECORD_TONES[r.status]}>{sentenceCase(r.status)}</Badge>}
+        actions={
+          <>
+            {me.permissions.includes('audit:read') ? (
+              <a href={`/api/trace/premium-records/${r.id}`} className={buttonClass('secondary')}>
+                <Download aria-hidden className="size-4" /> Audit trace
+              </a>
+            ) : null}
+            <Badge tone={RECORD_TONES[r.status]}>{sentenceCase(r.status)}</Badge>
+          </>
+        }
       />
       {recalculated ? (
         <div className="mb-6">
