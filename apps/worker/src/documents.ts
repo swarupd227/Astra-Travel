@@ -15,6 +15,8 @@ export interface EmailMessage {
   subject: string;
   text: string;
   attachment: { filename: string; content: Buffer };
+  /** Sent with the message so the provider can say which delivery its receipt is about. */
+  deliveryId?: string;
 }
 
 export interface EmailSender {
@@ -31,7 +33,7 @@ export class SmtpSender implements EmailSender {
     this.transport = nodemailer.createTransport(url);
   }
   async send(m: EmailMessage): Promise<string> {
-    const info = await this.transport.sendMail({ from: this.from, to: m.to, subject: m.subject, text: m.text, attachments: [{ filename: m.attachment.filename, content: m.attachment.content, contentType: 'application/pdf' }] });
+    const info = await this.transport.sendMail({ from: this.from, to: m.to, subject: m.subject, text: m.text, ...(m.deliveryId ? { headers: { 'X-Astra-Delivery-Id': m.deliveryId } } : {}), attachments: [{ filename: m.attachment.filename, content: m.attachment.content, contentType: 'application/pdf' }] });
     return `accepted by the mail server (${info.messageId})`;
   }
 }
@@ -91,6 +93,7 @@ export async function deliverNext(pool: Pool, files: FileStore, sender: EmailSen
       const pdf = await readAll(files.read(due.file_key));
       detail = await sender.send({
         to: due.recipient,
+        deliveryId: due.id,
         subject: due.number ? `${due.title}, policy ${due.number}` : due.title,
         text: `Your ${due.title.toLowerCase()}${due.number ? ` for policy ${due.number}` : ''} is attached.\n\nKeep it with your travel documents.`,
         attachment: { filename: `${(due.number ?? due.kind).replace(/[^A-Za-z0-9._-]/g, '_')}-${due.kind}.pdf`, content: pdf },

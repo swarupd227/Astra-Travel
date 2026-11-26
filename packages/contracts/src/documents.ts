@@ -68,6 +68,10 @@ export const DocumentDeliverySchema = z.object({
   lastError: z.string().nullable(),
   nextAttemptAt: z.iso.datetime({ offset: true }).nullable(),
   deliveredAt: z.iso.datetime({ offset: true }).nullable(),
+  /** What the delivery provider reported afterwards; null until it reports. */
+  receipt: z.enum(['delivered', 'bounced']).nullable(),
+  receiptAt: z.iso.datetime({ offset: true }).nullable(),
+  receiptDetail: z.string().nullable(),
 });
 export type DocumentDelivery = z.infer<typeof DocumentDeliverySchema>;
 
@@ -124,3 +128,12 @@ export const DocumentFindingSchema = z.object({
   severity: z.enum(['hold', 'note']).default('hold'),
 });
 export type DocumentFinding = z.infer<typeof DocumentFindingSchema>;
+
+/** What the email provider reports about messages it accepted (E14-F03-S03). */
+export const DeliveryReceiptsSchema = z.object({
+  receipts: z
+    .array(z.object({ deliveryId: z.uuid(), status: z.enum(['delivered', 'bounced']), at: z.iso.datetime({ offset: true }), detail: z.string().trim().max(400).optional() }))
+    .min(1)
+    .max(500),
+});
+export const DeliveryReceiptsResultSchema = z.object({ recorded: z.number().int(), ignored: z.array(z.object({ deliveryId: z.uuid(), reason: z.string() })) });

@@ -142,7 +142,7 @@ export const TravellerInputSchema = z.object({
   costPerTraveller: money.optional(),
 });
 
-export const STAGES = ['quote', 'bind', 'change'] as const;
+export const STAGES = ['quote', 'bind', 'change', 'refund'] as const;
 
 export const EvaluationInputSchema = z
   .object({

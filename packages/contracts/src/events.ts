@@ -289,7 +289,7 @@ export const ReferralRaised = defineEvent({
     referralId: z.uuid(),
     caseRef: z.string(),
     kind: z.enum(['underwriting', 'sanctions']),
-    stage: z.enum(['quote', 'bind', 'change']),
+    stage: z.enum(['quote', 'bind', 'change', 'refund']),
     recommendation: z.enum(['refer', 'recommend_decline']),
   }),
 });

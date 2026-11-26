@@ -3,6 +3,7 @@ import { diffRecords } from '@astra/documents';
 import { AppError, conflict, notFound, type RequestContext, type Tx } from '@astra/platform';
 import { benefitLimits, cancellationMoney, changeMoney, CoverageError, fromCents, policyCoverage, project, reviewStatus, toCents, withinDays, type Money } from '@astra/policies';
 import { loadEvents } from '../documents/issue';
+import { partiesAfter, screenParties } from './screening';
 import { buildQuote, type NormalisedQuoteRequest, type Pinned } from '../routes/quote-core';
 import type { storeWorksheets } from '../routes/policies';
 
@@ -192,6 +193,13 @@ export async function planServicing(tx: Tx, ctx: RequestContext, policyId: strin
   }
   if (problems.length) return refuse(problems, summary);
 
+  // ---- Everyone who would be on the policy is screened, whatever the change (E14-F03-S02).
+  const screening = await screenParties(tx, ctx, { stage: 'change', policyId, planVersionId: pol.plan_version_id, ruleSetId: before.ruleSet.id, parties: partiesAfter(before, req), raise: true });
+  if (screening.outcome !== 'clear') {
+    const referral = screening.referralId ? ` (referral ${screening.referralId})` : '';
+    return refuse([screening.outcome === 'confirmed' ? `A sanctions match has been confirmed${referral}, so this change cannot be made.` : `A possible sanctions match must be reviewed before this change can be made${referral}.`], summary);
+  }
+
   // ---- Re-rate and re-screen with the versions the policy was bound with.
   let after: PolicySnapshot;
   let patch: Record<string, unknown>;
@@ -211,7 +219,9 @@ export async function planServicing(tx: Tx, ctx: RequestContext, policyId: strin
     const b = built.body;
     worksheets = built.worksheets;
     const stop: string[] = [];
-    if (b.outcome !== 'eligible') stop.push(b.outcome === 'ineligible' ? `Not eligible: ${b.reasons.join(' ')}` : b.outcome === 'held' ? 'A possible sanctions match must be reviewed, so this change cannot be made here.' : 'An underwriter must review this change, so it cannot be made here.');
+    // A match a person has cleared for exactly these people does not stop the change (screening.ts decides that).
+    const cleared = b.outcome === 'held' && !b.reasons.length && !b.evaluation.referrals.length;
+    if (b.outcome !== 'eligible' && !cleared) stop.push(b.outcome === 'ineligible' ? `Not eligible: ${b.reasons.join(' ')}` : b.outcome === 'held' ? 'A possible sanctions match must be reviewed, so this change cannot be made here.' : 'An underwriter must review this change, so it cannot be made here.');
     if (before.waiver.applies && !b.waiver.applies) stop.push('This change would lose the pre-existing condition waiver the policy was sold with.');
     if (before.cfar.offered && !b.cfar.offered && before.benefits.some((x) => pv.document.benefits.find((d) => d.code === x.code)?.ratingBenefit === 'CFAR')) stop.push('This change would lose eligibility for Cancel For Any Reason.');
     if (!b.premium || b.premium.kind !== 'premium') stop.push('The re-rated price is not a premium that can be charged.');

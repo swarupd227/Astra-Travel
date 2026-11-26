@@ -2,6 +2,7 @@ import type { CommissionRuleDocument, PolicySnapshot } from '@astra/contracts';
 import { buildMoney, fromCents, toCents, type Arrangement, type RecordInput } from '@astra/billing';
 import { conflict, notFound, type Tx } from '@astra/platform';
 import { versionInForce } from '@astra/studio';
+import { refundHold } from '../servicing/screening';
 
 /**
  * Creating and recalculating premium records (E08-F01, E08-F02). A record is written in the transaction of the
@@ -104,6 +105,11 @@ export async function recordTransaction(tx: Tx, t: Transaction, now: Date = new 
     occurredAt: now.toISOString(),
   };
   const m = buildMoney(await context(tx, stored));
+  // A refund a sanctions match is waiting on is recorded, and not sent to billing until a person clears it.
+  if (stored.premiumCents < 0) {
+    const hold = await refundHold(tx, t.policy.id);
+    if (hold) m.issues.push(hold);
+  }
   const seq = Number((await tx.query<{ n: string }>(`SELECT nextval('billing.record_seq') AS n`)).rows[0]!.n);
   const worksheets = t.worksheetIds.length || t.kind !== 'cancellation' ? t.worksheetIds : ((await tx.query<{ worksheet_ids: string[] }>(`SELECT worksheet_ids FROM billing.premium_records WHERE policy_id = $1 AND type = 'bind'`, [t.policy.id])).rows[0]?.worksheet_ids ?? []);
   const row = (
@@ -148,6 +154,10 @@ export async function recalculate(tx: Tx, id: string): Promise<{ status: 'held' 
   if (r.status !== 'held') throw conflict(`This record is ${r.status}; only a held record is recalculated.`);
   await tx.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`billing:${r.account_id}`]);
   const m = buildMoney(await context(tx, r.inputs));
+  if (r.inputs.premiumCents < 0) {
+    const hold = await refundHold(tx, r.inputs.policyId);
+    if (hold) m.issues.push(hold);
+  }
   const status = m.issues.length ? 'held' : 'ready';
   await tx.query(
     `UPDATE billing.premium_records SET status = $2, issues = $3, per_benefit = $4, per_traveller = $5, allocation = $6, commission = $7, commission_cents = $8, tax_cents = $9 WHERE id = $1`,

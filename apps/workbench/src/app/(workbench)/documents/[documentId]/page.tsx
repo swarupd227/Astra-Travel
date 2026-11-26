@@ -99,6 +99,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
                       </TD>
                       <TD>
                         <Badge tone={DELIVERY_TONES[x.status]}>{sentenceCase(x.status)}</Badge>
+                        {x.receipt === 'delivered' ? <span className="mt-1 block text-xs text-muted">The provider reports it arrived.</span> : null}
                         {x.lastError ? <span className="mt-1 block text-xs text-danger">{x.lastError}</span> : null}
                       </TD>
                     </TR>

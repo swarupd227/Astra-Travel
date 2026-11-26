@@ -35,6 +35,7 @@ import type { AppDeps } from '../app';
 import { commonErrors } from './shared';
 import { assemble, catalogueDocument, planOf, planVersionOf, sha, type RuleSetRow } from './underwriting-data';
 import { runEvaluation } from './underwriting-evaluate';
+import { recalculate } from '../billing/records';
 
 /** Underwriting and eligibility rules (E03). Design: docs/adr/0008. */
 
@@ -149,7 +150,7 @@ interface ReferralRow {
   id: string;
   case_ref: string;
   kind: 'underwriting' | 'sanctions';
-  stage: 'quote' | 'bind' | 'change';
+  stage: 'quote' | 'bind' | 'change' | 'refund';
   status: 'open' | 'approved' | 'declined';
   recommendation: 'refer' | 'recommend_decline';
   rule_set_id: string;
@@ -731,7 +732,16 @@ export const underwritingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, de
         ).rows[0]!;
         // The decision and the reason go back to the channel that raised the case: the case reference of a quote or
         // bind referral is the quote's id, and its account is the channel's.
-        const channel = (await tx.query<{ account_id: string }>(`SELECT account_id FROM policies.quotes WHERE id::text = $1`, [r.case_ref])).rows[0];
+        // A hold on a change or refund names the policy as the second part of its case reference.
+        const channel = (
+          await tx.query<{ account_id: string }>(`SELECT account_id FROM policies.quotes WHERE id::text = $1 UNION ALL SELECT account_id FROM policies.policies WHERE id::text = split_part($1, ':', 2) LIMIT 1`, [r.case_ref])
+        ).rows[0];
+        // A cleared refund hold releases the refund records it was holding.
+        if (r.stage === 'refund' && request.body.decision === 'approved') {
+          const policyId = r.case_ref.split(':')[1]!;
+          const held = (await tx.query<{ id: string }>(`SELECT id FROM billing.premium_records WHERE policy_id = $1 AND status = 'held' AND premium_cents < 0`, [policyId])).rows;
+          for (const h of held) await recalculate(tx, h.id);
+        }
         await publishEvent(tx, request.ctx, ReferralDecided, { referralId: r.id, caseRef: r.case_ref, decision: request.body.decision, reason: request.body.reason }, { accountId: channel?.account_id ?? null });
         await writeAudit(tx, request.ctx, { action: `referral.${request.body.decision}`, resourceType: 'referral', resourceId: r.id, reason: request.body.reason, data: { caseRef: r.case_ref, kind: r.kind } });
         return toReferral(r);

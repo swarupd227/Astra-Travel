@@ -8,6 +8,9 @@ import { issueNotice } from '../documents/issue';
 import { planServicing, type Planned } from '../servicing/engine';
 import type { AppDeps } from '../app';
 import { externalCaseOf } from '../http/service-cloud';
+import { currentParties, partiesAfter, screenParties } from '../servicing/screening';
+import { project } from '@astra/policies';
+import { loadEvents } from '../documents/issue';
 import { commonErrors, idempotencyHeaders, idempotencyKey } from './shared';
 import { policyView, storeWorksheets } from './policies';
 import { recordTransaction } from '../billing/records';
@@ -110,6 +113,19 @@ export const servicingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
         });
         if (gate) throw gate;
       }
+
+      // Screening comes first and is committed on its own, so that a hold raised here is kept even when the change
+      // is then refused (E14-F03-S02).
+      await withTx(deps.pool, ctx, async (tx) => {
+        const p = (await tx.query<{ plan_version_id: string; status: string }>(`SELECT plan_version_id, status FROM policies.policies WHERE id = $1`, [request.params.policyId])).rows[0];
+        if (!p || p.status !== 'active') return;
+        const record = project(await loadEvents(tx, request.params.policyId))!.record;
+        const base = { policyId: request.params.policyId, planVersionId: p.plan_version_id, ruleSetId: record.ruleSet.id, raise: true };
+        if (req.type !== 'cancel') await screenParties(tx, ctx, { ...base, stage: 'change', parties: partiesAfter(record, req) });
+        // Money going back is screened too; a match holds the refund, not the cancellation or change.
+        // A cancellation confirms the refund as a positive amount; a change that gives money back, as a negative one.
+        if (req.type === 'cancel' ? Number(confirmAmount) > 0 : Number(confirmAmount) < 0) await screenParties(tx, ctx, { ...base, stage: 'refund', parties: currentParties(record) });
+      });
 
       const result = await withTx(deps.pool, ctx, async (tx) => {
         const owner = (await tx.query<{ account_id: string }>(`SELECT account_id FROM policies.policies WHERE id = $1`, [request.params.policyId])).rows[0];

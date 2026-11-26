@@ -114,7 +114,7 @@ export const serviceCloudRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, de
         if (missing.length) throw notFound('A document emailed for this policy');
         if (rows.length === 0) throw conflict('None of this policy’s documents has been emailed, so there is nothing to send again.');
         const again = rows.filter((r) => r.status !== 'queued');
-        if (again.length) await tx.query(`UPDATE documents.deliveries SET status = 'queued', attempts = 0, next_attempt_at = now(), updated_at = now() WHERE id = ANY ($1::uuid[])`, [again.map((r) => r.id)]);
+        if (again.length) await tx.query(`UPDATE documents.deliveries SET status = 'queued', attempts = 0, next_attempt_at = now(), updated_at = now(), receipt = NULL, receipt_at = NULL, receipt_detail = NULL WHERE id = ANY ($1::uuid[])`, [again.map((r) => r.id)]);
         await writeAudit(tx, request.ctx, { action: 'documents.resent', resourceType: 'policy', resourceId: request.params.policyId, accountId: p.account_id, reason, data: { number: p.number, documents: again.map((r) => r.document_id), ...(externalCase ? { externalCase } : {}) } });
         return { queued: again.map((r) => ({ documentId: r.document_id, title: r.title })), alreadyQueued: rows.length - again.length };
       });

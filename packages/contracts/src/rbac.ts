@@ -26,7 +26,7 @@ export const EXTERNAL_ROLES = ['partner_developer'] as const;
  * Roles held by Assurant systems rather than people (client-credentials clients). They act platform-wide
  * but only within their permissions, and are audited as `system` actors.
  */
-export const SYSTEM_ROLES = ['cover_verifier', 'billing_system'] as const;
+export const SYSTEM_ROLES = ['cover_verifier', 'billing_system', 'delivery_provider'] as const;
 
 export const ROLES = [...STAFF_ROLES, ...EXTERNAL_ROLES, ...SYSTEM_ROLES] as const;
 export type Role = (typeof ROLES)[number];
@@ -47,6 +47,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   partner_developer: 'Account integration developer',
   cover_verifier: 'Cover verification system (claims)',
   billing_system: 'Assurant billing system (confirmations)',
+  delivery_provider: 'Email delivery provider',
 };
 
 export const PERMISSIONS = {
@@ -106,6 +107,7 @@ export const PERMISSIONS = {
   'documents:release': 'Release document templates assembled by someone else, and resolve document quality findings',
   'reports:read': 'View sales, premium, take-up, cancellation and refund reports for the accounts you can see',
   'reports:statutory': 'View and export statutory and statistical data by state, entity and benefit',
+  'documents:receipts': 'Report what happened to documents that were sent (the delivery provider)',
   'data:read': 'View the data catalogue, the loads to the data platform and their files',
   'data:manage': 'Run a load to the data platform',
   'claims:feed': 'Read the policy and certificate data feed for claims',
@@ -236,6 +238,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // The claims application's client: cover verification and the policy and certificate data feed.
   cover_verifier: ['cover:verify', 'claims:feed'],
   billing_system: ['billing:confirm'],
+  delivery_provider: ['documents:receipts'],
 };
 
 export function isSystemRole(role: Role): boolean {

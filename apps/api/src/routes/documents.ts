@@ -7,7 +7,7 @@ import {
   GuideRequestSchema,
   IssueNoticeRequestSchema,
   IssuedDocumentDetailSchema,
-  IssuedDocumentSchema,
+  IssuedDocumentSchema, DeliveryReceiptsSchema, DeliveryReceiptsResultSchema,
   ReleaseTemplateRequestSchema,
   TemplateSchema,
   TemplateSummarySchema,
@@ -54,13 +54,13 @@ interface DocRow {
   size_bytes: string | null;
   issued_at: Date;
   text?: string | null;
-  deliveries: { id: string; channel: 'email' | 'account'; recipient: string | null; status: 'queued' | 'sent' | 'available' | 'failed'; attempts: number; last_error: string | null; next_attempt_at: string | null; delivered_at: string | null }[];
+  deliveries: { id: string; channel: 'email' | 'account'; recipient: string | null; status: 'queued' | 'sent' | 'available' | 'failed'; attempts: number; last_error: string | null; next_attempt_at: string | null; delivered_at: string | null; receipt: 'delivered' | 'bounced' | null; receipt_at: string | null; receipt_detail: string | null }[];
 }
 
 const DOC_SELECT = `SELECT d.id, d.kind, d.title, d.status, d.failure, d.account_id, d.policy_id, p.number AS policy_number, d.programme_id, d.template_id, d.source, d.version,
        d.sha256, d.size_bytes::text, d.issued_at,
        coalesce((SELECT json_agg(json_build_object('id', x.id, 'channel', x.channel, 'recipient', x.recipient, 'status', x.status, 'attempts', x.attempts, 'last_error', x.last_error,
-                                                     'next_attempt_at', x.next_attempt_at, 'delivered_at', x.delivered_at) ORDER BY x.channel) FROM documents.deliveries x WHERE x.document_id = d.id), '[]') AS deliveries`;
+                                                     'next_attempt_at', x.next_attempt_at, 'delivered_at', x.delivered_at, 'receipt', x.receipt, 'receipt_at', x.receipt_at, 'receipt_detail', x.receipt_detail) ORDER BY x.channel) FROM documents.deliveries x WHERE x.document_id = d.id), '[]') AS deliveries`;
 const DOC_FROM = `FROM documents.documents d LEFT JOIN policies.policies p ON p.id = d.policy_id`;
 
 const iso = (v: string | null) => (v ? new Date(v).toISOString() : null);
@@ -80,7 +80,7 @@ const toDoc = (r: DocRow): IssuedDocument => ({
   sha256: r.sha256,
   sizeBytes: r.size_bytes === null ? null : Number(r.size_bytes),
   issuedAt: r.issued_at.toISOString(),
-  deliveries: r.deliveries.map((d) => ({ id: d.id, channel: d.channel, recipient: d.recipient, status: d.status, attempts: d.attempts, lastError: d.last_error, nextAttemptAt: iso(d.next_attempt_at), deliveredAt: iso(d.delivered_at) })),
+  deliveries: r.deliveries.map((d) => ({ id: d.id, channel: d.channel, recipient: d.recipient, status: d.status, attempts: d.attempts, lastError: d.last_error, nextAttemptAt: iso(d.next_attempt_at), deliveredAt: iso(d.delivered_at), receipt: d.receipt, receiptAt: iso(d.receipt_at), receiptDetail: d.receipt_detail })),
 });
 
 async function documentById(tx: Tx, id: string): Promise<DocRow> {
@@ -328,7 +328,7 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
         ).rows;
         return {
           documents: docs,
-          deliveries: del.map((x) => ({ id: x.id, documentId: x.document_id, documentKind: x.kind, policyNumber: x.number, accountId: x.account_id, channel: x.channel, recipient: x.recipient, status: 'failed' as const, attempts: x.attempts, lastError: x.last_error, nextAttemptAt: null, deliveredAt: null })),
+          deliveries: del.map((x) => ({ id: x.id, documentId: x.document_id, documentKind: x.kind, policyNumber: x.number, accountId: x.account_id, channel: x.channel, recipient: x.recipient, status: 'failed' as const, attempts: x.attempts, lastError: x.last_error, nextAttemptAt: null, deliveredAt: null, receipt: null, receiptAt: null, receiptDetail: null })),
         };
       }),
   );
@@ -344,9 +344,55 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
         const x = (await tx.query<{ id: string; status: string; document_id: string; account_id: string }>(`SELECT id, status, document_id, account_id FROM documents.deliveries WHERE id = $1 FOR UPDATE`, [request.params.id])).rows[0];
         if (!x) throw notFound('The delivery');
         if (x.status !== 'failed') throw conflict(`This delivery is ${x.status}; only a failed delivery can be retried.`);
-        await tx.query(`UPDATE documents.deliveries SET status = 'queued', attempts = 0, next_attempt_at = now(), updated_at = now() WHERE id = $1`, [x.id]);
+        await tx.query(`UPDATE documents.deliveries SET status = 'queued', attempts = 0, next_attempt_at = now(), updated_at = now(), receipt = NULL, receipt_at = NULL, receipt_detail = NULL WHERE id = $1`, [x.id]);
         await writeAudit(tx, request.ctx, { action: 'document_delivery.retried', resourceType: 'document_delivery', resourceId: x.id, accountId: x.account_id, data: { documentId: x.document_id } });
         return toDoc(await documentById(tx, x.document_id));
+      }),
+  );
+
+  app.post(
+    '/v1/delivery-receipts',
+    {
+      config: { tenancy: 'platform', permission: 'documents:receipts' },
+      schema: {
+        tags: ['Documents'],
+        summary: 'The delivery provider reports what happened to messages it accepted (E14-F03-S03)',
+        description:
+          'Each message carries its delivery id in the X-Astra-Delivery-Id header. A delivered report records that it arrived; a bounced report marks the delivery failed, so it joins the work queue and can be retried. A report about a delivery that was not sent, or older than one already recorded, is ignored and listed.',
+        body: DeliveryReceiptsSchema,
+        response: { 200: DeliveryReceiptsResultSchema, ...commonErrors },
+      },
+    },
+    async (request) =>
+      withTx(deps.pool, request.ctx, async (tx) => {
+        let recorded = 0;
+        const ignored: { deliveryId: string; reason: string }[] = [];
+        for (const r of [...request.body.receipts].sort((a, b) => Date.parse(a.at) - Date.parse(b.at))) {
+          const d = (await tx.query<{ status: string; channel: string; receipt_at: Date | null; document_id: string; account_id: string }>(`SELECT status, channel, receipt_at, document_id, account_id FROM documents.deliveries WHERE id = $1 FOR UPDATE`, [r.deliveryId])).rows[0];
+          const reason =
+            !d || d.channel !== 'email'
+              ? 'There is no email delivery with this id.'
+              : d.receipt_at && d.receipt_at.getTime() >= Date.parse(r.at)
+                ? 'A report at this time or later is already recorded.'
+                : d.status !== 'sent' && !(d.status === 'failed' && d.receipt_at)
+                  ? `The delivery is ${d.status}, not sent.`
+                  : null;
+          if (reason) {
+            ignored.push({ deliveryId: r.deliveryId, reason });
+            continue;
+          }
+          const bounced = r.status === 'bounced';
+          await tx.query(
+            `UPDATE documents.deliveries SET receipt = $2, receipt_at = $3, receipt_detail = $4::text, updated_at = now(),
+                    status = CASE WHEN $2::text = 'bounced' THEN 'failed' ELSE 'sent' END,
+                    last_error = CASE WHEN $2::text = 'bounced' THEN 'The provider reported the message bounced' || coalesce(': ' || $4::text, '') ELSE NULL END
+              WHERE id = $1`,
+            [r.deliveryId, r.status, r.at, r.detail ?? null],
+          );
+          await writeAudit(tx, request.ctx, { action: bounced ? 'document_delivery.bounced' : 'document_delivery.delivered', resourceType: 'document_delivery', resourceId: r.deliveryId, accountId: d!.account_id, data: { documentId: d!.document_id, at: r.at } });
+          recorded += 1;
+        }
+        return { recorded, ignored };
       }),
   );
 
