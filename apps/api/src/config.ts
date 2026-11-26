@@ -43,6 +43,8 @@ const EnvSchema = z.object({
   QUOTE_VALID_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   /** The largest charge or refund the servicing agent may confirm on its own; above it the request goes to a person. To be confirmed by Assurant. */
   AGENT_SERVICING_MAX_AMOUNT: z.coerce.number().min(0).max(100000).default(500),
+  /** How long the claims feed waits before offering a change, so one still being saved is not skipped. */
+  CLAIMS_FEED_SETTLE_SECONDS: z.coerce.number().int().min(0).max(600).default(60),
   /** Largest eligibility feed accepted, in bytes (default 4 GiB: about 50 million records). */
   CARD_FEED_MAX_BYTES: z.coerce
     .number()

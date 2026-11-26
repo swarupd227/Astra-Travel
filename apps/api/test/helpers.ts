@@ -125,6 +125,7 @@ export async function createTestApp(overrides: Partial<ApiConfig> = {}): Promise
     FILE_STORE_DIR: mkdtempSync(join(tmpdir(), 'astra-files-')),
     CARD_FEED_MAX_BYTES: 64 * 1024 * 1024,
     AGENT_SERVICING_MAX_AMOUNT: 500,
+    CLAIMS_FEED_SETTLE_SECONDS: 0,
     IDP_REALM: 'astra',
     PUBLIC_API_URL: 'http://localhost:4000',
     CHANNEL_SIGNING_SECRET: CHANNEL_SECRET,

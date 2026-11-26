@@ -16,6 +16,8 @@ const EnvSchema = z.object({
   WORKER_POLL_MS: z.coerce.number().int().min(100).default(1_000),
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(8),
   AUDIT_SEAL_INTERVAL_MS: z.coerce.number().int().min(1_000).default(60_000),
+  /** How often changes are loaded to the data platform; they must land within 15 minutes (E12-F01-S02). */
+  DATA_LOAD_INTERVAL_MS: z.coerce.number().int().min(1_000).max(600_000).default(300_000),
   AUDIT_SEAL_MIN_AGE_SECONDS: z.coerce.number().int().min(70).default(120),
   /** Base64 PKCS#8 PEM of the Ed25519 key that signs agent run tokens. Agents do not run without it. */
   AGENT_TOKEN_PRIVATE_KEY: z.string().optional(),

@@ -135,22 +135,27 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
              UNION ALL
              SELECT p.id, 'account' FROM platform.accounts a JOIN policies.policies p ON p.account_id = a.id WHERE lower(a.name) LIKE $1 OR lower(a.code) LIKE $1
              UNION ALL
+             -- The trip as it stands now: as quoted, unless a change replaced it.
              SELECT p.id, 'trip' FROM policies.quotes qt JOIN policies.policies p ON p.quote_id = qt.id
-              WHERE lower((qt.request->'trip'->'destinations')::text) LIKE $1 OR qt.request->'trip'->>'departureDate' = $2 OR qt.request->'trip'->>'returnDate' = $2
+              WHERE (lower((qt.request->'trip'->'destinations')::text) LIKE $1 OR qt.request->'trip'->>'departureDate' = $2 OR qt.request->'trip'->>'returnDate' = $2)
+                AND NOT EXISTS (SELECT 1 FROM policies.policy_events e WHERE e.policy_id = p.id AND e.type = 'details_changed' AND (e.data->'patch') ? 'trip')
+             UNION ALL
+             SELECT c.policy_id, 'trip' FROM policies.current_trips c
+              WHERE c.changed AND (lower((c.trip->'destinations')::text) LIKE $1 OR c.trip->>'departureDate' = $2 OR c.trip->>'returnDate' = $2)
            ), found AS (
              SELECT id, array_agg(DISTINCT m) AS matched FROM hits GROUP BY id
            )
            SELECT p.id, p.number, p.status, p.account_id, a.name AS account_name, pl.code AS plan_code,
                   array(SELECT t.first_name || ' ' || t.last_name FROM policies.policy_travellers t WHERE t.policy_id = p.id ORDER BY t.traveller_id) AS travellers,
-                  qt.request->'trip'->>'departureDate' AS departure, qt.request->'trip'->>'returnDate' AS ret,
+                  ct.trip->>'departureDate' AS departure, ct.trip->>'returnDate' AS ret,
                   array(SELECT coalesce(d->>'country', '') || CASE WHEN d->>'country' IS NOT NULL AND d->>'region' IS NOT NULL THEN ' · ' ELSE '' END || coalesce(d->>'region', '')
-                          FROM jsonb_array_elements(coalesce(qt.request->'trip'->'destinations', '[]'::jsonb)) d) AS destinations,
+                          FROM jsonb_array_elements(coalesce(ct.trip->'destinations', '[]'::jsonb)) d) AS destinations,
                   f.matched
              FROM found f
              JOIN policies.policies p ON p.id = f.id
              JOIN platform.accounts a ON a.id = p.account_id
              JOIN plans.plans pl ON pl.id = p.plan_id
-             JOIN policies.quotes qt ON qt.id = p.quote_id
+             JOIN policies.current_trips ct ON ct.policy_id = p.id
             ORDER BY ('number' = ANY (f.matched)) DESC, p.created_at DESC
             LIMIT $3`,
           [like, q, request.query.limit],

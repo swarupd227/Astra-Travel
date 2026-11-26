@@ -21,3 +21,4 @@ export * from './onboarding';
 export * from './channels';
 export * from './workbench';
 export * from './reports';
+export * from './data';

@@ -106,6 +106,9 @@ export const PERMISSIONS = {
   'documents:release': 'Release document templates assembled by someone else, and resolve document quality findings',
   'reports:read': 'View sales, premium, take-up, cancellation and refund reports for the accounts you can see',
   'reports:statutory': 'View and export statutory and statistical data by state, entity and benefit',
+  'data:read': 'View the data catalogue, the loads to the data platform and their files',
+  'data:manage': 'Run a load to the data platform',
+  'claims:feed': 'Read the policy and certificate data feed for claims',
   'tasks:read': 'See the work queue: referrals, agent proposals, agent reviews and failed deliveries, with their timers and owners',
   'tasks:work': 'Take work from the queue and hand it back',
   'tasks:assign': 'Assign work to other people and set how long each kind of work may wait',
@@ -170,6 +173,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ],
   compliance_officer: [
     ...STAFF_BASE,
+    'data:read',
     'reports:read',
     'reports:statutory',
     'audit:read',
@@ -194,6 +198,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ],
   ops_supervisor: [
     ...STAFF_BASE,
+    'data:read',
     'reports:read',
     'documents:manage',
     'events:read',
@@ -228,7 +233,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'servicing:execute',
     'billing:read',
   ],
-  cover_verifier: ['cover:verify'],
+  // The claims application's client: cover verification and the policy and certificate data feed.
+  cover_verifier: ['cover:verify', 'claims:feed'],
   billing_system: ['billing:confirm'],
 };
 

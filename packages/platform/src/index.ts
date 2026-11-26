@@ -15,4 +15,5 @@ export * from './outbound';
 export * from './net-guard';
 export * from './events/dispatcher';
 export * from './file-store';
+export * from './data-load';
 export * from './people';
