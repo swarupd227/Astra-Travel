@@ -89,6 +89,11 @@ async function documentById(tx: Tx, id: string): Promise<DocRow> {
   return r;
 }
 
+/** Issued documents matching a condition on `d`, oldest first. */
+export async function issuedDocuments(tx: Tx, where: string, params: unknown[]): Promise<IssuedDocument[]> {
+  return (await tx.query<DocRow>(`${DOC_SELECT} ${DOC_FROM} WHERE ${where} ORDER BY d.issued_at, d.kind`, params)).rows.map(toDoc);
+}
+
 export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
   // ---------------- Templates ----------------
 

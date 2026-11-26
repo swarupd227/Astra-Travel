@@ -55,6 +55,7 @@ import { channelRoutes } from './routes/channels';
 import { workbenchRoutes } from './routes/workbench';
 import { reportRoutes } from './routes/reports';
 import { dataRoutes } from './routes/data';
+import { serviceCloudRoutes } from './routes/service-cloud';
 import { INTERNAL_HEADER, INTERNAL_KEY } from './http/internal';
 import { billingRoutes } from './routes/billing';
 
@@ -272,6 +273,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(workbenchRoutes, deps);
   await app.register(reportRoutes, deps);
   await app.register(dataRoutes, deps);
+  await app.register(serviceCloudRoutes, deps);
 
   return app;
 }

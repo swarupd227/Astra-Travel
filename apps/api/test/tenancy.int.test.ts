@@ -185,6 +185,8 @@ const PROBES: Record<string, Probe[]> = {
   ],
   'GET /v1/reports/accounts': [{ method: 'GET', url: () => '/v1/reports/accounts?from=2026-01-01&to=2026-12-31' }, { method: 'GET', url: () => `/v1/reports/accounts?from=2026-01-01&to=2026-12-31&accountId=${accountA}` }],
   'GET /v1/reports/accounts.csv': [{ method: 'GET', url: () => `/v1/reports/accounts.csv?from=2026-01-01&to=2026-12-31&accountId=${accountA}` }],
+  'POST /v1/service/customer-view': [{ method: 'POST', url: () => '/v1/service/customer-view', payload: () => ({ lastName: 'Sample', dateOfBirth: '1980-05-05' }) }],
+  'POST /v1/policies/:policyId/documents/resend': [{ method: 'POST', url: () => `/v1/policies/${ABSENT}/documents/resend`, payload: () => ({ reason: 'Probe' }) }],
   'GET /v1/search': [{ method: 'GET', url: () => '/v1/search?q=ATP' }, { method: 'GET', url: () => '/v1/search?q=Sample' }],
   'GET /v1/policies': [
     { method: 'GET', url: () => '/v1/policies' },

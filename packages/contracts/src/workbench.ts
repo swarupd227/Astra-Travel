@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 // ---------------------------------------------------------------- Task queue
 
-export const TASK_SOURCES = ['referral', 'sanctions_hold', 'agent_proposal', 'agent_review', 'delivery_failure'] as const;
+export const TASK_SOURCES = ['referral', 'sanctions_hold', 'agent_proposal', 'agent_review', 'delivery_failure', 'event_delivery'] as const;
 export const TaskSourceSchema = z.enum(TASK_SOURCES);
 export type TaskSource = z.infer<typeof TaskSourceSchema>;
 
@@ -14,6 +14,7 @@ export const TASK_SOURCE_LABELS: Record<TaskSource, string> = {
   agent_proposal: 'Agent proposal',
   agent_review: 'Agent review',
   delivery_failure: 'Failed delivery',
+  event_delivery: 'Undelivered event',
 };
 
 export const TASK_PRIORITIES = ['urgent', 'high', 'normal', 'low'] as const;

@@ -7,6 +7,7 @@ import { forbidden } from '@astra/platform';
 import { issueNotice } from '../documents/issue';
 import { planServicing, type Planned } from '../servicing/engine';
 import type { AppDeps } from '../app';
+import { externalCaseOf } from '../http/service-cloud';
 import { commonErrors, idempotencyHeaders, idempotencyKey } from './shared';
 import { policyView, storeWorksheets } from './policies';
 import { recordTransaction } from '../billing/records';
@@ -59,7 +60,15 @@ export const servicingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
         response: { 200: ServicingPreviewSchema, ...commonErrors },
       },
     },
-    async (request) => withTx(deps.pool, request.ctx, async (tx) => (await planServicing(tx, request.ctx, request.params.policyId, request.body, clock(), false)).preview),
+    async (request) => {
+      const externalCase = externalCaseOf(request);
+      return withTx(deps.pool, request.ctx, async (tx) => {
+        const planned = await planServicing(tx, request.ctx, request.params.policyId, request.body, clock(), false);
+        // A quote of a change made for a Service Cloud case is recorded against that case; nothing else is saved.
+        if (externalCase) await writeAudit(tx, request.ctx, { action: 'policy.change_quoted', resourceType: 'policy', resourceId: planned.policy.id, accountId: planned.policy.accountId, data: { transaction: request.body.type, confirmAmount: planned.preview.confirmAmount, externalCase } });
+        return planned.preview;
+      });
+    },
   );
 
   app.post(
@@ -79,6 +88,7 @@ export const servicingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
     },
     async (request, reply) => {
       const key = idempotencyKey(request);
+      const externalCase = externalCaseOf(request);
       const { request: req, confirmAmount } = request.body;
       const ctx: RequestContext = request.ctx;
       const principal = ctx.principal;
@@ -115,7 +125,7 @@ export const servicingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
               (
                 await tx.query<{ seq: string }>(
                   `INSERT INTO policies.policy_events (policy_id, account_id, type, actor, actor_name, reason, data) VALUES ($1, $2, 'status_changed', $3, $4, $5, $6) RETURNING seq`,
-                  [policy.id, policy.accountId, principal.subject, principal.name, req.reason, JSON.stringify({ from: 'active', to: 'cancelled', transaction: 'cancel', noLoss: planned.cancel.noLoss, money })],
+                  [policy.id, policy.accountId, principal.subject, principal.name, req.reason, JSON.stringify({ from: 'active', to: 'cancelled', transaction: 'cancel', noLoss: planned.cancel.noLoss, money, ...(externalCase ? { externalCase } : {}) })],
                 )
               ).rows[0]!.seq,
             );
@@ -128,7 +138,7 @@ export const servicingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
               (
                 await tx.query<{ seq: string }>(
                   `INSERT INTO policies.policy_events (policy_id, account_id, type, actor, actor_name, reason, data) VALUES ($1, $2, 'details_changed', $3, $4, $5, $6) RETURNING seq`,
-                  [policy.id, policy.accountId, principal.subject, principal.name, req.reason, JSON.stringify({ transaction: req.type, summary: planned.preview.summary, patch: planned.patch, money })],
+                  [policy.id, policy.accountId, principal.subject, principal.name, req.reason, JSON.stringify({ transaction: req.type, summary: planned.preview.summary, patch: planned.patch, money, ...(externalCase ? { externalCase } : {}) })],
                 )
               ).rows[0]!.seq,
             );
@@ -143,7 +153,7 @@ export const servicingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
             resourceId: policy.id,
             accountId: policy.accountId,
             reason: req.reason,
-            data: { number: policy.number, transaction: req.type, premiumBefore: before.premium.total, premiumAfter: planned.after?.premium.total ?? null, charge: money.charge, refund: money.refund, retained: money.retained, basis: money.basis },
+            data: { number: policy.number, transaction: req.type, premiumBefore: before.premium.total, premiumAfter: planned.after?.premium.total ?? null, charge: money.charge, refund: money.refund, retained: money.retained, basis: money.basis, ...(externalCase ? { externalCase } : {}) },
           });
           // A correction of names or details is a change like any other; its notice shows exactly what changed.
           const notice = await issueNotice(tx, deps.files, ctx, policy.id, seq);

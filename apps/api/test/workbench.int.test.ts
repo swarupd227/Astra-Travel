@@ -95,7 +95,7 @@ beforeAll(async () => {
   apiBaseUrl = `http://127.0.0.1:${(t.app.server.address() as AddressInfo).port}`;
   await resetDatabase();
   // The timers are settings that survive a reset, so a run starts from the seeded values.
-  await asOwner((c) => c.query(`UPDATE workbench.sla_policies SET priority = CASE source_type WHEN 'sanctions_hold' THEN 'urgent' WHEN 'referral' THEN 'high' ELSE 'normal' END, target_hours = CASE source_type WHEN 'sanctions_hold' THEN 4 WHEN 'referral' THEN 24 WHEN 'agent_proposal' THEN 72 ELSE 24 END`));
+  await asOwner((c) => c.query(`UPDATE workbench.sla_policies SET priority = CASE source_type WHEN 'sanctions_hold' THEN 'urgent' WHEN 'referral' THEN 'high' WHEN 'event_delivery' THEN 'high' ELSE 'normal' END, target_hours = CASE source_type WHEN 'sanctions_hold' THEN 4 WHEN 'event_delivery' THEN 4 WHEN 'agent_proposal' THEN 72 ELSE 24 END`));
   st = await publishedStack(t);
   await syncRegistry(t.pool, MANIFESTS);
   governance = await t.idp.token({ roles: ['ai_governance_lead'], sub: 'gov-1', name: 'Sage Governance' });
