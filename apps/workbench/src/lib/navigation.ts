@@ -52,6 +52,20 @@ export const NAVIGATION: NavSection[] = [
         permission: 'workbench:access',
         description: 'Your workspace and items that need attention.',
       },
+      {
+        href: '/work',
+        label: 'Work queue',
+        icon: 'inbox',
+        permission: 'tasks:read',
+        description: 'Referrals, agent work and failed deliveries waiting for a person, with timers and owners.',
+      },
+      {
+        href: '/search',
+        label: 'Find a policy',
+        icon: 'file',
+        permission: 'policies:read',
+        description: 'Search by policy number, traveller, account or trip.',
+      },
     ],
   },
   {

@@ -104,6 +104,9 @@ export const PERMISSIONS = {
   'documents:read': 'View document templates, issued documents and their delivery',
   'documents:manage': 'Assemble document templates, issue notices and guides, and retry failed deliveries',
   'documents:release': 'Release document templates assembled by someone else, and resolve document quality findings',
+  'tasks:read': 'See the work queue: referrals, agent proposals, agent reviews and failed deliveries, with their timers and owners',
+  'tasks:work': 'Take work from the queue and hand it back',
+  'tasks:assign': 'Assign work to other people and set how long each kind of work may wait',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -125,6 +128,8 @@ const STAFF_BASE: Permission[] = [
   'policies:read',
   'documents:read',
   'billing:read',
+  'tasks:read',
+  'tasks:work',
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
@@ -192,6 +197,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'agents:pause',
     'agents:review',
     'servicing:review',
+    'tasks:assign',
   ],
   ai_governance_lead: [
     ...STAFF_BASE,

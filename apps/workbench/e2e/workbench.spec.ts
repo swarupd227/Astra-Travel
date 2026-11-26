@@ -63,6 +63,8 @@ const PAGES = [
   '/billing/rules',
   '/compliance/licences',
   '/channels/booking-files',
+  '/work',
+  '/search',
 ];
 
 test('platform administrator sees every screen, and every screen is accessible', async ({

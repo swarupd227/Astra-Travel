@@ -302,6 +302,8 @@ export const ReferralDecided = defineEvent({
     referralId: z.uuid(),
     caseRef: z.string(),
     decision: z.enum(['approved', 'declined']),
+    /** The underwriter's reason, returned to the channel that raised the case (E03-F05-S01). */
+    reason: z.string().optional(),
   }),
 });
 

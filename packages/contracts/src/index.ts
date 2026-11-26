@@ -19,3 +19,4 @@ export * from './servicing';
 export * from './billing';
 export * from './onboarding';
 export * from './channels';
+export * from './workbench';

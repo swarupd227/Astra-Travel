@@ -52,6 +52,7 @@ import { servicingRoutes } from './routes/servicing';
 import type { CredentialIssuer } from './accounts/credentials';
 import { accountConfigRoutes } from './routes/account-config';
 import { channelRoutes } from './routes/channels';
+import { workbenchRoutes } from './routes/workbench';
 import { INTERNAL_HEADER, INTERNAL_KEY } from './http/internal';
 import { billingRoutes } from './routes/billing';
 
@@ -266,6 +267,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(billingRoutes, deps);
   await app.register(accountConfigRoutes, deps);
   await app.register(channelRoutes, deps);
+  await app.register(workbenchRoutes, deps);
 
   return app;
 }

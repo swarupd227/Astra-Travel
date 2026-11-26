@@ -467,6 +467,39 @@ export const submitOnboardingDraft = defineTool({
   run: (i, api) => api.post('/v1/agent-proposals', i),
 });
 
+export const getReferral = defineTool({
+  name: 'get_referral',
+  description: 'Get a referral: the case, the stage it was raised at, the rule set and plan version, the platform’s own summary, and the full evaluation with every rule that fired (code, reason and recommendation) and every check with its result.',
+  input: z.strictObject({ referralId: z.uuid() }),
+  permission: 'underwriting:read',
+  risk: 'read',
+  run: (i, api) => api.get(`/v1/referrals/${i.referralId}`),
+});
+
+export const getQuote = defineTool({
+  name: 'get_quote',
+  description: 'Get a quote: the travellers, trip, plan and priced result. A referral’s case reference is the id of the quote it was raised for.',
+  input: z.strictObject({ quoteId: z.uuid() }),
+  permission: 'quotes:read',
+  risk: 'read',
+  run: (i, api) => api.get(`/v1/quotes/${i.quoteId}`),
+});
+
+export const submitReferralSummary = defineTool({
+  name: 'submit_referral_summary',
+  description:
+    'Submit your summary of a referral for the underwriter. It must say what the case is, which rules fired and why, and what you suggest (approve, decline or needs_information). Cite only rule codes that fired on this referral: the platform checks each one. You never decide the referral; an underwriter reads your summary and decides, and a decline is always theirs.',
+  input: z.strictObject({
+    referralId: z.uuid(),
+    summary: z.string().min(20).max(4000),
+    rulesCited: z.array(z.string().min(1).max(100)).min(1).max(20),
+    suggested: z.enum(['approve', 'decline', 'needs_information']),
+  }),
+  permission: 'underwriting:evaluate',
+  risk: 'propose',
+  run: (i, api) => api.post(`/v1/referrals/${i.referralId}/summaries`, { summary: i.summary, rulesCited: i.rulesCited, suggested: i.suggested }),
+});
+
 export const TOOL_CATALOGUE: Record<string, ToolDefinition> = Object.fromEntries(
   [
     listAccounts,
@@ -496,6 +529,9 @@ export const TOOL_CATALOGUE: Record<string, ToolDefinition> = Object.fromEntries
     getPolicy,
     previewPolicyChange,
     applyPolicyChange,
+    getReferral,
+    getQuote,
+    submitReferralSummary,
     getAccountProfile,
     listAccountDocuments,
     readAccountDocument,

@@ -729,7 +729,10 @@ export const underwritingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, de
             [cur.id, request.body.decision, request.ctx.principal.subject, request.body.reason],
           )
         ).rows[0]!;
-        await publishEvent(tx, request.ctx, ReferralDecided, { referralId: r.id, caseRef: r.case_ref, decision: request.body.decision }, { accountId: null });
+        // The decision and the reason go back to the channel that raised the case: the case reference of a quote or
+        // bind referral is the quote's id, and its account is the channel's.
+        const channel = (await tx.query<{ account_id: string }>(`SELECT account_id FROM policies.quotes WHERE id::text = $1`, [r.case_ref])).rows[0];
+        await publishEvent(tx, request.ctx, ReferralDecided, { referralId: r.id, caseRef: r.case_ref, decision: request.body.decision, reason: request.body.reason }, { accountId: channel?.account_id ?? null });
         await writeAudit(tx, request.ctx, { action: `referral.${request.body.decision}`, resourceType: 'referral', resourceId: r.id, reason: request.body.reason, data: { caseRef: r.case_ref, kind: r.kind } });
         return toReferral(r);
       }),

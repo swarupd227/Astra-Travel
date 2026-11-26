@@ -183,6 +183,7 @@ const PROBES: Record<string, Probe[]> = {
       payload: () => ({ ableToTravel: true, acknowledgement: { disclosureVersion: 'v1', acknowledgedBy: 'Pat Sample' }, payment: { reference: 'PAY-TENANT-1', amount: '10.00' }, purchaser: { name: 'Pat Sample' } }),
     },
   ],
+  'GET /v1/search': [{ method: 'GET', url: () => '/v1/search?q=ATP' }, { method: 'GET', url: () => '/v1/search?q=Sample' }],
   'GET /v1/policies': [
     { method: 'GET', url: () => '/v1/policies' },
     { method: 'GET', url: () => `/v1/policies?accountId=${accountA}` },
