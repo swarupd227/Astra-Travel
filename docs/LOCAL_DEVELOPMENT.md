@@ -23,8 +23,9 @@ npm run dev:workbench    # http://localhost:3000
 ## Agents
 
 The worker registers the agents in this build (today AG-10 Operations Copilot) as **pending** versions.
-Claude credentials come from `ANTHROPIC_API_KEY` in your environment, never from `.env`. To release an
-agent locally, sign in as `ai.governance.lead`, open **AI agents > Agent registry**, then set the warrant
+The model API key is saved in the app (sign in as `platform.admin`, **Settings > AI model connection**,
+which also tests it); without a saved key the worker uses `ANTHROPIC_API_KEY` from your environment (never
+put it in `.env`). To release an agent locally, sign in as `ai.governance.lead`, open **AI agents > Agent registry**, then set the warrant
 (start from the one proposed in code), set a budget, evaluate the pending version and approve it. Any staff
 user can then ask questions under **AI agents > Copilot**. Evaluations and questions call the real model and
 cost a few cents.
