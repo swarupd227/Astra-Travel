@@ -67,6 +67,7 @@ const PAGES = [
   '/search',
   '/reports/accounts',
   '/compliance/statutory',
+  '/compliance/launch',
 ];
 
 test('platform administrator sees every screen, and every screen is accessible', async ({

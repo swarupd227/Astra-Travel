@@ -57,6 +57,7 @@ import { reportRoutes } from './routes/reports';
 import { dataRoutes } from './routes/data';
 import { serviceCloudRoutes } from './routes/service-cloud';
 import { cardMappingRoutes } from './routes/card-mapping';
+import { launchRoutes } from './routes/launch';
 import { INTERNAL_HEADER, INTERNAL_KEY } from './http/internal';
 import { billingRoutes } from './routes/billing';
 
@@ -276,6 +277,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(dataRoutes, deps);
   await app.register(serviceCloudRoutes, deps);
   await app.register(cardMappingRoutes, deps);
+  await app.register(launchRoutes, deps);
 
   return app;
 }

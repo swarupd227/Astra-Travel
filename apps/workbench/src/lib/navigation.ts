@@ -112,6 +112,13 @@ export const NAVIGATION: NavSection[] = [
         description: 'Retailer registrations and producer licences by state, with expiry alerts.',
       },
       {
+        href: '/compliance/launch',
+        label: 'Launch readiness',
+        icon: 'check',
+        permission: 'launch:read',
+        description: 'What each state still needs before it can be sold, and the go-live sign-offs.',
+      },
+      {
         href: '/compliance/statutory',
         label: 'Statutory data',
         icon: 'table',

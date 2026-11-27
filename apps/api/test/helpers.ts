@@ -191,7 +191,7 @@ export async function resetDatabase(): Promise<void> {
                         agents.eval_runs, agents.eval_sets, agents.agent_versions, agents.agents CASCADE`);
     await client.query('ALTER TABLE agents.run_steps ENABLE TRIGGER run_steps_no_truncate');
     await client.query('COMMIT');
-    await client.query(`TRUNCATE workbench.assignments, workbench.staff, platform.event_deliveries, platform.outbox, platform.idempotency_keys,
+    await client.query(`TRUNCATE workbench.assignments, workbench.staff, launch.signoffs, integration.data_load_items, integration.data_loads, platform.event_deliveries, platform.outbox, platform.idempotency_keys,
                         platform.feature_flag_overrides, integration.webhook_subscriptions, card.feed_records, platform.people, platform.accounts CASCADE`);
     await client.query(`TRUNCATE refdata.entries, refdata.versions, compliance.filing_events, compliance.filings,
                         billing.premium_records, billing.batches, billing.commission_rules, billing.programme_rules, documents.delivery_attempts, documents.deliveries, documents.documents, documents.templates, policies.policy_events, policies.policy_benefits, policies.policy_travellers, policies.quotes, policies.policies, underwriting.referrals, underwriting.declarations, underwriting.cover_register, underwriting.test_runs, underwriting.test_cases, underwriting.rule_sets, underwriting.sanctions_entries, underwriting.sanctions_lists, plans.test_runs, plans.test_cases, plans.plan_versions, plans.plans, rating.worksheets, rating.parity_runs, rating.parity_cases, rating.manuals, studio.benefit_catalogues, studio.form_variables, studio.variable_maps, studio.form_editions CASCADE`);

@@ -111,6 +111,8 @@ export const PERMISSIONS = {
   'data:read': 'View the data catalogue, the loads to the data platform and their files',
   'data:manage': 'Run a load to the data platform',
   'claims:feed': 'Read the policy and certificate data feed for claims',
+  'launch:read': 'View whether each state is ready to launch and who has signed',
+  'launch:signoff': 'Sign or withdraw the go-live approval for your own area',
   'tasks:read': 'See the work queue: referrals, agent proposals, agent reviews and failed deliveries, with their timers and owners',
   'tasks:work': 'Take work from the queue and hand it back',
   'tasks:assign': 'Assign work to other people and set how long each kind of work may wait',
@@ -137,12 +139,14 @@ const STAFF_BASE: Permission[] = [
   'billing:read',
   'tasks:read',
   'tasks:work',
+  'launch:read',
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  product_manager: [...STAFF_BASE, 'forms:manage', 'plans:manage', 'plans:approve', 'proposals:create', 'documents:manage'],
+  product_manager: [...STAFF_BASE, 'launch:signoff', 'forms:manage', 'plans:manage', 'plans:approve', 'proposals:create', 'documents:manage'],
   rating_analyst: [
     ...STAFF_BASE,
+    'launch:signoff',
     'forms:manage',
     'refdata:manage',
     'rating:manage',
@@ -163,7 +167,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'proposals:create',
   ],
   service_rep: [...STAFF_BASE, 'card:read', 'cover:verify', 'quotes:create', 'servicing:execute'],
-  finance_analyst: [...STAFF_BASE, 'card:read', 'billing:manage', 'reports:read', 'reports:statutory'],
+  finance_analyst: [...STAFF_BASE, 'launch:signoff', 'card:read', 'billing:manage', 'reports:read', 'reports:statutory'],
   card_programme_manager: [
     ...STAFF_BASE,
     'proposals:create',
@@ -176,6 +180,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ],
   compliance_officer: [
     ...STAFF_BASE,
+    'launch:signoff',
     'data:read',
     'reports:read',
     'reports:statutory',

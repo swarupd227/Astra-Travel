@@ -28,6 +28,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - name: Role guides match the roles and menu
+        run: node --import tsx scripts/role-guides.ts --check
 
   integration:
     name: Integration tests (PostgreSQL)

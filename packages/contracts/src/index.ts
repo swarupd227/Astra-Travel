@@ -24,3 +24,4 @@ export * from './reports';
 export * from './data';
 export * from './service-cloud';
 export * from './feed-mapping';
+export * from './launch';
