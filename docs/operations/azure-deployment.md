@@ -24,7 +24,7 @@ On a first deployment the worker logs `relation "agents.agents" does not exist` 
 then restarts and carries on.
 
 After the first deployment: sign in to the workbench as `platform.admin`, open **Settings, AI model connection**, save
-the model API key and test it. The database starts empty.
+the model API key and test it. The database starts empty; [sample data](sample-data.md) can be loaded into it.
 
 To remove the environment: `az group delete --name rg-astra-travel-dev`.
 

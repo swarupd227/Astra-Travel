@@ -5,7 +5,12 @@ import { defineConfig } from 'tsup';
 // library into an ES module fails at start-up.
 export default defineConfig({
   // The migration command ships in the same image, so a release and its database changes are one artefact.
-  entry: { main: 'src/main.ts', migrate: '../../packages/platform/src/db/migrate-cli.ts' },
+  entry: {
+    main: 'src/main.ts',
+    migrate: '../../packages/platform/src/db/migrate-cli.ts',
+    // Loads the invented sample data set into a development environment; it does nothing unless asked.
+    'demo/seed': 'src/demo/seed.ts',
+  },
   format: ['esm'],
   platform: 'node',
   target: 'node24',
