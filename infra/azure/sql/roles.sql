@@ -20,4 +20,18 @@ ALTER ROLE keycloak PASSWORD :'keycloak_password';
 GRANT keycloak TO current_user;
 ALTER DATABASE keycloak OWNER TO keycloak;
 REVOKE ALL ON DATABASE keycloak FROM PUBLIC;
+\connect keycloak
+GRANT USAGE, CREATE ON SCHEMA public TO keycloak;
+\connect postgres
 \endif
+
+-- A database created through Azure, unlike one created in SQL, does not give its owner the public schema. The
+-- extensions the migrations name are created here, by the administrator.
+\connect astra
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+GRANT USAGE, CREATE ON SCHEMA public TO astra_owner;
+-- Shown in the job's log.
+SELECT nspname, pg_get_userbyid(nspowner) AS owner, has_schema_privilege('astra_owner', oid, 'CREATE') AS owner_can_create
+  FROM pg_namespace WHERE nspname = 'public';

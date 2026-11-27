@@ -1,8 +1,9 @@
 # Deploying to Azure
 
 The templates are in `infra/azure`, one for every environment (`env/<name>.bicepparam`), and the workflow is
-`.github/workflows/deploy.yml`. **Nothing has been deployed: no Azure subscription has been provided.** The templates
-and parameter files compile (`infra/azure/validate.ps1`); everything below is untested against Azure.
+`.github/workflows/deploy.yml`. **Only the lean development environment has been deployed** (November 2026, from a
+machine, described next). The other environments compile (`infra/azure/validate.ps1`) but are untested against
+Azure, and the workflow has never run.
 
 ## The development environment (lean)
 
@@ -18,6 +19,9 @@ The script creates the resource group (`rg-astra-travel-dev`, East US 2 by defau
 roles, the four images (built in the registry), the applications and the schema, then checks that the three public
 addresses answer. It is safe to run again. Its secrets, including the sign-in passwords, are in
 `var/azure/dev.secrets.json`: keep that file.
+
+On a first deployment the worker logs `relation "agents.agents" does not exist` until the migration job has run,
+then restarts and carries on.
 
 After the first deployment: sign in to the workbench as `platform.admin`, open **Settings, AI model connection**, save
 the model API key and test it. The database starts empty.

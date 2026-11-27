@@ -72,15 +72,27 @@ Write-Host "Registry $registry, sign-in $issuer"
 Invoke-Job $base.bootstrapJobName.value
 if ($FoundationsOnly) { Write-Host 'Foundations are ready.'; return }
 
-# 3. Images, built in the registry from this commit.
+# 3. Images, built in the registry from a clean export of the commit: only committed files are uploaded, and the Azure
+# CLI does not have to walk the local dependency folders.
 if (-not $SkipBuild) {
-  foreach ($target in 'api', 'worker', 'workbench') {
-    Write-Host "Building astra-${target}:$ImageTag ..."
-    $extra = if ($target -eq 'workbench') { @('--build-arg', "OIDC_ISSUER=$issuer") } else { @() }
-    Invoke-Az acr build -r $registry -f infra/docker/Dockerfile --target $target -t "astra-${target}:$ImageTag" @extra --no-logs . -o none
+  $export = Join-Path ([IO.Path]::GetTempPath()) "astra-build-$ImageTag"
+  if (Test-Path $export) { Remove-Item $export -Recurse -Force }
+  New-Item -ItemType Directory $export | Out-Null
+  try {
+    git archive --format=tar -o "$export.tar" $ImageTag
+    if ($LASTEXITCODE -ne 0) { throw "Commit $ImageTag could not be exported." }
+    tar -xf "$export.tar" -C $export
+    if ($LASTEXITCODE -ne 0) { throw 'The export could not be unpacked.' }
+    foreach ($target in 'api', 'worker', 'workbench') {
+      Write-Host "Building astra-${target}:$ImageTag ..."
+      $extra = if ($target -eq 'workbench') { @('--build-arg', "OIDC_ISSUER=$issuer") } else { @() }
+      Invoke-Az acr build -r $registry -f "$export/infra/docker/Dockerfile" --target $target -t "astra-${target}:$ImageTag" @extra --no-logs $export -o none
+    }
+    Write-Host "Building astra-keycloak:$ImageTag ..."
+    Invoke-Az acr build -r $registry -f "$export/infra/azure/keycloak/Dockerfile" -t "astra-keycloak:$ImageTag" --no-logs "$export/infra/azure/keycloak" -o none
+  } finally {
+    Remove-Item $export, "$export.tar" -Recurse -Force -ErrorAction SilentlyContinue
   }
-  Write-Host "Building astra-keycloak:$ImageTag ..."
-  Invoke-Az acr build -r $registry -f infra/azure/keycloak/Dockerfile -t "astra-keycloak:$ImageTag" --no-logs infra/azure/keycloak -o none
 }
 
 # 4. Applications (with the final database addresses in the vault), then migrations.
