@@ -58,6 +58,7 @@ import { dataRoutes } from './routes/data';
 import { serviceCloudRoutes } from './routes/service-cloud';
 import { cardMappingRoutes } from './routes/card-mapping';
 import { launchRoutes } from './routes/launch';
+import { modelConnectionRoutes } from './routes/model-connection';
 import { INTERNAL_HEADER, INTERNAL_KEY } from './http/internal';
 import { billingRoutes } from './routes/billing';
 
@@ -73,6 +74,8 @@ export interface AppDeps {
   now?: () => Date;
   /** Issues sandbox credentials through the identity provider; absent when it is not configured. */
   credentials?: CredentialIssuer;
+  /** Where the model connection test sends its requests; tests give a stand-in. The model service otherwise. */
+  modelServiceUrl?: string;
   /** Records display names of signed-in principals; optional so tests can leave it out. */
   people?: PeopleDirectory;
 }
@@ -288,6 +291,7 @@ export async function buildApp(deps: AppDeps) {
   await app.register(serviceCloudRoutes, deps);
   await app.register(cardMappingRoutes, deps);
   await app.register(launchRoutes, deps);
+  await app.register(modelConnectionRoutes, deps);
 
   return app;
 }

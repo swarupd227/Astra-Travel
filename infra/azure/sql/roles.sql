@@ -13,3 +13,11 @@ GRANT astra_owner TO current_user;
 ALTER DATABASE astra OWNER TO astra_owner;
 REVOKE ALL ON DATABASE astra FROM PUBLIC;
 GRANT CONNECT ON DATABASE astra TO astra_app;
+-- Only where Keycloak is the identity provider (development): its own role and database, closed to everyone else.
+\if :{?keycloak_password}
+SELECT 'CREATE ROLE keycloak LOGIN' WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'keycloak') \gexec
+ALTER ROLE keycloak PASSWORD :'keycloak_password';
+GRANT keycloak TO current_user;
+ALTER DATABASE keycloak OWNER TO keycloak;
+REVOKE ALL ON DATABASE keycloak FROM PUBLIC;
+\endif

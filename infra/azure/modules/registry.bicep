@@ -3,13 +3,15 @@
 param location string
 param name string
 param pullPrincipalId string
+@allowed(['Basic', 'Standard', 'Premium'])
+param sku string = 'Standard'
 param tags object
 
 resource registry 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = {
   name: take('${toLower(replace(name, '-', ''))}acr${uniqueString(resourceGroup().id)}', 50)
   location: location
   tags: tags
-  sku: { name: 'Standard' }
+  sku: { name: sku }
   properties: {
     adminUserEnabled: false
     anonymousPullEnabled: false

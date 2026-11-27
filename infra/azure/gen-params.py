@@ -3,7 +3,7 @@ import os
 
 ENVS = {
     #            prefix           sku                tier             gb   zoneHA geo    days storage          share min max logs waf
-    'dev':     ('10.40.0.0/20', 'Standard_B2ms',    'Burstable',      64, False, False,  7, 'Standard_LRS',    100, 0,  2,  30, 'Detection'),
+    'dev':     ('10.40.0.0/20', 'Standard_B2s',     'Burstable',      32, False, False,  7, 'Standard_LRS',     20, 0,  1,  30, 'Detection'),
     'test':    ('10.41.0.0/20', 'Standard_B2ms',    'Burstable',      64, False, False,  7, 'Standard_LRS',    100, 0,  2,  30, 'Prevention'),
     'sandbox': ('10.42.0.0/20', 'Standard_D2ds_v5', 'GeneralPurpose', 128, False, False, 14, 'Standard_ZRS',   200, 1,  3,  30, 'Prevention'),
     'uat':     ('10.43.0.0/20', 'Standard_D2ds_v5', 'GeneralPurpose', 128, False, False, 14, 'Standard_ZRS',   200, 1,  3,  60, 'Prevention'),
@@ -13,6 +13,13 @@ ENVS = {
 
 SECRETS = ['database-url', 'database-owner-url', 'database-admin-password', 'database-owner-password', 'database-app-password', 'secrets-kek', 'channel-signing-secret', 'agent-token-public-key', 'agent-token-private-key',
            'anthropic-api-key', 'workbench-client-secret', 'workbench-session-secret', 'smtp-url', 'billing-signing-secret']
+
+
+# The development environment is the lean one: reached directly over HTTPS, with Keycloak in place of Entra ID, small
+# containers, and no model key or mail server (the model key is set in the app). The others follow the design.
+LEAN = {'dev'}
+LEAN_SECRETS = [s for s in SECRETS if s not in ('anthropic-api-key', 'smtp-url')] + [
+    'keycloak-db-password', 'keycloak-admin-password', 'staff-user-password', 'admin-user-password']
 
 
 def var(name):
@@ -31,6 +38,17 @@ for env, (prefix, sku, tier, gb, ha, geo, days, storage, share, lo, hi, logs, wa
         "param deployApps = bool(readEnvironmentVariable('ASTRA_DEPLOY_APPS', 'true'))",
         "param imageTag = readEnvironmentVariable('ASTRA_IMAGE_TAG', 'latest')",
         '',
+    ]
+    lean = env in LEAN
+    lines += [
+        "param edge = 'direct'",
+        "param identityProvider = 'keycloak'",
+        "param registrySku = 'Basic'",
+        "param serviceCpu = '0.5'",
+        "param serviceMemory = '1Gi'",
+        'param apiMinReplicas = 1',
+        '',
+    ] if lean else [
         "param oidcIssuer = readEnvironmentVariable('ASTRA_OIDC_ISSUER')",
         "param oidcAudience = readEnvironmentVariable('ASTRA_OIDC_AUDIENCE')",
         "param oidcGroupRoleMap = readEnvironmentVariable('ASTRA_OIDC_GROUP_ROLE_MAP')",
@@ -39,6 +57,8 @@ for env, (prefix, sku, tier, gb, ha, geo, days, storage, share, lo, hi, logs, wa
         "param workbenchPublicUrl = readEnvironmentVariable('ASTRA_WORKBENCH_PUBLIC_URL')",
         "param mailFrom = readEnvironmentVariable('ASTRA_MAIL_FROM')",
         '',
+    ]
+    lines += [
         f"param databaseSkuName = '{sku}'",
         f"param databaseSkuTier = '{tier}'",
         f'param databaseStorageGb = {gb}',
@@ -56,7 +76,7 @@ for env, (prefix, sku, tier, gb, ha, geo, days, storage, share, lo, hi, logs, wa
         "param databaseAdminPassword = readEnvironmentVariable('ASTRA_DATABASE_ADMIN_PASSWORD')",
         'param secrets = {',
     ]
-    lines += [f"  '{s}': readEnvironmentVariable('{var(s)}')" for s in SECRETS]
+    lines += [f"  '{s}': readEnvironmentVariable('{var(s)}')" for s in (LEAN_SECRETS if lean else SECRETS)]
     lines += ['}', '']
     with open(f'infra/azure/env/{env}.bicepparam', 'w', encoding='utf8', newline='\n') as f:
         f.write('\n'.join(lines))

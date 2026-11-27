@@ -350,6 +350,18 @@ export const NAVIGATION: NavSection[] = [
     ],
   },
   {
+    label: 'Settings',
+    items: [
+      {
+        href: '/admin/model',
+        label: 'AI model connection',
+        icon: 'sparkles',
+        permission: 'settings:manage',
+        description: 'Set and test the key the AI agents use to call the model.',
+      },
+    ],
+  },
+  {
     label: 'Governance',
     items: [
       {

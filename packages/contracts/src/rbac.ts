@@ -62,6 +62,7 @@ export const PERMISSIONS = {
   'audit:verify': 'Run audit-trail integrity verification',
   'flags:read': 'View feature flags',
   'flags:manage': 'Change feature flags',
+  'settings:manage': 'Set, test and remove the key the AI agents use to call the model',
   'agents:use': 'Ask AI agents for help within your own access',
   'agents:read': 'View AI agents, their warrants, runs and evaluations',
   'agents:manage': 'Approve agent versions and set warrants, budgets and evaluations',

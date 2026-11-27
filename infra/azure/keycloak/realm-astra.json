@@ -1,0 +1,400 @@
+{
+  "realm": "astra",
+  "displayName": "Astra Travel (Azure development)",
+  "enabled": true,
+  "sslRequired": "all",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 10,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "revokeRefreshToken": false,
+  "refreshTokenMaxReuse": 0,
+  "passwordPolicy": "length(12) and notUsername",
+  "groups": [
+    {
+      "name": "astra-product-manager",
+      "attributes": {
+        "description": [
+          "Product manager"
+        ]
+      }
+    },
+    {
+      "name": "astra-rating-analyst",
+      "attributes": {
+        "description": [
+          "Rating analyst"
+        ]
+      }
+    },
+    {
+      "name": "astra-underwriter",
+      "attributes": {
+        "description": [
+          "Underwriter"
+        ]
+      }
+    },
+    {
+      "name": "astra-account-manager",
+      "attributes": {
+        "description": [
+          "Account manager"
+        ]
+      }
+    },
+    {
+      "name": "astra-service-rep",
+      "attributes": {
+        "description": [
+          "Policy service representative"
+        ]
+      }
+    },
+    {
+      "name": "astra-finance-analyst",
+      "attributes": {
+        "description": [
+          "Premium accounting and finance"
+        ]
+      }
+    },
+    {
+      "name": "astra-card-programme-manager",
+      "attributes": {
+        "description": [
+          "Card programme manager"
+        ]
+      }
+    },
+    {
+      "name": "astra-compliance-officer",
+      "attributes": {
+        "description": [
+          "Compliance officer"
+        ]
+      }
+    },
+    {
+      "name": "astra-ops-supervisor",
+      "attributes": {
+        "description": [
+          "Operations supervisor"
+        ]
+      }
+    },
+    {
+      "name": "astra-ai-governance-lead",
+      "attributes": {
+        "description": [
+          "AI governance lead"
+        ]
+      }
+    },
+    {
+      "name": "astra-platform-admin",
+      "attributes": {
+        "description": [
+          "Platform administrator"
+        ]
+      }
+    },
+    {
+      "name": "astra-partner-developer",
+      "attributes": {
+        "description": [
+          "External account integration developer"
+        ]
+      }
+    },
+    {
+      "name": "astra-cover-verifier",
+      "attributes": {
+        "description": [
+          "Cover verification system (claims); machine clients only"
+        ]
+      }
+    },
+    {
+      "name": "astra-billing-system",
+      "attributes": {
+        "description": [
+          "Assurant billing system (batch confirmations); machine clients only"
+        ]
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "product.manager",
+      "email": "product.manager@astra.local",
+      "emailVerified": true,
+      "firstName": "Robin",
+      "lastName": "Product",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${STAFF_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/astra-product-manager"
+      ]
+    },
+    {
+      "username": "rating.analyst",
+      "email": "rating.analyst@astra.local",
+      "emailVerified": true,
+      "firstName": "Avery",
+      "lastName": "Rating",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${STAFF_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/astra-rating-analyst"
+      ]
+    },
+    {
+      "username": "underwriter",
+      "email": "underwriter@astra.local",
+      "emailVerified": true,
+      "firstName": "Jordan",
+      "lastName": "Underwriting",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${STAFF_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/astra-underwriter"
+      ]
+    },
+    {
+      "username": "account.manager",
+      "email": "account.manager@astra.local",
+      "emailVerified": true,
+      "firstName": "Casey",
+      "lastName": "Accounts",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${STAFF_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/astra-account-manager"
+      ]
+    },
+    {
+      "username": "service.rep",
+      "email": "service.rep@astra.local",
+      "emailVerified": true,
+      "firstName": "Morgan",
+      "lastName": "Service",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${STAFF_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/astra-service-rep"
+      ]
+    },
+    {
+      "username": "finance.analyst",
+      "email": "finance.analyst@astra.local",
+      "emailVerified": true,
+      "firstName": "Taylor",
+      "lastName": "Finance",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${STAFF_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/astra-finance-analyst"
+      ]
+    },
+    {
+      "username": "card.programme.manager",
+      "email": "card.programme.manager@astra.local",
+      "emailVerified": true,
+      "firstName": "Riley",
+      "lastName": "Cards",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${STAFF_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/astra-card-programme-manager"
+      ]
+    },
+    {
+      "username": "compliance.officer",
+      "email": "compliance.officer@astra.local",
+      "emailVerified": true,
+      "firstName": "Quinn",
+      "lastName": "Compliance",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${STAFF_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/astra-compliance-officer"
+      ]
+    },
+    {
+      "username": "ops.supervisor",
+      "email": "ops.supervisor@astra.local",
+      "emailVerified": true,
+      "firstName": "Drew",
+      "lastName": "Operations",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${STAFF_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/astra-ops-supervisor"
+      ]
+    },
+    {
+      "username": "ai.governance.lead",
+      "email": "ai.governance.lead@astra.local",
+      "emailVerified": true,
+      "firstName": "Sage",
+      "lastName": "Governance",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${STAFF_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/astra-ai-governance-lead"
+      ]
+    },
+    {
+      "username": "platform.admin",
+      "email": "platform.admin@astra.local",
+      "emailVerified": true,
+      "firstName": "Alex",
+      "lastName": "Admin",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${ADMIN_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/astra-platform-admin"
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "astra-api",
+      "name": "Astra Travel API (audience)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "clientAuthenticatorType": "client-secret"
+    },
+    {
+      "clientId": "astra-workbench",
+      "name": "Astra Workbench",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${WORKBENCH_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "rootUrl": "${WORKBENCH_BASE_URL}",
+      "baseUrl": "/",
+      "redirectUris": [
+        "${WORKBENCH_BASE_URL}/api/auth/callback"
+      ],
+      "webOrigins": [
+        "${WORKBENCH_BASE_URL}"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${WORKBENCH_BASE_URL}/signed-out"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-astra-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "astra-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "config": {
+            "claim.name": "groups",
+            "full.path": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

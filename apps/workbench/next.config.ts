@@ -41,6 +41,9 @@ const config: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   transpilePackages: ['@astra/contracts', '@astra/plans'],
+  // The development console would otherwise print each server action's arguments, which can hold a secret
+  // (the model API key).
+  logging: { serverFunctions: false },
   experimental: {
     // The dev server's own disk cache is written inside the watched project, which can set it recompiling and
     // reloading pages forever, so it is off in development.

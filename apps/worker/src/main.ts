@@ -127,7 +127,7 @@ async function listen() {
 }
 await listen();
 
-const agentLoops = await startAgentLoops(pool, config, logger);
+const agentLoops = await startAgentLoops(pool, config, logger, SecretBox.fromEnv());
 const cardFeeds = cardFeedLoop(pool, config, logger);
 // A new feed is announced through the outbox, so the same notification wakes feed processing.
 listener.on('notification', () => cardFeeds.wake());

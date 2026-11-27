@@ -7,25 +7,24 @@ param addressPrefix = '10.40.0.0/20'
 param deployApps = bool(readEnvironmentVariable('ASTRA_DEPLOY_APPS', 'true'))
 param imageTag = readEnvironmentVariable('ASTRA_IMAGE_TAG', 'latest')
 
-param oidcIssuer = readEnvironmentVariable('ASTRA_OIDC_ISSUER')
-param oidcAudience = readEnvironmentVariable('ASTRA_OIDC_AUDIENCE')
-param oidcGroupRoleMap = readEnvironmentVariable('ASTRA_OIDC_GROUP_ROLE_MAP')
-param workbenchClientId = readEnvironmentVariable('ASTRA_WORKBENCH_CLIENT_ID')
-param apiPublicUrl = readEnvironmentVariable('ASTRA_API_PUBLIC_URL')
-param workbenchPublicUrl = readEnvironmentVariable('ASTRA_WORKBENCH_PUBLIC_URL')
-param mailFrom = readEnvironmentVariable('ASTRA_MAIL_FROM')
+param edge = 'direct'
+param identityProvider = 'keycloak'
+param registrySku = 'Basic'
+param serviceCpu = '0.5'
+param serviceMemory = '1Gi'
+param apiMinReplicas = 1
 
-param databaseSkuName = 'Standard_B2ms'
+param databaseSkuName = 'Standard_B2s'
 param databaseSkuTier = 'Burstable'
-param databaseStorageGb = 64
+param databaseStorageGb = 32
 param zoneRedundant = false
 param geoRedundantBackup = false
 param backupRetentionDays = 7
 param primaryDatabaseId = readEnvironmentVariable('ASTRA_PRIMARY_DATABASE_ID', '')
 param storageRedundancy = 'Standard_LRS'
-param fileShareGb = 100
+param fileShareGb = 20
 param minReplicas = 0
-param maxReplicas = 2
+param maxReplicas = 1
 param logRetentionDays = 30
 param wafMode = 'Detection'
 
@@ -40,9 +39,11 @@ param secrets = {
   'channel-signing-secret': readEnvironmentVariable('ASTRA_CHANNEL_SIGNING_SECRET')
   'agent-token-public-key': readEnvironmentVariable('ASTRA_AGENT_TOKEN_PUBLIC_KEY')
   'agent-token-private-key': readEnvironmentVariable('ASTRA_AGENT_TOKEN_PRIVATE_KEY')
-  'anthropic-api-key': readEnvironmentVariable('ASTRA_ANTHROPIC_API_KEY')
   'workbench-client-secret': readEnvironmentVariable('ASTRA_WORKBENCH_CLIENT_SECRET')
   'workbench-session-secret': readEnvironmentVariable('ASTRA_WORKBENCH_SESSION_SECRET')
-  'smtp-url': readEnvironmentVariable('ASTRA_SMTP_URL')
   'billing-signing-secret': readEnvironmentVariable('ASTRA_BILLING_SIGNING_SECRET')
+  'keycloak-db-password': readEnvironmentVariable('ASTRA_KEYCLOAK_DB_PASSWORD')
+  'keycloak-admin-password': readEnvironmentVariable('ASTRA_KEYCLOAK_ADMIN_PASSWORD')
+  'staff-user-password': readEnvironmentVariable('ASTRA_STAFF_USER_PASSWORD')
+  'admin-user-password': readEnvironmentVariable('ASTRA_ADMIN_USER_PASSWORD')
 }

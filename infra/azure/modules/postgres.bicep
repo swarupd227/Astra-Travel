@@ -16,6 +16,8 @@ param administratorPassword string
 param sourceServerId string = ''
 param endpointSubnetId string
 param dnsZoneId string
+@description('Also create the database Keycloak keeps its users in (development environments without Entra ID).')
+param createKeycloakDatabase bool = false
 param tags object
 
 var isReplica = !empty(sourceServerId)
@@ -62,6 +64,14 @@ resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-0
   name: 'astra'
   properties: { charset: 'UTF8', collation: 'en_US.utf8' }
   dependsOn: [extensions]
+}
+
+// After the application database: the server accepts one database operation at a time.
+resource keycloakDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-01' = if (createKeycloakDatabase && !isReplica) {
+  parent: server
+  name: 'keycloak'
+  properties: { charset: 'UTF8', collation: 'en_US.utf8' }
+  dependsOn: [database]
 }
 
 module endpoint 'private-endpoint.bicep' = {

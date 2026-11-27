@@ -56,6 +56,7 @@ Events & deliveries, Audit trail verification, and the data platform loads throu
 | AI agents | Copilot | Ask the Operations Copilot about accounts, events and the audit trail. |
 | AI agents | Agent registry | Agents, their warrants, budgets, evaluations and kill switch. |
 | AI agents | Agent reviews | Work that agents routed to people. |
+| Settings | AI model connection | Set and test the key the AI agents use to call the model. |
 | Governance | Audit trail | Tamper-evident record of every change and approval. |
 | Governance | Feature flags | Release switches, globally or per account. |
 
@@ -116,6 +117,7 @@ Events & deliveries, Audit trail verification, and the data platform loads throu
 - View and export statutory and statistical data by state, entity and benefit
 - Preview and make changes, cancellations and corrections on policies
 - Review the sample of changes made by the servicing agent
+- Set, test and remove the key the AI agents use to call the model
 - Assign work to other people and set how long each kind of work may wait
 - See the work queue: referrals, agent proposals, agent reviews and failed deliveries, with their timers and owners
 - Take work from the queue and hand it back

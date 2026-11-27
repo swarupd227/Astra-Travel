@@ -2,12 +2,13 @@ import {
   AgentRuntime,
   AgentTokenSigner,
   AGENT_MANIFESTS,
-  AnthropicGateway,
+  ConfiguredModelGateway,
   EvaluationRunner,
   raiseReview,
+  savedModelKey,
   syncRegistry,
 } from '@astra/agents';
-import { systemContext, withTx, type Logger, type Pool } from '@astra/platform';
+import { systemContext, withTx, type Logger, type Pool, type SecretBox } from '@astra/platform';
 import type { WorkerConfig } from './config';
 import { Loop } from './loops';
 
@@ -19,6 +20,7 @@ export async function startAgentLoops(
   pool: Pool,
   config: WorkerConfig,
   logger: Logger,
+  secrets: SecretBox,
 ): Promise<Loop[]> {
   const registered = await syncRegistry(pool, AGENT_MANIFESTS);
   for (const r of registered) {
@@ -34,7 +36,10 @@ export async function startAgentLoops(
 
   const runtime = new AgentRuntime({
     pool,
-    gateway: new AnthropicGateway(),
+    // The key saved in the application; without one, ANTHROPIC_API_KEY from the environment.
+    gateway: new ConfiguredModelGateway(
+      async () => (await savedModelKey(pool, secrets))?.apiKey ?? null,
+    ),
     signer: await AgentTokenSigner.fromPrivateKey(config.AGENT_TOKEN_PRIVATE_KEY),
     apiBaseUrl: config.API_BASE_URL,
     apiAudience: config.OIDC_AUDIENCE,

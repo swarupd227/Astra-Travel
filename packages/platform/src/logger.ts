@@ -22,6 +22,7 @@ export function createLogger(service: string, level = process.env.LOG_LEVEL ?? '
         'req.headers.authorization',
         'req.headers.cookie',
         '*.password',
+        '*.apiKey',
         '*.secret',
         '*.signingSecret',
         '*.token',

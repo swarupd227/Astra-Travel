@@ -51,6 +51,11 @@ jobs:
       ASTRA_WORKBENCH_SESSION_SECRET: ${{ secrets.WORKBENCH_SESSION_SECRET }}
       ASTRA_SMTP_URL: ${{ secrets.SMTP_URL }}
       ASTRA_BILLING_SIGNING_SECRET: ${{ secrets.BILLING_SIGNING_SECRET }}
+      # Used only by an environment that runs Keycloak (development).
+      ASTRA_KEYCLOAK_DB_PASSWORD: ${{ secrets.KEYCLOAK_DB_PASSWORD }}
+      ASTRA_KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}
+      ASTRA_STAFF_USER_PASSWORD: ${{ secrets.STAFF_USER_PASSWORD }}
+      ASTRA_ADMIN_USER_PASSWORD: ${{ secrets.ADMIN_USER_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: azure/login@v2
@@ -65,23 +70,28 @@ jobs:
         run: |
           out=$(ASTRA_DEPLOY_APPS=false az deployment group create -g "$RESOURCE_GROUP" --name base-${{ github.run_id }} --parameters "$PARAMS" --query properties.outputs -o json)
           echo "registry=$(echo "$out" | jq -r .registryName.value)" >> "$GITHUB_OUTPUT"
+          echo "issuer=$(echo "$out" | jq -r .issuer.value)" >> "$GITHUB_OUTPUT"
+          echo "roles=$(echo "$out" | jq -r .bootstrapJobName.value)" >> "$GITHUB_OUTPUT"
+          echo "keycloak=$(echo "$out" | jq -r .keycloakEndpoint.value)" >> "$GITHUB_OUTPUT"
       - name: Build the images in the registry
         run: |
           for target in api worker; do
             az acr build -r "${{ steps.base.outputs.registry }}" -f infra/docker/Dockerfile --target "$target" -t "astra-$target:$ASTRA_IMAGE_TAG" .
           done
-          az acr build -r "${{ steps.base.outputs.registry }}" -f infra/docker/Dockerfile --target workbench --build-arg OIDC_ISSUER="$ASTRA_OIDC_ISSUER" -t "astra-workbench:$ASTRA_IMAGE_TAG" .
+          az acr build -r "${{ steps.base.outputs.registry }}" -f infra/docker/Dockerfile --target workbench --build-arg OIDC_ISSUER="${{ steps.base.outputs.issuer }}" -t "astra-workbench:$ASTRA_IMAGE_TAG" .
+          if [ -n "${{ steps.base.outputs.keycloak }}" ]; then
+            az acr build -r "${{ steps.base.outputs.registry }}" -f infra/azure/keycloak/Dockerfile -t "astra-keycloak:$ASTRA_IMAGE_TAG" infra/azure/keycloak
+          fi
       - name: Deploy the applications
         id: apps
         run: |
           out=$(ASTRA_DEPLOY_APPS=true az deployment group create -g "$RESOURCE_GROUP" --name apps-${{ github.run_id }} --parameters "$PARAMS" --query properties.outputs -o json)
           echo "job=$(echo "$out" | jq -r .migrateJobName.value)" >> "$GITHUB_OUTPUT"
-          echo "roles=$(echo "$out" | jq -r .bootstrapJobName.value)" >> "$GITHUB_OUTPUT"
           echo "api=$(echo "$out" | jq -r .apiEndpoint.value)" >> "$GITHUB_OUTPUT"
       # Both jobs are safe to run on every deployment: the roles script sets what is missing, and migrations apply once.
       - name: Create the database roles, then apply migrations
         run: |
-          for job in "${{ steps.apps.outputs.roles }}" "${{ steps.apps.outputs.job }}"; do
+          for job in "${{ steps.base.outputs.roles }}" "${{ steps.apps.outputs.job }}"; do
             run=$(az containerapp job start -g "$RESOURCE_GROUP" -n "$job" --query name -o tsv)
             status=Running
             for i in $(seq 1 120); do

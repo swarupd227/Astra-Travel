@@ -4,6 +4,28 @@ The templates are in `infra/azure`, one for every environment (`env/<name>.bicep
 `.github/workflows/deploy.yml`. **Nothing has been deployed: no Azure subscription has been provided.** The templates
 and parameter files compile (`infra/azure/validate.ps1`); everything below is untested against Azure.
 
+## The development environment (lean)
+
+`dev` differs from the design so that it can run without anything from Assurant (docs/adr/0025): Keycloak in place of
+Entra ID, no Front Door or firewall, small sizes, no mail server. It is deployed from a machine with the Azure CLI,
+from a committed tree:
+
+```powershell
+./infra/azure/deploy-dev.ps1 -Subscription '<subscription name or id>'
+```
+
+The script creates the resource group (`rg-astra-travel-dev`, East US 2 by default), the foundations, the database
+roles, the four images (built in the registry), the applications and the schema, then checks that the three public
+addresses answer. It is safe to run again. Its secrets, including the sign-in passwords, are in
+`var/azure/dev.secrets.json`: keep that file.
+
+After the first deployment: sign in to the workbench as `platform.admin`, open **Settings, AI model connection**, save
+the model API key and test it. The database starts empty.
+
+To remove the environment: `az group delete --name rg-astra-travel-dev`.
+
+The sections below are for the other environments.
+
 ## Needed from Assurant before the first deployment
 
 | Item | Where it goes |

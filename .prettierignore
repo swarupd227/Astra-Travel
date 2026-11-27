@@ -6,5 +6,6 @@ playwright-report
 test-results
 package-lock.json
 infra/docker/keycloak/realm-astra.json
+infra/azure/keycloak/realm-astra.json
 infra/docker/grafana/dashboards/*.json
 *.md

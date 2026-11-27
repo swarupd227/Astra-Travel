@@ -2,6 +2,7 @@ export * from './guardrails';
 export * from './api-client';
 export * from './tools';
 export * from './gateway';
+export * from './model-connection';
 export * from './agent-token';
 export * from './manifest';
 export * from './registry';
