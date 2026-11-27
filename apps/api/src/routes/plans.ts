@@ -215,7 +215,17 @@ async function problemsOf(tx: Tx, plan: PlanRow, v: VersionRow) {
   return problems;
 }
 
-async function toVersion(tx: Tx, plan: PlanRow, v: VersionRow): Promise<PlanVersion> {
+/**
+ * A version saved before a part was added to plan documents lacks it; it reads as that part's default. The stored
+ * document is left as it was, because approved and published versions are hashed and immutable.
+ */
+const complete = (v: VersionRow): VersionRow => ({
+  ...v,
+  document: { ...PlanDocumentSchema.parse({}), ...v.document },
+});
+
+async function toVersion(tx: Tx, plan: PlanRow, row: VersionRow): Promise<PlanVersion> {
+  const v = complete(row);
   return {
     id: v.id,
     planId: v.plan_id,
