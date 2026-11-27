@@ -17,7 +17,14 @@ export interface AssemblyVariable {
   excerpt: string;
 }
 
-export type ResolvedValue = boolean | number | string | string[] | { percent: number; basis?: string | undefined } | null | undefined;
+export type ResolvedValue =
+  | boolean
+  | number
+  | string
+  | string[]
+  | { percent: number; basis?: string | undefined }
+  | null
+  | undefined;
 
 export interface AssemblyProblem {
   variable: string | null;
@@ -46,7 +53,10 @@ function tree(variables: AssemblyVariable[], problems: AssemblyProblem[]): Node[
     while (stack.length && stack.at(-1)!.v.end <= v.start) stack.pop();
     const parent = stack.at(-1);
     if (parent && v.end > parent.v.end) {
-      problems.push({ variable: v.ref, message: `${v.label} overlaps ${parent.v.label} without being inside it, so the form cannot be assembled.` });
+      problems.push({
+        variable: v.ref,
+        message: `${v.label} overlaps ${parent.v.label} without being inside it, so the form cannot be assembled.`,
+      });
       continue;
     }
     const node: Node = { v, children: [] };
@@ -73,15 +83,27 @@ function format(v: AssemblyVariable, value: ResolvedValue): string | null {
       if (typeof value !== 'number' || !Number.isInteger(value)) return null;
       return `${wordsAndFigures(value)}${suffixOf(v.excerpt)}`;
     case 'percentage_range': {
-      const n = typeof value === 'number' ? value : value && typeof value === 'object' && !Array.isArray(value) ? value.percent : null;
+      const n =
+        typeof value === 'number'
+          ? value
+          : value && typeof value === 'object' && !Array.isArray(value)
+            ? value.percent
+            : null;
       if (n === null || !Number.isInteger(n)) return null;
-      const basis = value && typeof value === 'object' && !Array.isArray(value) && value.basis ? ` ${value.basis}` : '';
+      const basis =
+        value && typeof value === 'object' && !Array.isArray(value) && value.basis
+          ? ` ${value.basis}`
+          : '';
       return `${numberToWords(n)} percent (${n}%)${basis}${suffixOf(v.excerpt)}`;
     }
     case 'limit_basis':
       return typeof value === 'string' ? value : null;
     case 'wording_choice':
-      return Array.isArray(value) && value.length ? value.join(', ') : typeof value === 'string' ? value : null;
+      return Array.isArray(value) && value.length
+        ? value.join(', ')
+        : typeof value === 'string'
+          ? value
+          : null;
     case 'insert_placeholder':
       return typeof value === 'string' && value.length ? value : null;
     default:
@@ -89,7 +111,11 @@ function format(v: AssemblyVariable, value: ResolvedValue): string | null {
   }
 }
 
-export function assemble(text: string, variables: AssemblyVariable[], values: Map<string, ResolvedValue>): AssemblyResult {
+export function assemble(
+  text: string,
+  variables: AssemblyVariable[],
+  values: Map<string, ResolvedValue>,
+): AssemblyResult {
   const problems: AssemblyProblem[] = [];
   const inserted: string[] = [];
   const removed: string[] = [];
@@ -126,7 +152,13 @@ export function assemble(text: string, variables: AssemblyVariable[], values: Ma
     }
     const f = format(v, value);
     if (f === null) {
-      problems.push({ variable: v.ref, message: value === undefined || value === null ? `The plan gives no value for “${v.label}”.` : `The plan's value for “${v.label}” is not in a form this wording can take (${JSON.stringify(value)}).` });
+      problems.push({
+        variable: v.ref,
+        message:
+          value === undefined || value === null
+            ? `The plan gives no value for “${v.label}”.`
+            : `The plan's value for “${v.label}” is not in a form this wording can take (${JSON.stringify(value)}).`,
+      });
       return v.excerpt;
     }
     inserted.push(v.ref);
@@ -137,7 +169,10 @@ export function assemble(text: string, variables: AssemblyVariable[], values: Ma
   // Nothing of the form's machinery may reach a traveller.
   for (const m of out.matchAll(/\[[^\]\n]{0,80}\]?|<<[^>\n]{0,80}>>?|[[\]]/g)) {
     const start = Math.max(0, m.index - 30);
-    problems.push({ variable: null, message: `A bracket is left in the document: “…${out.slice(start, m.index + m[0].length + 30).replace(/\s+/g, ' ')}…”.` });
+    problems.push({
+      variable: null,
+      message: `A bracket is left in the document: “…${out.slice(start, m.index + m[0].length + 30).replace(/\s+/g, ' ')}…”.`,
+    });
     if (problems.length > 60) break;
   }
   return { text: out, problems, inserted, removed };

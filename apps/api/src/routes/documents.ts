@@ -7,7 +7,9 @@ import {
   GuideRequestSchema,
   IssueNoticeRequestSchema,
   IssuedDocumentDetailSchema,
-  IssuedDocumentSchema, DeliveryReceiptsSchema, DeliveryReceiptsResultSchema,
+  IssuedDocumentSchema,
+  DeliveryReceiptsSchema,
+  DeliveryReceiptsResultSchema,
   ReleaseTemplateRequestSchema,
   TemplateSchema,
   TemplateSummarySchema,
@@ -18,7 +20,16 @@ import {
   type PolicySnapshot,
 } from '@astra/contracts';
 import { ARRANGEMENT_NAMES, BUILDER_VERSION, guideToBenefits } from '@astra/documents';
-import { AppError, conflict, forbidden, notFound, publishEvent, withTx, writeAudit, type Tx } from '@astra/platform';
+import {
+  AppError,
+  conflict,
+  forbidden,
+  notFound,
+  publishEvent,
+  withTx,
+  writeAudit,
+  type Tx,
+} from '@astra/platform';
 import { benefitLimits } from '@astra/policies';
 import type { AppDeps } from '../app';
 import { commonErrors } from './shared';
@@ -32,7 +43,12 @@ const idParams = z.object({ id: z.uuid() });
 const TEMPLATE_COLUMNS = `t.*`;
 
 async function findTemplate(tx: Tx, id: string, lock = false): Promise<TemplateRow> {
-  const r = (await tx.query<TemplateRow>(`SELECT ${TEMPLATE_COLUMNS} FROM documents.templates t WHERE t.id = $1 ${lock ? 'FOR UPDATE' : ''}`, [id])).rows[0];
+  const r = (
+    await tx.query<TemplateRow>(
+      `SELECT ${TEMPLATE_COLUMNS} FROM documents.templates t WHERE t.id = $1 ${lock ? 'FOR UPDATE' : ''}`,
+      [id],
+    )
+  ).rows[0];
   if (!r) throw notFound('The document template');
   return r;
 }
@@ -54,7 +70,19 @@ interface DocRow {
   size_bytes: string | null;
   issued_at: Date;
   text?: string | null;
-  deliveries: { id: string; channel: 'email' | 'account'; recipient: string | null; status: 'queued' | 'sent' | 'available' | 'failed'; attempts: number; last_error: string | null; next_attempt_at: string | null; delivered_at: string | null; receipt: 'delivered' | 'bounced' | null; receipt_at: string | null; receipt_detail: string | null }[];
+  deliveries: {
+    id: string;
+    channel: 'email' | 'account';
+    recipient: string | null;
+    status: 'queued' | 'sent' | 'available' | 'failed';
+    attempts: number;
+    last_error: string | null;
+    next_attempt_at: string | null;
+    delivered_at: string | null;
+    receipt: 'delivered' | 'bounced' | null;
+    receipt_at: string | null;
+    receipt_detail: string | null;
+  }[];
 }
 
 const DOC_SELECT = `SELECT d.id, d.kind, d.title, d.status, d.failure, d.account_id, d.policy_id, p.number AS policy_number, d.programme_id, d.template_id, d.source, d.version,
@@ -80,7 +108,19 @@ const toDoc = (r: DocRow): IssuedDocument => ({
   sha256: r.sha256,
   sizeBytes: r.size_bytes === null ? null : Number(r.size_bytes),
   issuedAt: r.issued_at.toISOString(),
-  deliveries: r.deliveries.map((d) => ({ id: d.id, channel: d.channel, recipient: d.recipient, status: d.status, attempts: d.attempts, lastError: d.last_error, nextAttemptAt: iso(d.next_attempt_at), deliveredAt: iso(d.delivered_at), receipt: d.receipt, receiptAt: iso(d.receipt_at), receiptDetail: d.receipt_detail })),
+  deliveries: r.deliveries.map((d) => ({
+    id: d.id,
+    channel: d.channel,
+    recipient: d.recipient,
+    status: d.status,
+    attempts: d.attempts,
+    lastError: d.last_error,
+    nextAttemptAt: iso(d.next_attempt_at),
+    deliveredAt: iso(d.delivered_at),
+    receipt: d.receipt,
+    receiptAt: iso(d.receipt_at),
+    receiptDetail: d.receipt_detail,
+  })),
 });
 
 async function documentById(tx: Tx, id: string): Promise<DocRow> {
@@ -90,8 +130,17 @@ async function documentById(tx: Tx, id: string): Promise<DocRow> {
 }
 
 /** Issued documents matching a condition on `d`, oldest first. */
-export async function issuedDocuments(tx: Tx, where: string, params: unknown[]): Promise<IssuedDocument[]> {
-  return (await tx.query<DocRow>(`${DOC_SELECT} ${DOC_FROM} WHERE ${where} ORDER BY d.issued_at, d.kind`, params)).rows.map(toDoc);
+export async function issuedDocuments(
+  tx: Tx,
+  where: string,
+  params: unknown[],
+): Promise<IssuedDocument[]> {
+  return (
+    await tx.query<DocRow>(
+      `${DOC_SELECT} ${DOC_FROM} WHERE ${where} ORDER BY d.issued_at, d.kind`,
+      params,
+    )
+  ).rows.map(toDoc);
 }
 
 export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
@@ -114,16 +163,47 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       const principal = request.ctx.principal;
       const out = await withTx(deps.pool, request.ctx, async (tx) => {
         const built = await assembleFor(tx, request.body.planVersionId, request.body.kind);
-        await tx.query(`UPDATE documents.templates SET status = 'superseded' WHERE plan_version_id = $1 AND kind = $2 AND status = 'draft'`, [request.body.planVersionId, request.body.kind]);
-        const version = (await tx.query<{ v: number }>(`SELECT coalesce(max(version), 0) + 1 AS v FROM documents.templates WHERE plan_version_id = $1 AND kind = $2`, [request.body.planVersionId, request.body.kind])).rows[0]!.v;
+        await tx.query(
+          `UPDATE documents.templates SET status = 'superseded' WHERE plan_version_id = $1 AND kind = $2 AND status = 'draft'`,
+          [request.body.planVersionId, request.body.kind],
+        );
+        const version = (
+          await tx.query<{ v: number }>(
+            `SELECT coalesce(max(version), 0) + 1 AS v FROM documents.templates WHERE plan_version_id = $1 AND kind = $2`,
+            [request.body.planVersionId, request.body.kind],
+          )
+        ).rows[0]!.v;
         const row = (
           await tx.query<TemplateRow>(
             `INSERT INTO documents.templates (plan_version_id, kind, version, edition_id, map_id, text, problems, inserted, removed, checks, created_by)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-            [request.body.planVersionId, request.body.kind, version, built.edition.id, built.map.id, built.text, JSON.stringify(built.problems), built.inserted, built.removed, JSON.stringify(built.checks), principal.subject],
+            [
+              request.body.planVersionId,
+              request.body.kind,
+              version,
+              built.edition.id,
+              built.map.id,
+              built.text,
+              JSON.stringify(built.problems),
+              built.inserted,
+              built.removed,
+              JSON.stringify(built.checks),
+              principal.subject,
+            ],
           )
         ).rows[0]!;
-        await writeAudit(tx, request.ctx, { action: 'document_template.created', resourceType: 'document_template', resourceId: row.id, data: { plan: built.planVersion.planCode, planVersion: built.planVersion.version, kind: request.body.kind, version, problems: built.problems.length } });
+        await writeAudit(tx, request.ctx, {
+          action: 'document_template.created',
+          resourceType: 'document_template',
+          resourceId: row.id,
+          data: {
+            plan: built.planVersion.planCode,
+            planVersion: built.planVersion.version,
+            kind: request.body.kind,
+            version,
+            problems: built.problems.length,
+          },
+        });
         return templateView(tx, row);
       });
       return reply.code(201).send(out);
@@ -137,7 +217,10 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       schema: {
         tags: ['Documents'],
         summary: 'Document templates, newest first',
-        querystring: z.object({ planVersionId: z.uuid().optional(), status: z.enum(['draft', 'released', 'superseded']).optional() }),
+        querystring: z.object({
+          planVersionId: z.uuid().optional(),
+          status: z.enum(['draft', 'released', 'superseded']).optional(),
+        }),
         response: { 200: z.object({ items: z.array(TemplateSummarySchema) }), ...commonErrors },
       },
     },
@@ -149,7 +232,13 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
         );
         const items: z.infer<typeof TemplateSummarySchema>[] = [];
         for (const r of rows) {
-          const { text: _t, problems: _p, removed: _r, checks: _c, ...rest } = await templateView(tx, r);
+          const {
+            text: _t,
+            problems: _p,
+            removed: _r,
+            checks: _c,
+            ...rest
+          } = await templateView(tx, r);
           items.push(rest);
         }
         return { items };
@@ -160,9 +249,17 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
     '/v1/document-templates/:id',
     {
       config: { tenancy: 'platform', permission: 'documents:read' },
-      schema: { tags: ['Documents'], summary: 'A template with its assembled text, problems and checks', params: idParams, response: { 200: TemplateSchema, ...commonErrors } },
+      schema: {
+        tags: ['Documents'],
+        summary: 'A template with its assembled text, problems and checks',
+        params: idParams,
+        response: { 200: TemplateSchema, ...commonErrors },
+      },
     },
-    async (request) => withTx(deps.pool, request.ctx, async (tx) => templateView(tx, await findTemplate(tx, request.params.id))),
+    async (request) =>
+      withTx(deps.pool, request.ctx, async (tx) =>
+        templateView(tx, await findTemplate(tx, request.params.id)),
+      ),
   );
 
   app.post(
@@ -184,19 +281,74 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
         const principal = request.ctx.principal;
         const cur = await findTemplate(tx, request.params.id, true);
         if (cur.status !== 'draft') throw conflict(`This template is ${cur.status}.`);
-        if (cur.created_by === principal.subject) throw forbidden('A template is released by someone other than the person who made it.');
+        if (cur.created_by === principal.subject)
+          throw forbidden('A template is released by someone other than the person who made it.');
         const built = await assembleFor(tx, cur.plan_version_id, cur.kind);
         const failed = [...built.checks, ...cur.checks].filter((c) => !c.passed);
-        if (built.text !== cur.text) throw conflict('The plan, its form or a reference list has changed since this template was made. Make a new template.');
-        if (failed.length || built.problems.length) throw new AppError('precondition_failed', `This template cannot be released: ${failed.map((c) => c.detail).join(' ') || built.problems[0]!.message}`, built.problems.slice(0, 20).map((p) => ({ code: 'template_problem', field: p.variable ?? 'text', message: p.message })));
+        if (built.text !== cur.text)
+          throw conflict(
+            'The plan, its form or a reference list has changed since this template was made. Make a new template.',
+          );
+        if (failed.length || built.problems.length)
+          throw new AppError(
+            'precondition_failed',
+            `This template cannot be released: ${failed.map((c) => c.detail).join(' ') || built.problems[0]!.message}`,
+            built.problems.slice(0, 20).map((p) => ({
+              code: 'template_problem',
+              field: p.variable ?? 'text',
+              message: p.message,
+            })),
+          );
         const holds = await holdsFor(tx, cur.id);
         if (holds.open || holds.accepted) {
-          throw new AppError('precondition_failed', holds.open ? `The Document Quality agent has ${holds.open} open finding${holds.open === 1 ? '' : 's'} on this template. A person must review them before release.` : `${holds.accepted} accepted finding${holds.accepted === 1 ? '' : 's'} of the Document Quality agent show a defect. Correct the plan or form and make a new template.`, [{ code: 'quality_hold', field: 'template', message: 'Held by the Document Quality agent' }]);
+          throw new AppError(
+            'precondition_failed',
+            holds.open
+              ? `The Document Quality agent has ${holds.open} open finding${holds.open === 1 ? '' : 's'} on this template. A person must review them before release.`
+              : `${holds.accepted} accepted finding${holds.accepted === 1 ? '' : 's'} of the Document Quality agent show a defect. Correct the plan or form and make a new template.`,
+            [
+              {
+                code: 'quality_hold',
+                field: 'template',
+                message: 'Held by the Document Quality agent',
+              },
+            ],
+          );
         }
-        await tx.query(`UPDATE documents.templates SET status = 'superseded' WHERE plan_version_id = $1 AND kind = $2 AND status = 'released'`, [cur.plan_version_id, cur.kind]);
-        const row = (await tx.query<TemplateRow>(`UPDATE documents.templates SET status = 'released', released_by = $2, released_at = now(), release_note = $3 WHERE id = $1 RETURNING *`, [cur.id, principal.subject, request.body.note ?? null])).rows[0]!;
-        await publishEvent(tx, request.ctx, DocumentTemplateReleased, { templateId: cur.id, planCode: built.planVersion.planCode, kind: cur.kind, version: cur.version }, { accountId: null });
-        await writeAudit(tx, request.ctx, { action: 'document_template.released', resourceType: 'document_template', resourceId: cur.id, reason: request.body.note, data: { plan: built.planVersion.planCode, planVersion: built.planVersion.version, kind: cur.kind, version: cur.version } });
+        await tx.query(
+          `UPDATE documents.templates SET status = 'superseded' WHERE plan_version_id = $1 AND kind = $2 AND status = 'released'`,
+          [cur.plan_version_id, cur.kind],
+        );
+        const row = (
+          await tx.query<TemplateRow>(
+            `UPDATE documents.templates SET status = 'released', released_by = $2, released_at = now(), release_note = $3 WHERE id = $1 RETURNING *`,
+            [cur.id, principal.subject, request.body.note ?? null],
+          )
+        ).rows[0]!;
+        await publishEvent(
+          tx,
+          request.ctx,
+          DocumentTemplateReleased,
+          {
+            templateId: cur.id,
+            planCode: built.planVersion.planCode,
+            kind: cur.kind,
+            version: cur.version,
+          },
+          { accountId: null },
+        );
+        await writeAudit(tx, request.ctx, {
+          action: 'document_template.released',
+          resourceType: 'document_template',
+          resourceId: cur.id,
+          reason: request.body.note,
+          data: {
+            plan: built.planVersion.planCode,
+            planVersion: built.planVersion.version,
+            kind: cur.kind,
+            version: cur.version,
+          },
+        });
         return templateView(tx, row);
       }),
   );
@@ -207,13 +359,23 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
     '/v1/policies/:policyId/documents',
     {
       config: { tenancy: 'account', permission: 'documents:read' },
-      schema: { tags: ['Documents'], summary: 'The documents issued for a policy, with how each was delivered', params: z.object({ policyId: z.uuid() }), response: { 200: z.object({ items: z.array(IssuedDocumentSchema) }), ...commonErrors } },
+      schema: {
+        tags: ['Documents'],
+        summary: 'The documents issued for a policy, with how each was delivered',
+        params: z.object({ policyId: z.uuid() }),
+        response: { 200: z.object({ items: z.array(IssuedDocumentSchema) }), ...commonErrors },
+      },
     },
     async (request) =>
       withTx(deps.pool, request.ctx, async (tx) => {
-        const p = (await tx.query(`SELECT 1 FROM policies.policies WHERE id = $1`, [request.params.policyId])).rowCount;
+        const p = (
+          await tx.query(`SELECT 1 FROM policies.policies WHERE id = $1`, [request.params.policyId])
+        ).rowCount;
         if (!p) throw notFound('The policy');
-        const { rows } = await tx.query<DocRow>(`${DOC_SELECT} ${DOC_FROM} WHERE d.policy_id = $1 ORDER BY d.issued_at, d.kind`, [request.params.policyId]);
+        const { rows } = await tx.query<DocRow>(
+          `${DOC_SELECT} ${DOC_FROM} WHERE d.policy_id = $1 ORDER BY d.issued_at, d.kind`,
+          [request.params.policyId],
+        );
         return { items: rows.map(toDoc) };
       }),
   );
@@ -225,18 +387,37 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       schema: {
         tags: ['Documents'],
         summary: 'Issue the purchase confirmation, schedule and policy that are missing or failed',
-        description: 'For a policy bound before its plan’s templates were released, or whose document could not be produced. Documents already issued are left as they are.',
+        description:
+          'For a policy bound before its plan’s templates were released, or whose document could not be produced. Documents already issued are left as they are.',
         params: z.object({ policyId: z.uuid() }),
         response: { 200: z.object({ items: z.array(IssuedDocumentSchema) }), ...commonErrors },
       },
     },
     async (request) =>
       withTx(deps.pool, request.ctx, async (tx) => {
-        const pol = (await tx.query<{ id: string; account_id: string; plan_version_id: string }>(`SELECT id, account_id, plan_version_id FROM policies.policies WHERE id = $1`, [request.params.policyId])).rows[0];
+        const pol = (
+          await tx.query<{ id: string; account_id: string; plan_version_id: string }>(
+            `SELECT id, account_id, plan_version_id FROM policies.policies WHERE id = $1`,
+            [request.params.policyId],
+          )
+        ).rows[0];
         if (!pol) throw notFound('The policy');
-        const bound = (await tx.query<{ data: PolicySnapshot }>(`SELECT data FROM policies.policy_events WHERE policy_id = $1 AND type = 'bound'`, [pol.id])).rows[0]!;
-        await issuePolicyDocuments(tx, deps.files, request.ctx, { policyId: pol.id, accountId: pol.account_id, snapshot: bound.data, planVersionId: pol.plan_version_id });
-        const { rows } = await tx.query<DocRow>(`${DOC_SELECT} ${DOC_FROM} WHERE d.policy_id = $1 ORDER BY d.issued_at, d.kind`, [pol.id]);
+        const bound = (
+          await tx.query<{ data: PolicySnapshot }>(
+            `SELECT data FROM policies.policy_events WHERE policy_id = $1 AND type = 'bound'`,
+            [pol.id],
+          )
+        ).rows[0]!;
+        await issuePolicyDocuments(tx, deps.files, request.ctx, {
+          policyId: pol.id,
+          accountId: pol.account_id,
+          snapshot: bound.data,
+          planVersionId: pol.plan_version_id,
+        });
+        const { rows } = await tx.query<DocRow>(
+          `${DOC_SELECT} ${DOC_FROM} WHERE d.policy_id = $1 ORDER BY d.issued_at, d.kind`,
+          [pol.id],
+        );
         return { items: rows.map(toDoc) };
       }),
   );
@@ -248,7 +429,8 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       schema: {
         tags: ['Documents'],
         summary: 'Issue the notice for a change or cancellation (E09-F01-S03)',
-        description: 'A change notice states what changed between the policy before and after the event; a cancellation or expiry notice states when cover ended. One notice per event.',
+        description:
+          'A change notice states what changed between the policy before and after the event; a cancellation or expiry notice states when cover ended. One notice per event.',
         params: z.object({ policyId: z.uuid() }),
         body: IssueNoticeRequestSchema,
         response: { 201: IssuedDocumentSchema, ...commonErrors },
@@ -256,7 +438,13 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
     },
     async (request, reply) => {
       const out = await withTx(deps.pool, request.ctx, async (tx) => {
-        const ref = await issueNotice(tx, deps.files, request.ctx, request.params.policyId, request.body.eventSeq);
+        const ref = await issueNotice(
+          tx,
+          deps.files,
+          request.ctx,
+          request.params.policyId,
+          request.body.eventSeq,
+        );
         return toDoc(await documentById(tx, ref.id));
       });
       return reply.code(201).send(out);
@@ -267,12 +455,22 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
     '/v1/documents/:id',
     {
       config: { tenancy: 'account', permission: 'documents:read' },
-      schema: { tags: ['Documents'], summary: 'An issued document with its text', params: idParams, response: { 200: IssuedDocumentDetailSchema, ...commonErrors } },
+      schema: {
+        tags: ['Documents'],
+        summary: 'An issued document with its text',
+        params: idParams,
+        response: { 200: IssuedDocumentDetailSchema, ...commonErrors },
+      },
     },
     async (request) =>
       withTx(deps.pool, request.ctx, async (tx) => {
         const d = await documentById(tx, request.params.id);
-        const text = (await tx.query<{ text: string | null }>(`SELECT text FROM documents.documents WHERE id = $1`, [d.id])).rows[0]!.text;
+        const text = (
+          await tx.query<{ text: string | null }>(
+            `SELECT text FROM documents.documents WHERE id = $1`,
+            [d.id],
+          )
+        ).rows[0]!.text;
         return { ...toDoc(d), text };
       }),
   );
@@ -281,17 +479,39 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
     '/v1/documents/:id/file',
     {
       config: { tenancy: 'account', permission: 'documents:read' },
-      schema: { tags: ['Documents'], summary: 'The document as a PDF', description: 'Every download is audited.', params: idParams, produces: ['application/pdf'], response: { ...commonErrors } },
+      schema: {
+        tags: ['Documents'],
+        summary: 'The document as a PDF',
+        description: 'Every download is audited.',
+        params: idParams,
+        produces: ['application/pdf'],
+        response: { ...commonErrors },
+      },
     },
     async (request, reply) => {
       const d = await withTx(deps.pool, request.ctx, async (tx) => {
-        const r = (await tx.query<{ id: string; kind: string; file_key: string | null; account_id: string; number: string | null; sha256: string | null }>(
-          `SELECT d.id, d.kind, d.file_key, d.account_id, p.number, d.sha256 FROM documents.documents d LEFT JOIN policies.policies p ON p.id = d.policy_id WHERE d.id = $1`,
-          [request.params.id],
-        )).rows[0];
+        const r = (
+          await tx.query<{
+            id: string;
+            kind: string;
+            file_key: string | null;
+            account_id: string;
+            number: string | null;
+            sha256: string | null;
+          }>(
+            `SELECT d.id, d.kind, d.file_key, d.account_id, p.number, d.sha256 FROM documents.documents d LEFT JOIN policies.policies p ON p.id = d.policy_id WHERE d.id = $1`,
+            [request.params.id],
+          )
+        ).rows[0];
         if (!r) throw notFound('The document');
         if (!r.file_key) throw conflict('This document was not produced, so there is no file.');
-        await writeAudit(tx, request.ctx, { action: 'document.downloaded', resourceType: 'document', resourceId: r.id, accountId: r.account_id, data: { kind: r.kind } });
+        await writeAudit(tx, request.ctx, {
+          action: 'document.downloaded',
+          resourceType: 'document',
+          resourceId: r.id,
+          accountId: r.account_id,
+          data: { kind: r.kind },
+        });
         return r;
       });
       const name = `${d.number ?? d.kind}-${d.kind}`.replace(/[^A-Za-z0-9._-]/g, '_');
@@ -313,14 +533,35 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       schema: {
         tags: ['Documents'],
         summary: 'Documents that could not be produced and deliveries that failed (E09-F03-S01)',
-        response: { 200: z.object({ documents: z.array(IssuedDocumentSchema), deliveries: z.array(FailedDeliverySchema) }), ...commonErrors },
+        response: {
+          200: z.object({
+            documents: z.array(IssuedDocumentSchema),
+            deliveries: z.array(FailedDeliverySchema),
+          }),
+          ...commonErrors,
+        },
       },
     },
     async (request) =>
       withTx(deps.pool, request.ctx, async (tx) => {
-        const docs = (await tx.query<DocRow>(`${DOC_SELECT} ${DOC_FROM} WHERE d.status = 'failed' ORDER BY d.issued_at DESC LIMIT 200`)).rows.map(toDoc);
+        const docs = (
+          await tx.query<DocRow>(
+            `${DOC_SELECT} ${DOC_FROM} WHERE d.status = 'failed' ORDER BY d.issued_at DESC LIMIT 200`,
+          )
+        ).rows.map(toDoc);
         const del = (
-          await tx.query<{ id: string; document_id: string; kind: DocumentKind; number: string | null; account_id: string; channel: 'email' | 'account'; recipient: string | null; attempts: number; last_error: string | null; updated_at: Date }>(
+          await tx.query<{
+            id: string;
+            document_id: string;
+            kind: DocumentKind;
+            number: string | null;
+            account_id: string;
+            channel: 'email' | 'account';
+            recipient: string | null;
+            attempts: number;
+            last_error: string | null;
+            updated_at: Date;
+          }>(
             `SELECT x.id, x.document_id, d.kind, p.number, x.account_id, x.channel, x.recipient, x.attempts, x.last_error, x.updated_at
                FROM documents.deliveries x JOIN documents.documents d ON d.id = x.document_id LEFT JOIN policies.policies p ON p.id = d.policy_id
               WHERE x.status = 'failed' ORDER BY x.updated_at DESC LIMIT 200`,
@@ -328,7 +569,23 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
         ).rows;
         return {
           documents: docs,
-          deliveries: del.map((x) => ({ id: x.id, documentId: x.document_id, documentKind: x.kind, policyNumber: x.number, accountId: x.account_id, channel: x.channel, recipient: x.recipient, status: 'failed' as const, attempts: x.attempts, lastError: x.last_error, nextAttemptAt: null, deliveredAt: null, receipt: null, receiptAt: null, receiptDetail: null })),
+          deliveries: del.map((x) => ({
+            id: x.id,
+            documentId: x.document_id,
+            documentKind: x.kind,
+            policyNumber: x.number,
+            accountId: x.account_id,
+            channel: x.channel,
+            recipient: x.recipient,
+            status: 'failed' as const,
+            attempts: x.attempts,
+            lastError: x.last_error,
+            nextAttemptAt: null,
+            deliveredAt: null,
+            receipt: null,
+            receiptAt: null,
+            receiptDetail: null,
+          })),
         };
       }),
   );
@@ -337,15 +594,35 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
     '/v1/document-deliveries/:id/retry',
     {
       config: { tenancy: 'account', permission: 'documents:manage' },
-      schema: { tags: ['Documents'], summary: 'Queue a failed delivery to be sent again', params: idParams, response: { 200: IssuedDocumentSchema, ...commonErrors } },
+      schema: {
+        tags: ['Documents'],
+        summary: 'Queue a failed delivery to be sent again',
+        params: idParams,
+        response: { 200: IssuedDocumentSchema, ...commonErrors },
+      },
     },
     async (request) =>
       withTx(deps.pool, request.ctx, async (tx) => {
-        const x = (await tx.query<{ id: string; status: string; document_id: string; account_id: string }>(`SELECT id, status, document_id, account_id FROM documents.deliveries WHERE id = $1 FOR UPDATE`, [request.params.id])).rows[0];
+        const x = (
+          await tx.query<{ id: string; status: string; document_id: string; account_id: string }>(
+            `SELECT id, status, document_id, account_id FROM documents.deliveries WHERE id = $1 FOR UPDATE`,
+            [request.params.id],
+          )
+        ).rows[0];
         if (!x) throw notFound('The delivery');
-        if (x.status !== 'failed') throw conflict(`This delivery is ${x.status}; only a failed delivery can be retried.`);
-        await tx.query(`UPDATE documents.deliveries SET status = 'queued', attempts = 0, next_attempt_at = now(), updated_at = now(), receipt = NULL, receipt_at = NULL, receipt_detail = NULL WHERE id = $1`, [x.id]);
-        await writeAudit(tx, request.ctx, { action: 'document_delivery.retried', resourceType: 'document_delivery', resourceId: x.id, accountId: x.account_id, data: { documentId: x.document_id } });
+        if (x.status !== 'failed')
+          throw conflict(`This delivery is ${x.status}; only a failed delivery can be retried.`);
+        await tx.query(
+          `UPDATE documents.deliveries SET status = 'queued', attempts = 0, next_attempt_at = now(), updated_at = now(), receipt = NULL, receipt_at = NULL, receipt_detail = NULL WHERE id = $1`,
+          [x.id],
+        );
+        await writeAudit(tx, request.ctx, {
+          action: 'document_delivery.retried',
+          resourceType: 'document_delivery',
+          resourceId: x.id,
+          accountId: x.account_id,
+          data: { documentId: x.document_id },
+        });
         return toDoc(await documentById(tx, x.document_id));
       }),
   );
@@ -356,7 +633,8 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       config: { tenancy: 'platform', permission: 'documents:receipts' },
       schema: {
         tags: ['Documents'],
-        summary: 'The delivery provider reports what happened to messages it accepted (E14-F03-S03)',
+        summary:
+          'The delivery provider reports what happened to messages it accepted (E14-F03-S03)',
         description:
           'Each message carries its delivery id in the X-Astra-Delivery-Id header. A delivered report records that it arrived; a bounced report marks the delivery failed, so it joins the work queue and can be retried. A report about a delivery that was not sent, or older than one already recorded, is ignored and listed.',
         body: DeliveryReceiptsSchema,
@@ -367,8 +645,21 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       withTx(deps.pool, request.ctx, async (tx) => {
         let recorded = 0;
         const ignored: { deliveryId: string; reason: string }[] = [];
-        for (const r of [...request.body.receipts].sort((a, b) => Date.parse(a.at) - Date.parse(b.at))) {
-          const d = (await tx.query<{ status: string; channel: string; receipt_at: Date | null; document_id: string; account_id: string }>(`SELECT status, channel, receipt_at, document_id, account_id FROM documents.deliveries WHERE id = $1 FOR UPDATE`, [r.deliveryId])).rows[0];
+        for (const r of [...request.body.receipts].sort(
+          (a, b) => Date.parse(a.at) - Date.parse(b.at),
+        )) {
+          const d = (
+            await tx.query<{
+              status: string;
+              channel: string;
+              receipt_at: Date | null;
+              document_id: string;
+              account_id: string;
+            }>(
+              `SELECT status, channel, receipt_at, document_id, account_id FROM documents.deliveries WHERE id = $1 FOR UPDATE`,
+              [r.deliveryId],
+            )
+          ).rows[0];
           const reason =
             !d || d.channel !== 'email'
               ? 'There is no email delivery with this id.'
@@ -389,7 +680,13 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
               WHERE id = $1`,
             [r.deliveryId, r.status, r.at, r.detail ?? null],
           );
-          await writeAudit(tx, request.ctx, { action: bounced ? 'document_delivery.bounced' : 'document_delivery.delivered', resourceType: 'document_delivery', resourceId: r.deliveryId, accountId: d!.account_id, data: { documentId: d!.document_id, at: r.at } });
+          await writeAudit(tx, request.ctx, {
+            action: bounced ? 'document_delivery.bounced' : 'document_delivery.delivered',
+            resourceType: 'document_delivery',
+            resourceId: r.deliveryId,
+            accountId: d!.account_id,
+            data: { documentId: d!.document_id, at: r.at },
+          });
           recorded += 1;
         }
         return { recorded, ignored };
@@ -405,7 +702,8 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
       schema: {
         tags: ['Documents'],
         summary: 'Produce the next version of a card programme’s Guide to Benefits',
-        description: 'Built from the programme, its master policy and the benefits and limits of the plan version published for the plan code on the date. Each guide is a new version; earlier ones stay as issued.',
+        description:
+          'Built from the programme, its master policy and the benefits and limits of the plan version published for the plan code on the date. Each guide is a new version; earlier ones stay as issued.',
         params: z.object({ programmeId: z.uuid() }),
         body: GuideRequestSchema,
         response: { 201: IssuedDocumentSchema, ...commonErrors },
@@ -414,31 +712,83 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
     async (request, reply) => {
       const out = await withTx(deps.pool, request.ctx, async (tx) => {
         const prog = (
-          await tx.query<{ id: string; account_id: string; code: string; name: string; card_product: string; states: string[]; master_policy_id: string }>(
+          await tx.query<{
+            id: string;
+            account_id: string;
+            code: string;
+            name: string;
+            card_product: string;
+            states: string[];
+            master_policy_id: string;
+          }>(
             `SELECT id, account_id, code, name, card_product, states, master_policy_id FROM card.programmes WHERE id = $1 FOR UPDATE`,
             [request.params.programmeId],
           )
         ).rows[0];
         if (!prog) throw notFound('The card programme');
-        const mp = (await tx.query<{ policy_number: string; underwriter: 'VSC' | 'ABIC'; effective_from: string; effective_to: string | null }>(`SELECT policy_number, underwriter, effective_from::text, effective_to::text FROM card.master_policies WHERE id = $1`, [prog.master_policy_id])).rows[0]!;
+        const mp = (
+          await tx.query<{
+            policy_number: string;
+            underwriter: 'VSC' | 'ABIC';
+            effective_from: string;
+            effective_to: string | null;
+          }>(
+            `SELECT policy_number, underwriter, effective_from::text, effective_to::text FROM card.master_policies WHERE id = $1`,
+            [prog.master_policy_id],
+          )
+        ).rows[0]!;
         const date = request.body.asOf ?? new Date().toISOString().slice(0, 10);
         const pv = (
-          await tx.query<{ version: number; document: PlanDocument; catalogue_id: string; name: string }>(
+          await tx.query<{
+            version: number;
+            document: PlanDocument;
+            catalogue_id: string;
+            name: string;
+          }>(
             `SELECT v.version, v.document, v.catalogue_id, p.name FROM plans.plan_versions v JOIN plans.plans p ON p.id = v.plan_id
               WHERE p.code = $1 AND v.status = 'published' AND v.effective_from <= $2::date AND (v.effective_to IS NULL OR v.effective_to > $2::date)`,
             [request.body.planCode, date],
           )
         ).rows[0];
-        if (!pv) throw new AppError('validation_failed', `No version of plan ${request.body.planCode} is published on ${date}.`, [{ code: 'no_plan_version', field: 'planCode', message: 'No published version' }]);
-        const cat = (await tx.query<{ document: CatalogueDocument }>(`SELECT document FROM studio.benefit_catalogues WHERE id = $1`, [pv.catalogue_id])).rows[0]!.document;
-        const version = (await tx.query<{ v: number }>(`SELECT coalesce(max(version), 0) + 1 AS v FROM documents.documents WHERE programme_id = $1 AND kind = 'guide_to_benefits'`, [prog.id])).rows[0]!.v;
+        if (!pv)
+          throw new AppError(
+            'validation_failed',
+            `No version of plan ${request.body.planCode} is published on ${date}.`,
+            [{ code: 'no_plan_version', field: 'planCode', message: 'No published version' }],
+          );
+        const cat = (
+          await tx.query<{ document: CatalogueDocument }>(
+            `SELECT document FROM studio.benefit_catalogues WHERE id = $1`,
+            [pv.catalogue_id],
+          )
+        ).rows[0]!.document;
+        const version = (
+          await tx.query<{ v: number }>(
+            `SELECT coalesce(max(version), 0) + 1 AS v FROM documents.documents WHERE programme_id = $1 AND kind = 'guide_to_benefits'`,
+            [prog.id],
+          )
+        ).rows[0]!.v;
         const benefits = pv.document.benefits.map((b) => {
           const c = cat.benefits.find((x) => x.code === b.code);
-          return { name: c?.name ?? b.code, limit: benefitLimits(pv.document, cat, b.code), underwriter: b.underwriter ? ARRANGEMENT_NAMES[b.underwriter] : null };
+          return {
+            name: c?.name ?? b.code,
+            limit: benefitLimits(pv.document, cat, b.code),
+            underwriter: b.underwriter ? ARRANGEMENT_NAMES[b.underwriter] : null,
+          };
         });
         const model = guideToBenefits({
-          programme: { code: prog.code, name: prog.name, cardProduct: prog.card_product, states: prog.states },
-          masterPolicy: { policyNumber: mp.policy_number, underwriter: mp.underwriter, effectiveFrom: mp.effective_from, effectiveTo: mp.effective_to },
+          programme: {
+            code: prog.code,
+            name: prog.name,
+            cardProduct: prog.card_product,
+            states: prog.states,
+          },
+          masterPolicy: {
+            policyNumber: mp.policy_number,
+            underwriter: mp.underwriter,
+            effectiveFrom: mp.effective_from,
+            effectiveTo: mp.effective_to,
+          },
           plan: { code: request.body.planCode, name: pv.name, version: pv.version },
           benefits,
           version,
@@ -457,7 +807,13 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
           email: null,
           actor: request.ctx.principal.subject,
         });
-        await writeAudit(tx, request.ctx, { action: 'guide.issued', resourceType: 'card_programme', resourceId: prog.id, accountId: prog.account_id, data: { documentId: id, version, plan: request.body.planCode, planVersion: pv.version } });
+        await writeAudit(tx, request.ctx, {
+          action: 'guide.issued',
+          resourceType: 'card_programme',
+          resourceId: prog.id,
+          accountId: prog.account_id,
+          data: { documentId: id, version, plan: request.body.planCode, planVersion: pv.version },
+        });
         return toDoc(await documentById(tx, id));
       });
       return reply.code(201).send(out);
@@ -468,13 +824,25 @@ export const documentRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) 
     '/v1/card-programmes/:programmeId/guides',
     {
       config: { tenancy: 'account', permission: 'documents:read' },
-      schema: { tags: ['Documents'], summary: 'The guides issued for a card programme, newest version first', params: z.object({ programmeId: z.uuid() }), response: { 200: z.object({ items: z.array(IssuedDocumentSchema) }), ...commonErrors } },
+      schema: {
+        tags: ['Documents'],
+        summary: 'The guides issued for a card programme, newest version first',
+        params: z.object({ programmeId: z.uuid() }),
+        response: { 200: z.object({ items: z.array(IssuedDocumentSchema) }), ...commonErrors },
+      },
     },
     async (request) =>
       withTx(deps.pool, request.ctx, async (tx) => {
-        const ok = (await tx.query(`SELECT 1 FROM card.programmes WHERE id = $1`, [request.params.programmeId])).rowCount;
+        const ok = (
+          await tx.query(`SELECT 1 FROM card.programmes WHERE id = $1`, [
+            request.params.programmeId,
+          ])
+        ).rowCount;
         if (!ok) throw notFound('The card programme');
-        const { rows } = await tx.query<DocRow>(`${DOC_SELECT} ${DOC_FROM} WHERE d.programme_id = $1 AND d.kind = 'guide_to_benefits' ORDER BY d.version DESC`, [request.params.programmeId]);
+        const { rows } = await tx.query<DocRow>(
+          `${DOC_SELECT} ${DOC_FROM} WHERE d.programme_id = $1 AND d.kind = 'guide_to_benefits' ORDER BY d.version DESC`,
+          [request.params.programmeId],
+        );
         return { items: rows.map(toDoc) };
       }),
   );

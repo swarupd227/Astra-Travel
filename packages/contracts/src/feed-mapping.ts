@@ -12,9 +12,15 @@ export const FeedMappingDocumentSchema = z.object({
   columns: z.object({
     accountRef: z.object({ column }),
     /** Either a column of the file, with an optional translation of its values, or one product for every record. */
-    productCode: z.union([z.object({ column, values }), z.object({ constant: z.string().regex(/^[A-Za-z0-9._-]{1,32}$/) })]),
+    productCode: z.union([
+      z.object({ column, values }),
+      z.object({ constant: z.string().regex(/^[A-Za-z0-9._-]{1,32}$/) }),
+    ]),
     /** A, U or D: from a column translated to those, or the same for every record (a full file is all A). */
-    action: z.union([z.object({ column, values }), z.object({ constant: z.enum(['A', 'U', 'D']) })]),
+    action: z.union([
+      z.object({ column, values }),
+      z.object({ constant: z.enum(['A', 'U', 'D']) }),
+    ]),
     eligibleFrom: z.object({ column, format: z.enum(FEED_DATE_FORMATS) }),
     eligibleTo: z.object({ column, format: z.enum(FEED_DATE_FORMATS) }).nullable(),
   }),
@@ -40,7 +46,16 @@ export const FeedMappingPreviewSchema = z.object({
   records: z.number().int(),
   converted: z.number().int(),
   rejected: z.number().int(),
-  sample: z.array(z.object({ line: z.number().int(), accountRef: z.string(), productCode: z.string(), action: z.string(), eligibleFrom: z.string(), eligibleTo: z.string().nullable() })),
+  sample: z.array(
+    z.object({
+      line: z.number().int(),
+      accountRef: z.string(),
+      productCode: z.string(),
+      action: z.string(),
+      eligibleFrom: z.string(),
+      eligibleTo: z.string().nullable(),
+    }),
+  ),
   problems: z.array(z.object({ line: z.number().int(), code: z.string(), message: z.string() })),
 });
 export type FeedMappingPreview = z.infer<typeof FeedMappingPreviewSchema>;
@@ -71,7 +86,11 @@ export const RejectionExplanationSchema = z.object({
   explanation: z.string().trim().min(10).max(1000),
   fix: z.discriminatedUnion('kind', [
     /** The platform’s mapping should change: the whole corrected mapping. */
-    z.object({ kind: z.literal('mapping'), detail: z.string().trim().min(10).max(1000), mapping: FeedMappingDocumentSchema }),
+    z.object({
+      kind: z.literal('mapping'),
+      detail: z.string().trim().min(10).max(1000),
+      mapping: FeedMappingDocumentSchema,
+    }),
     /** The issuer must correct what it sends. */
     z.object({ kind: z.literal('issuer'), detail: z.string().trim().min(10).max(1000) }),
   ]),
@@ -79,6 +98,11 @@ export const RejectionExplanationSchema = z.object({
 export type RejectionExplanation = z.infer<typeof RejectionExplanationSchema>;
 
 export const DecideExplanationsSchema = z.object({
-  decisions: z.array(z.object({ code: z.string().min(1).max(40), decision: z.enum(['approved', 'rejected']) })).min(1).max(40),
+  decisions: z
+    .array(
+      z.object({ code: z.string().min(1).max(40), decision: z.enum(['approved', 'rejected']) }),
+    )
+    .min(1)
+    .max(40),
   note: z.string().trim().max(1000).optional(),
 });

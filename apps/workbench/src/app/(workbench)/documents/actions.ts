@@ -11,7 +11,11 @@ import { fromError, text, type ActionState } from '@/lib/actions';
 export async function createTemplate(_prev: ActionState, form: FormData): Promise<ActionState> {
   let created: Template;
   try {
-    created = await api<Template>('/v1/document-templates', { method: 'POST', body: { planVersionId: text(form, 'planVersionId'), kind: text(form, 'kind') }, idempotencyKey: randomUUID() });
+    created = await api<Template>('/v1/document-templates', {
+      method: 'POST',
+      body: { planVersionId: text(form, 'planVersionId'), kind: text(form, 'kind') },
+      idempotencyKey: randomUUID(),
+    });
   } catch (err) {
     return fromError(err, form);
   }
@@ -23,7 +27,11 @@ export async function createTemplate(_prev: ActionState, form: FormData): Promis
 export async function releaseTemplate(_prev: ActionState, form: FormData): Promise<ActionState> {
   const id = text(form, 'templateId');
   try {
-    await api<Template>(`/v1/document-templates/${encodeURIComponent(id)}/release`, { method: 'POST', body: { note: text(form, 'note') || undefined }, idempotencyKey: randomUUID() });
+    await api<Template>(`/v1/document-templates/${encodeURIComponent(id)}/release`, {
+      method: 'POST',
+      body: { note: text(form, 'note') || undefined },
+      idempotencyKey: randomUUID(),
+    });
   } catch (err) {
     return fromError(err, form);
   }
@@ -33,7 +41,10 @@ export async function releaseTemplate(_prev: ActionState, form: FormData): Promi
 
 export async function retryDelivery(_prev: ActionState, form: FormData): Promise<ActionState> {
   try {
-    await api<IssuedDocument>(`/v1/document-deliveries/${encodeURIComponent(text(form, 'deliveryId'))}/retry`, { method: 'POST', body: {}, idempotencyKey: randomUUID() });
+    await api<IssuedDocument>(
+      `/v1/document-deliveries/${encodeURIComponent(text(form, 'deliveryId'))}/retry`,
+      { method: 'POST', body: {}, idempotencyKey: randomUUID() },
+    );
   } catch (err) {
     return fromError(err, form);
   }
@@ -45,12 +56,20 @@ export async function retryDelivery(_prev: ActionState, form: FormData): Promise
 export async function issueMissing(_prev: ActionState, form: FormData): Promise<ActionState> {
   const policyId = text(form, 'policyId');
   try {
-    const out = await api<{ items: IssuedDocument[] }>(`/v1/policies/${encodeURIComponent(policyId)}/documents/issue`, { method: 'POST', body: {}, idempotencyKey: randomUUID() });
+    const out = await api<{ items: IssuedDocument[] }>(
+      `/v1/policies/${encodeURIComponent(policyId)}/documents/issue`,
+      { method: 'POST', body: {}, idempotencyKey: randomUUID() },
+    );
     revalidatePath(`/policies/${policyId}`);
     revalidatePath('/documents/failures');
     const failed = out.items.filter((d) => d.status === 'failed');
     return failed.length
-      ? { status: 'error', message: `Not issued: ${failed.map((d) => `${d.kind.replace(/_/g, ' ')}: ${d.failure}`).join(' ')}`, fieldErrors: {}, values: {} }
+      ? {
+          status: 'error',
+          message: `Not issued: ${failed.map((d) => `${d.kind.replace(/_/g, ' ')}: ${d.failure}`).join(' ')}`,
+          fieldErrors: {},
+          values: {},
+        }
       : { status: 'success', message: 'The documents are issued.' };
   } catch (err) {
     return fromError(err, form);
@@ -65,7 +84,11 @@ export async function reviewFindings(_prev: ActionState, form: FormData): Promis
   try {
     await api<Proposal>(`/v1/agent-proposals/${encodeURIComponent(id)}/resolve`, {
       method: 'POST',
-      body: { accepted, rejected: all.filter((x) => !accepted.includes(x)), note: text(form, 'note') || undefined },
+      body: {
+        accepted,
+        rejected: all.filter((x) => !accepted.includes(x)),
+        note: text(form, 'note') || undefined,
+      },
     });
   } catch (err) {
     return fromError(err, form);

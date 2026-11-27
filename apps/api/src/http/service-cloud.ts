@@ -21,8 +21,17 @@ export function externalCaseOf(request: FastifyRequest): ExternalCase | null {
   const user = request.headers[SERVICE_CLOUD_USER_HEADER];
   const ref = request.headers[SERVICE_CLOUD_CASE_HEADER];
   if (user === undefined && ref === undefined) return null;
-  const bad = (field: string, message: string) => new AppError('validation_failed', message, [{ code: 'service_cloud', field, message }]);
-  if (typeof user !== 'string' || !VALID.test(user)) throw bad(SERVICE_CLOUD_USER_HEADER, 'Give the Service Cloud user (up to 100 letters, digits or . _ @ : / -) with the case reference.');
-  if (typeof ref !== 'string' || !VALID.test(ref)) throw bad(SERVICE_CLOUD_CASE_HEADER, 'Give the Service Cloud case reference (up to 100 letters, digits or . _ @ : / -) with the user.');
+  const bad = (field: string, message: string) =>
+    new AppError('validation_failed', message, [{ code: 'service_cloud', field, message }]);
+  if (typeof user !== 'string' || !VALID.test(user))
+    throw bad(
+      SERVICE_CLOUD_USER_HEADER,
+      'Give the Service Cloud user (up to 100 letters, digits or . _ @ : / -) with the case reference.',
+    );
+  if (typeof ref !== 'string' || !VALID.test(ref))
+    throw bad(
+      SERVICE_CLOUD_CASE_HEADER,
+      'Give the Service Cloud case reference (up to 100 letters, digits or . _ @ : / -) with the user.',
+    );
   return { system: 'service_cloud', userId: user, caseReference: ref };
 }

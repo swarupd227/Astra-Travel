@@ -8,9 +8,23 @@ const percent = z.number().min(0).max(100);
 
 export const RECORD_TYPES = ['bind', 'change', 'cancellation', 'programme'] as const;
 export type RecordType = (typeof RECORD_TYPES)[number];
-export const RECORD_STATUSES = ['held', 'ready', 'batched', 'sent', 'confirmed', 'rejected'] as const;
+export const RECORD_STATUSES = [
+  'held',
+  'ready',
+  'batched',
+  'sent',
+  'confirmed',
+  'rejected',
+] as const;
 export type RecordStatus = (typeof RECORD_STATUSES)[number];
-export const BATCH_STATUSES = ['ready', 'sent', 'confirmed', 'mismatch', 'unconfirmed', 'rejected'] as const;
+export const BATCH_STATUSES = [
+  'ready',
+  'sent',
+  'confirmed',
+  'mismatch',
+  'unconfirmed',
+  'rejected',
+] as const;
 export type BatchStatus = (typeof BATCH_STATUSES)[number];
 
 // ---------------- Commission rules (E08-F02-S01) ----------------
@@ -26,7 +40,15 @@ export const CommissionRuleDocumentSchema = z.discriminatedUnion('kind', [
       .array(z.object({ upTo: z.number().positive().nullable(), percent }))
       .min(1)
       .max(20)
-      .refine((t) => t.every((x, i) => (i < t.length - 1 ? x.upTo !== null && (i === 0 || x.upTo > t[i - 1]!.upTo!) : x.upTo === null)), { message: 'Tiers rise, and the last has no upper limit' }),
+      .refine(
+        (t) =>
+          t.every((x, i) =>
+            i < t.length - 1
+              ? x.upTo !== null && (i === 0 || x.upTo > t[i - 1]!.upTo!)
+              : x.upTo === null,
+          ),
+        { message: 'Tiers rise, and the last has no upper limit' },
+      ),
   }),
   /** One percent for all of a policy's premium, chosen by how many policies the account has sold this month. */
   z.object({
@@ -35,12 +57,21 @@ export const CommissionRuleDocumentSchema = z.discriminatedUnion('kind', [
       .array(z.object({ minPolicies: z.number().int().min(0), percent }))
       .min(1)
       .max(20)
-      .refine((b) => b.every((x, i) => i === 0 || x.minPolicies > b[i - 1]!.minPolicies) && b[0]!.minPolicies === 0, { message: 'Bands start at 0 policies and rise' }),
+      .refine(
+        (b) =>
+          b.every((x, i) => i === 0 || x.minPolicies > b[i - 1]!.minPolicies) &&
+          b[0]!.minPolicies === 0,
+        { message: 'Bands start at 0 policies and rise' },
+      ),
   }),
 ]);
 export type CommissionRuleDocument = z.infer<typeof CommissionRuleDocumentSchema>;
 
-export const CreateCommissionRuleSchema = z.object({ accountId: z.uuid(), effectiveFrom: z.iso.date(), document: CommissionRuleDocumentSchema });
+export const CreateCommissionRuleSchema = z.object({
+  accountId: z.uuid(),
+  effectiveFrom: z.iso.date(),
+  document: CommissionRuleDocumentSchema,
+});
 
 export const CommissionRuleSchema = z.object({
   id: z.uuid(),
@@ -76,7 +107,10 @@ export const ProgrammeRuleSchema = z.object({
   createdBy: z.string(),
   approvedBy: z.string().nullable(),
 });
-export const ProgrammePremiumRequestSchema = z.object({ programmeId: z.uuid(), month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/) });
+export const ProgrammePremiumRequestSchema = z.object({
+  programmeId: z.uuid(),
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+});
 
 // ---------------- Premium records (E08-F01) ----------------
 
@@ -126,7 +160,26 @@ export const PremiumRecordSchema = z.object({
 });
 export type PremiumRecord = z.infer<typeof PremiumRecordSchema>;
 
-export const PremiumRecordSummarySchema = PremiumRecordSchema.pick({ id: true, number: true, type: true, status: true, accountId: true, policyId: true, policyNumber: true, programmeId: true, period: true, state: true, issues: true, premium: true, refund: true, commission: true, tax: true, occurredAt: true, batchId: true, billingReference: true });
+export const PremiumRecordSummarySchema = PremiumRecordSchema.pick({
+  id: true,
+  number: true,
+  type: true,
+  status: true,
+  accountId: true,
+  policyId: true,
+  policyNumber: true,
+  programmeId: true,
+  period: true,
+  state: true,
+  issues: true,
+  premium: true,
+  refund: true,
+  commission: true,
+  tax: true,
+  occurredAt: true,
+  batchId: true,
+  billingReference: true,
+});
 
 // ---------------- Batches and confirmations (E08-F03, E08-F04-S01) ----------------
 
@@ -158,14 +211,28 @@ export const BatchSchema = z.object({
 });
 export type Batch = z.infer<typeof BatchSchema>;
 
-export const CreateBatchSchema = z.object({ limit: z.number().int().min(1).max(200_000).default(50_000) });
+export const CreateBatchSchema = z.object({
+  limit: z.number().int().min(1).max(200_000).default(50_000),
+});
 
 /** What the billing system answers for a batch: what it received, and what it did with each record. */
 export const ConfirmationSchema = z.object({
   batchId: z.uuid(),
-  received: z.object({ count: z.number().int().min(0), premium: signed, commission: signed, tax: signed }),
+  received: z.object({
+    count: z.number().int().min(0),
+    premium: signed,
+    commission: signed,
+    tax: signed,
+  }),
   records: z
-    .array(z.object({ recordId: z.uuid(), status: z.enum(['accepted', 'rejected']), reference: z.string().trim().max(100).optional(), reason: z.string().trim().max(500).optional() }))
+    .array(
+      z.object({
+        recordId: z.uuid(),
+        status: z.enum(['accepted', 'rejected']),
+        reference: z.string().trim().max(100).optional(),
+        reason: z.string().trim().max(500).optional(),
+      }),
+    )
     .max(200_000),
 });
 export type Confirmation = z.infer<typeof ConfirmationSchema>;

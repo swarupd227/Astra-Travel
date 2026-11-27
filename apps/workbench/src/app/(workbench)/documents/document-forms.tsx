@@ -4,9 +4,23 @@ import { useActionState } from 'react';
 import { FileCheck2, FilePlus2, RotateCw } from 'lucide-react';
 import { Field, FormMessage, SubmitButton, Textarea } from '@/components/ui/form';
 import { idle } from '@/lib/actions';
-import { createTemplate, issueMissing, releaseTemplate, retryDelivery, reviewFindings } from './actions';
+import {
+  createTemplate,
+  issueMissing,
+  releaseTemplate,
+  retryDelivery,
+  reviewFindings,
+} from './actions';
 
-export function CreateTemplateForm({ planVersionId, kind, label }: { planVersionId: string; kind: 'schedule' | 'policy'; label: string }) {
+export function CreateTemplateForm({
+  planVersionId,
+  kind,
+  label,
+}: {
+  planVersionId: string;
+  kind: 'schedule' | 'policy';
+  label: string;
+}) {
   const [state, action] = useActionState(createTemplate, idle);
   return (
     <form action={action} className="space-y-2">
@@ -20,13 +34,21 @@ export function CreateTemplateForm({ planVersionId, kind, label }: { planVersion
   );
 }
 
-export function ReleaseTemplateForm({ templateId, disabledReason }: { templateId: string; disabledReason: string | null }) {
+export function ReleaseTemplateForm({
+  templateId,
+  disabledReason,
+}: {
+  templateId: string;
+  disabledReason: string | null;
+}) {
   const [state, action] = useActionState(releaseTemplate, idle);
   return (
     <form action={action} className="space-y-3">
       <input type="hidden" name="templateId" value={templateId} />
       <Field label="Note (optional)" hint="Kept with the release.">
-        {(f) => <Textarea id={f.id} name="note" maxLength={1000} aria-describedby={f.describedBy} />}
+        {(f) => (
+          <Textarea id={f.id} name="note" maxLength={1000} aria-describedby={f.describedBy} />
+        )}
       </Field>
       {disabledReason ? <p className="text-sm text-muted">{disabledReason}</p> : null}
       <FormMessage state={state} />
@@ -50,7 +72,13 @@ export function RetryDeliveryForm({ deliveryId }: { deliveryId: string }) {
   );
 }
 
-export function IssueMissingForm({ policyId, label = 'Issue the missing documents' }: { policyId: string; label?: string }) {
+export function IssueMissingForm({
+  policyId,
+  label = 'Issue the missing documents',
+}: {
+  policyId: string;
+  label?: string;
+}) {
   const [state, action] = useActionState(issueMissing, idle);
   return (
     <form action={action} className="space-y-2">
@@ -71,7 +99,13 @@ export interface FindingItem {
 }
 
 /** One checkbox per finding: ticked means a real defect (it blocks the template for good); unticked means it is not an issue. */
-export function FindingsReview({ proposalId, items }: { proposalId: string; items: FindingItem[] }) {
+export function FindingsReview({
+  proposalId,
+  items,
+}: {
+  proposalId: string;
+  items: FindingItem[];
+}) {
   const [state, action] = useActionState(reviewFindings, idle);
   return (
     <form action={action} className="space-y-4">
@@ -79,29 +113,46 @@ export function FindingsReview({ proposalId, items }: { proposalId: string; item
       <input type="hidden" name="items" value={JSON.stringify(items.map((i) => i.id))} />
       {items.length ? (
         <fieldset className="space-y-3">
-          <legend className="text-sm font-medium text-fg">Which findings show a real defect?</legend>
+          <legend className="text-sm font-medium text-fg">
+            Which findings show a real defect?
+          </legend>
           {items.map((i) => (
-            <label key={i.id} className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm">
+            <label
+              key={i.id}
+              className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm"
+            >
               <input type="checkbox" name="accept" value={i.id} className="mt-1 size-4" />
               <span className="min-w-0">
                 <span className="block font-medium text-fg">{i.issue}</span>
                 <span className="mt-1 block text-muted">
                   Quoted: <q className="font-mono text-xs text-fg">{i.quote}</q>
                 </span>
-                <span className="mt-1 block text-xs text-muted">{i.severity === 'hold' ? 'Holds the release while open.' : 'For information.'}</span>
+                <span className="mt-1 block text-xs text-muted">
+                  {i.severity === 'hold' ? 'Holds the release while open.' : 'For information.'}
+                </span>
               </span>
             </label>
           ))}
         </fieldset>
       ) : (
-        <p className="text-sm text-muted">The agent found nothing wrong. Recording your review closes this check.</p>
+        <p className="text-sm text-muted">
+          The agent found nothing wrong. Recording your review closes this check.
+        </p>
       )}
-      <Field label="Note" hint="Why you accepted or rejected these findings. Kept with the decision.">
-        {(f) => <Textarea id={f.id} name="note" maxLength={1000} aria-describedby={f.describedBy} />}
+      <Field
+        label="Note"
+        hint="Why you accepted or rejected these findings. Kept with the decision."
+      >
+        {(f) => (
+          <Textarea id={f.id} name="note" maxLength={1000} aria-describedby={f.describedBy} />
+        )}
       </Field>
       <FormMessage state={state} />
       <SubmitButton pendingLabel="Recording…">Record my review</SubmitButton>
-      <p className="text-xs text-muted">A ticked finding means the template has a defect: it cannot be released, and the plan or form must be corrected and the template assembled again.</p>
+      <p className="text-xs text-muted">
+        A ticked finding means the template has a defect: it cannot be released, and the plan or
+        form must be corrected and the template assembled again.
+      </p>
     </form>
   );
 }

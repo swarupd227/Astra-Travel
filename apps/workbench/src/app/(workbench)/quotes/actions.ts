@@ -17,7 +17,12 @@ export async function createQuote(_prev: ActionState, form: FormData): Promise<A
     .filter(Boolean)
     .map((l) => {
       const [first = '', last = '', dob = '', cost = ''] = l.split(',').map((x) => x.trim());
-      return { firstName: first, lastName: last, ...(dob ? { dateOfBirth: dob } : {}), costPerTraveller: cost || text(form, 'costPerTraveller') };
+      return {
+        firstName: first,
+        lastName: last,
+        ...(dob ? { dateOfBirth: dob } : {}),
+        costPerTraveller: cost || text(form, 'costPerTraveller'),
+      };
     });
   const country = text(form, 'destinationCountry').toUpperCase();
   const region = text(form, 'destinationRegion');
@@ -32,19 +37,32 @@ export async function createQuote(_prev: ActionState, form: FormData): Promise<A
         planCode: text(form, 'planCode'),
         state: text(form, 'state').toUpperCase(),
         travellers: [
-          { firstName: text(form, 'firstName'), lastName: text(form, 'lastName'), ...(dob ? { dateOfBirth: dob } : {}), ...(text(form, 'age') ? { age: num(text(form, 'age')) } : {}), costPerTraveller: text(form, 'costPerTraveller') },
+          {
+            firstName: text(form, 'firstName'),
+            lastName: text(form, 'lastName'),
+            ...(dob ? { dateOfBirth: dob } : {}),
+            ...(text(form, 'age') ? { age: num(text(form, 'age')) } : {}),
+            costPerTraveller: text(form, 'costPerTraveller'),
+          },
           ...extra,
         ],
         trip: {
           ...(text(form, 'purchaseDate') ? { purchaseDate: text(form, 'purchaseDate') } : {}),
-          ...(text(form, 'initialDepositDate') ? { initialDepositDate: text(form, 'initialDepositDate') } : {}),
+          ...(text(form, 'initialDepositDate')
+            ? { initialDepositDate: text(form, 'initialDepositDate') }
+            : {}),
           departureDate: text(form, 'departureDate'),
           returnDate: text(form, 'returnDate'),
-          destinations: country || region ? [{ ...(country ? { country } : {}), ...(region ? { region } : {}) }] : [],
+          destinations:
+            country || region
+              ? [{ ...(country ? { country } : {}), ...(region ? { region } : {}) }]
+              : [],
           ...(text(form, 'penaltyDays') ? { penaltyDays: num(text(form, 'penaltyDays')) } : {}),
         },
         insuredPercent: num(text(form, 'insuredPercent')) ?? 100,
-        ...(text(form, 'businessSegment') ? { businessSegment: text(form, 'businessSegment') } : {}),
+        ...(text(form, 'businessSegment')
+          ? { businessSegment: text(form, 'businessSegment') }
+          : {}),
       },
     });
   } catch (err) {
@@ -58,7 +76,10 @@ export async function changeSelection(_prev: ActionState, form: FormData): Promi
   const id = text(form, 'quoteId');
   const selection = form.getAll('selection').filter((v): v is string => typeof v === 'string');
   try {
-    await api<Quote>(`/v1/quotes/${encodeURIComponent(id)}/selection`, { method: 'PUT', body: { selection } });
+    await api<Quote>(`/v1/quotes/${encodeURIComponent(id)}/selection`, {
+      method: 'PUT',
+      body: { selection },
+    });
   } catch (err) {
     return fromError(err, form);
   }
@@ -80,9 +101,15 @@ export async function issuePolicy(_prev: ActionState, form: FormData): Promise<A
       idempotencyKey: text(form, 'key') || randomUUID(),
       body: {
         ableToTravel: form.get('able') === 'on',
-        acknowledgement: { disclosureVersion: text(form, 'disclosureVersion'), acknowledgedBy: text(form, 'acknowledgedBy') },
+        acknowledgement: {
+          disclosureVersion: text(form, 'disclosureVersion'),
+          acknowledgedBy: text(form, 'acknowledgedBy'),
+        },
         payment: { reference: text(form, 'paymentReference'), amount: text(form, 'paymentAmount') },
-        purchaser: { name: text(form, 'purchaserName'), ...(text(form, 'purchaserEmail') ? { email: text(form, 'purchaserEmail') } : {}) },
+        purchaser: {
+          name: text(form, 'purchaserName'),
+          ...(text(form, 'purchaserEmail') ? { email: text(form, 'purchaserEmail') } : {}),
+        },
       },
     });
     policyId = policy.id;

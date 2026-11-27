@@ -4,7 +4,15 @@ import { useActionState, useState } from 'react';
 import { Calculator, Check, Layers, RotateCw } from 'lucide-react';
 import { Field, FormMessage, Input, Select, SubmitButton, Textarea } from '@/components/ui/form';
 import { idle } from '@/lib/actions';
-import { approveRule, createBatch, createCommissionRule, createProgrammePremium, createProgrammeRule, recalculateRecord, retryBatch } from './actions';
+import {
+  approveRule,
+  createBatch,
+  createCommissionRule,
+  createProgrammePremium,
+  createProgrammeRule,
+  recalculateRecord,
+  retryBatch,
+} from './actions';
 
 export function CreateBatchForm() {
   const [state, action] = useActionState(createBatch, idle);
@@ -75,10 +83,26 @@ export function CommissionRuleForm({ accounts }: { accounts: { id: string; name:
             </Select>
           )}
         </Field>
-        <Field label="Effective from">{(f) => <Input id={f.id} name="effectiveFrom" type="date" required aria-describedby={f.describedBy} />}</Field>
+        <Field label="Effective from">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="effectiveFrom"
+              type="date"
+              required
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
         <Field label="How commission is calculated">
           {(f) => (
-            <Select id={f.id} name="kind" value={kind} onChange={(e) => setKind(e.target.value)} aria-describedby={f.describedBy}>
+            <Select
+              id={f.id}
+              name="kind"
+              value={kind}
+              onChange={(e) => setKind(e.target.value)}
+              aria-describedby={f.describedBy}
+            >
               <option value="flat">A flat percent of premium</option>
               <option value="tiered">Tiered by the account’s premium in the month</option>
               <option value="volume">By the number of policies sold in the month</option>
@@ -86,16 +110,49 @@ export function CommissionRuleForm({ accounts }: { accounts: { id: string; name:
             </Select>
           )}
         </Field>
-        {kind === 'flat' ? <Field label="Percent">{(f) => <Input id={f.id} name="percent" inputMode="decimal" required aria-describedby={f.describedBy} />}</Field> : null}
+        {kind === 'flat' ? (
+          <Field label="Percent">
+            {(f) => (
+              <Input
+                id={f.id}
+                name="percent"
+                inputMode="decimal"
+                required
+                aria-describedby={f.describedBy}
+              />
+            )}
+          </Field>
+        ) : null}
       </div>
       {kind === 'tiered' ? (
-        <Field label="Tiers" hint="One per line as “dollars up to: percent”, rising; the last line is “rest: percent”.">
-          {(f) => <Textarea id={f.id} name="tiers" rows={4} required placeholder={'10000: 10\nrest: 12'} aria-describedby={f.describedBy} />}
+        <Field
+          label="Tiers"
+          hint="One per line as “dollars up to: percent”, rising; the last line is “rest: percent”."
+        >
+          {(f) => (
+            <Textarea
+              id={f.id}
+              name="tiers"
+              rows={4}
+              required
+              placeholder={'10000: 10\nrest: 12'}
+              aria-describedby={f.describedBy}
+            />
+          )}
         </Field>
       ) : null}
       {kind === 'volume' ? (
         <Field label="Bands" hint="One per line as “policies from: percent”, starting at 0.">
-          {(f) => <Textarea id={f.id} name="bands" rows={4} required placeholder={'0: 8\n50: 10'} aria-describedby={f.describedBy} />}
+          {(f) => (
+            <Textarea
+              id={f.id}
+              name="bands"
+              rows={4}
+              required
+              placeholder={'0: 8\n50: 10'}
+              aria-describedby={f.describedBy}
+            />
+          )}
         </Field>
       ) : null}
       <FormMessage state={state} />
@@ -120,8 +177,28 @@ export function ProgrammeRuleForm({ programmes }: { programmes: { id: string; na
             </Select>
           )}
         </Field>
-        <Field label="Effective from">{(f) => <Input id={f.id} name="effectiveFrom" type="date" required aria-describedby={f.describedBy} />}</Field>
-        <Field label="Rate per eligible account per month" hint="In dollars.">{(f) => <Input id={f.id} name="rate" inputMode="decimal" required aria-describedby={f.describedBy} />}</Field>
+        <Field label="Effective from">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="effectiveFrom"
+              type="date"
+              required
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
+        <Field label="Rate per eligible account per month" hint="In dollars.">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="rate"
+              inputMode="decimal"
+              required
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
       </div>
       <FormMessage state={state} />
       <SubmitButton pendingLabel="Proposing…">Propose this rate</SubmitButton>
@@ -129,7 +206,11 @@ export function ProgrammeRuleForm({ programmes }: { programmes: { id: string; na
   );
 }
 
-export function ProgrammePremiumForm({ programmes }: { programmes: { id: string; name: string }[] }) {
+export function ProgrammePremiumForm({
+  programmes,
+}: {
+  programmes: { id: string; name: string }[];
+}) {
   const [state, action] = useActionState(createProgrammePremium, idle);
   return (
     <form action={action} className="space-y-4">
@@ -145,10 +226,16 @@ export function ProgrammePremiumForm({ programmes }: { programmes: { id: string;
             </Select>
           )}
         </Field>
-        <Field label="Month" hint="Counts the accounts eligible on its last day.">{(f) => <Input id={f.id} name="month" type="month" required aria-describedby={f.describedBy} />}</Field>
+        <Field label="Month" hint="Counts the accounts eligible on its last day.">
+          {(f) => (
+            <Input id={f.id} name="month" type="month" required aria-describedby={f.describedBy} />
+          )}
+        </Field>
       </div>
       <FormMessage state={state} />
-      <SubmitButton variant="secondary" pendingLabel="Calculating…">Create the month’s premium record</SubmitButton>
+      <SubmitButton variant="secondary" pendingLabel="Calculating…">
+        Create the month’s premium record
+      </SubmitButton>
     </form>
   );
 }

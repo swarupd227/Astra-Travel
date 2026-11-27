@@ -45,7 +45,8 @@ export function parseCsvRows(text: string): string[][] {
   return rows;
 }
 
-const nil = (v: string | undefined) => (v === undefined || v.trim() === '' || v.trim() === '-0-' ? null : v.trim());
+const nil = (v: string | undefined) =>
+  v === undefined || v.trim() === '' || v.trim() === '-0-' ? null : v.trim();
 
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
@@ -53,9 +54,15 @@ const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', '
 export function parseBirths(remarks: string | null): SanctionsEntry['births'] {
   if (!remarks) return [];
   const out: SanctionsEntry['births'] = [];
-  for (const m of remarks.matchAll(/DOB\s+(?:circa\s+)?(?:(\d{1,2})\s+)?(?:([A-Za-z]{3})[a-z]*\s+)?(\d{4})/g)) {
+  for (const m of remarks.matchAll(
+    /DOB\s+(?:circa\s+)?(?:(\d{1,2})\s+)?(?:([A-Za-z]{3})[a-z]*\s+)?(\d{4})/g,
+  )) {
     const month = m[2] ? MONTHS.indexOf(m[2].toLowerCase()) + 1 : 0;
-    out.push({ year: Number(m[3]), ...(month ? { month } : {}), ...(m[1] && month ? { day: Number(m[1]) } : {}) });
+    out.push({
+      year: Number(m[3]),
+      ...(month ? { month } : {}),
+      ...(m[1] && month ? { day: Number(m[1]) } : {}),
+    });
   }
   return out;
 }
@@ -83,7 +90,13 @@ export function parseSdn(sdnCsv: string, altCsv?: string): ParsedList {
     }
     // Only individuals are screened; entities, vessels and aircraft are kept out of the person list.
     if ((nil(r[2]) ?? '').toLowerCase() !== 'individual') return;
-    entries.set(uid, { uid, name, program: nil(r[3]), aliases: [], births: parseBirths(nil(r[11])) });
+    entries.set(uid, {
+      uid,
+      name,
+      program: nil(r[3]),
+      aliases: [],
+      births: parseBirths(nil(r[11])),
+    });
   });
   let aliases = 0;
   if (altCsv) {
@@ -101,7 +114,8 @@ export function parseSdn(sdnCsv: string, altCsv?: string): ParsedList {
       }
     });
   }
-  if (rows.length > 0 && entries.size === 0 && problems.length === 0) problems.push('The file has no individuals to screen against.');
+  if (rows.length > 0 && entries.size === 0 && problems.length === 0)
+    problems.push('The file has no individuals to screen against.');
   return { entries: [...entries.values()], aliases, problems };
 }
 
@@ -217,7 +231,13 @@ export class Screener {
     const out: PossibleMatch[] = [];
     for (const t of travellers) {
       const tokens = normaliseName(`${t.firstName} ${t.lastName}`);
-      const born = t.dateOfBirth ? { y: Number(t.dateOfBirth.slice(0, 4)), m: Number(t.dateOfBirth.slice(5, 7)), d: Number(t.dateOfBirth.slice(8, 10)) } : null;
+      const born = t.dateOfBirth
+        ? {
+            y: Number(t.dateOfBirth.slice(0, 4)),
+            m: Number(t.dateOfBirth.slice(5, 7)),
+            d: Number(t.dateOfBirth.slice(8, 10)),
+          }
+        : null;
       for (const p of this.prepared) {
         let best = 0;
         let bestName = p.entry.name;
@@ -234,7 +254,12 @@ export class Screener {
         let score = best;
         let note = `Name resembles ${bestName}`;
         if (born && p.entry.births.length) {
-          const agrees = p.entry.births.some((b) => b.year === born.y && (b.month === undefined || b.month === born.m) && (b.day === undefined || b.day === born.d));
+          const agrees = p.entry.births.some(
+            (b) =>
+              b.year === born.y &&
+              (b.month === undefined || b.month === born.m) &&
+              (b.day === undefined || b.day === born.d),
+          );
           if (agrees) {
             score = Math.min(1, score + 0.05);
             note += '; date of birth agrees';
@@ -243,7 +268,15 @@ export class Screener {
             note += '; date of birth differs';
           }
         }
-        if (score >= threshold) out.push({ travellerId: t.id, uid: p.entry.uid, name: p.entry.name, program: p.entry.program, score: Math.round(score * 1000) / 1000, reason: note });
+        if (score >= threshold)
+          out.push({
+            travellerId: t.id,
+            uid: p.entry.uid,
+            name: p.entry.name,
+            program: p.entry.program,
+            score: Math.round(score * 1000) / 1000,
+            reason: note,
+          });
       }
     }
     return out.sort((a, b) => b.score - a.score);

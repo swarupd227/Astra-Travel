@@ -17,7 +17,11 @@ import {
 } from '@astra/contracts';
 import { AppError, type Principal } from '@astra/platform';
 import { AGENT_TOKEN_ISSUER, type AgentTokenVerifier } from '@astra/agents/agent-token';
-import { CHANNEL_TOKEN_ISSUER, ChannelTokenError, verifyChannelToken } from '@astra/contracts/channel-token';
+import {
+  CHANNEL_TOKEN_ISSUER,
+  ChannelTokenError,
+  verifyChannelToken,
+} from '@astra/contracts/channel-token';
 import { ALL_PERMISSIONS, type Permission } from '@astra/contracts';
 
 /**
@@ -127,14 +131,19 @@ export class Authenticator {
 
   /** Channel principals: one account, the permissions their scope allows, and for a browser one quote. */
   private authenticateChannel(token: string): Principal {
-    if (!this.opts.channelSecret) throw new AppError('unauthenticated', 'Channel tokens are not accepted here.');
+    if (!this.opts.channelSecret)
+      throw new AppError('unauthenticated', 'Channel tokens are not accepted here.');
     let claims;
     try {
       claims = verifyChannelToken(this.opts.channelSecret, token);
     } catch (err) {
-      throw new AppError('unauthenticated', err instanceof ChannelTokenError ? err.message : 'The channel token is not valid.');
+      throw new AppError(
+        'unauthenticated',
+        err instanceof ChannelTokenError ? err.message : 'The channel token is not valid.',
+      );
     }
-    if (!UUID.test(claims.accountId)) throw new AppError('unauthenticated', 'The channel token is not valid.');
+    if (!UUID.test(claims.accountId))
+      throw new AppError('unauthenticated', 'The channel token is not valid.');
     const known = new Set<string>(ALL_PERMISSIONS);
     return {
       kind: 'partner',

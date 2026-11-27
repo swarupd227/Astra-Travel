@@ -7,7 +7,8 @@ import { POLICY_TRANSITIONS, type PolicyEvent, type PolicySnapshot } from '@astr
 
 export type PolicyStatus = keyof typeof POLICY_TRANSITIONS;
 
-export const canTransition = (from: PolicyStatus, to: PolicyStatus): boolean => (POLICY_TRANSITIONS[from] as readonly string[]).includes(to);
+export const canTransition = (from: PolicyStatus, to: PolicyStatus): boolean =>
+  (POLICY_TRANSITIONS[from] as readonly string[]).includes(to);
 
 export interface ProjectedPolicy {
   status: PolicyStatus;
@@ -16,7 +17,8 @@ export interface ProjectedPolicy {
 }
 
 /** A shallow merge of a details change: each key replaces what was there. */
-const merge = (record: PolicySnapshot, patch: Record<string, unknown>): PolicySnapshot => ({ ...record, ...patch }) as PolicySnapshot;
+const merge = (record: PolicySnapshot, patch: Record<string, unknown>): PolicySnapshot =>
+  ({ ...record, ...patch }) as PolicySnapshot;
 
 /**
  * Folds events (oldest first) into the policy as it was after the last one at or before `asOf`. Returns null
@@ -35,7 +37,10 @@ export function project(events: PolicyEvent[], asOf?: string): ProjectedPolicy |
       throw new Error('A policy event came before the policy was bound.');
     } else if (e.type === 'status_changed') {
       const to = e.data.to as PolicyStatus;
-      if (!canTransition(status, to)) throw new Error(`The history changes the policy from ${status} to ${to}, which is not allowed.`);
+      if (!canTransition(status, to))
+        throw new Error(
+          `The history changes the policy from ${status} to ${to}, which is not allowed.`,
+        );
       status = to;
     } else {
       record = merge(record, (e.data.patch ?? {}) as Record<string, unknown>);
@@ -46,9 +51,14 @@ export function project(events: PolicyEvent[], asOf?: string): ProjectedPolicy |
 }
 
 /** Whether cover is in force on a local date-time: active and within a benefit's window. */
-export function inForce(status: PolicyStatus, window: { start: string; end: string }, on: string): boolean {
+export function inForce(
+  status: PolicyStatus,
+  window: { start: string; end: string },
+  on: string,
+): boolean {
   return status === 'active' && on >= window.start && on <= window.end;
 }
 
 /** A policy number such as ATP-2026-000123 (the sequence number is the database's). */
-export const policyNumber = (year: number, seq: number): string => `ATP-${year}-${String(seq).padStart(6, '0')}`;
+export const policyNumber = (year: number, seq: number): string =>
+  `ATP-${year}-${String(seq).padStart(6, '0')}`;

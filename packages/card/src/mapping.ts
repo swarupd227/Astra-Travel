@@ -1,5 +1,11 @@
 import type { FeedMappingDocument } from '@astra/contracts';
-import { isRealDate, looksLikeCardNumber, parseFeed, type FeedRecord, type RecordRejection } from './parser';
+import {
+  isRealDate,
+  looksLikeCardNumber,
+  parseFeed,
+  type FeedRecord,
+  type RecordRejection,
+} from './parser';
 
 /**
  * Turns an issuer's own delimited file into the eligibility feed format (E21-F04-S01), so the one parser and its
@@ -67,12 +73,20 @@ export interface ConvertHeader {
 
 const columnsOf = (m: FeedMappingDocument): string[] => {
   const c = m.columns;
-  return [c.accountRef.column, ...('column' in c.productCode ? [c.productCode.column] : []), ...('column' in c.action ? [c.action.column] : []), c.eligibleFrom.column, ...(c.eligibleTo ? [c.eligibleTo.column] : [])];
+  return [
+    c.accountRef.column,
+    ...('column' in c.productCode ? [c.productCode.column] : []),
+    ...('column' in c.action ? [c.action.column] : []),
+    c.eligibleFrom.column,
+    ...(c.eligibleTo ? [c.eligibleTo.column] : []),
+  ];
 };
 
 /** The columns the mapping needs that the file's first line does not have. */
 export function missingColumns(headerLine: string, m: FeedMappingDocument): string[] {
-  const names = new Set(splitLine(headerLine.replace(/^\uFEFF/, '').replace(/\r$/, ''), m.delimiter));
+  const names = new Set(
+    splitLine(headerLine.replace(/^\uFEFF/, '').replace(/\r$/, ''), m.delimiter),
+  );
   return [...new Set(columnsOf(m))].filter((c) => !names.has(c));
 }
 
@@ -80,7 +94,11 @@ export function missingColumns(headerLine: string, m: FeedMappingDocument): stri
  * Converts the issuer's lines (the first naming the columns) to feed lines. Throws when a needed column is missing.
  * Detail line n of the result comes from line n of the issuer's file, so rejections point at the issuer's own lines.
  */
-export async function* convertLines(lines: AsyncIterable<string> | Iterable<string>, m: FeedMappingDocument, h: ConvertHeader): AsyncGenerator<string> {
+export async function* convertLines(
+  lines: AsyncIterable<string> | Iterable<string>,
+  m: FeedMappingDocument,
+  h: ConvertHeader,
+): AsyncGenerator<string> {
   let index: Map<string, number> | null = null;
   let count = 0;
   const actions = { A: 0, U: 0, D: 0 };
@@ -90,7 +108,9 @@ export async function* convertLines(lines: AsyncIterable<string> | Iterable<stri
     if (index === null) {
       const missing = missingColumns(line, m);
       if (missing.length) throw new Error(`The file has no column ${missing.join(', ')}.`);
-      index = new Map(splitLine(line.replace(/^\uFEFF/, ''), m.delimiter).map((name, i) => [name, i]));
+      index = new Map(
+        splitLine(line.replace(/^\uFEFF/, ''), m.delimiter).map((name, i) => [name, i]),
+      );
       yield `H|ASTRA-ELIG|1|${h.programmeCode}|${h.sequence}|${h.kind}|${h.asOfDate}`;
       continue;
     }
@@ -100,8 +120,14 @@ export async function* convertLines(lines: AsyncIterable<string> | Iterable<stri
     const c = m.columns;
     const rawRef = at(c.accountRef.column);
     const ref = looksLikeCardNumber(rawRef) ? CARD_STAND_IN : rawRef;
-    const product = 'constant' in c.productCode ? c.productCode.constant : (c.productCode.values[at(c.productCode.column)] ?? at(c.productCode.column));
-    const action = 'constant' in c.action ? c.action.constant : (c.action.values[at(c.action.column)] ?? at(c.action.column));
+    const product =
+      'constant' in c.productCode
+        ? c.productCode.constant
+        : (c.productCode.values[at(c.productCode.column)] ?? at(c.productCode.column));
+    const action =
+      'constant' in c.action
+        ? c.action.constant
+        : (c.action.values[at(c.action.column)] ?? at(c.action.column));
     const date = (spec: { column: string; format: string }) => {
       const v = at(spec.column);
       return v === '' ? '' : (convertDate(v, spec.format) ?? `unreadable:${v}`);
@@ -118,16 +144,36 @@ export async function* convertLines(lines: AsyncIterable<string> | Iterable<stri
 export async function previewMapping(sample: string, m: FeedMappingDocument, h: ConvertHeader) {
   const lines = sample.split('\n');
   const missing = missingColumns(lines[0] ?? '', m);
-  if (missing.length) return { missingColumns: missing, records: 0, converted: 0, rejected: 0, sample: [], problems: [] };
+  if (missing.length)
+    return {
+      missingColumns: missing,
+      records: 0,
+      converted: 0,
+      rejected: 0,
+      sample: [],
+      problems: [],
+    };
   const records: FeedRecord[] = [];
   const rejections: RecordRejection[] = [];
-  const result = await parseFeed(convertLines(lines, m, h), { record: (r) => void records.push(r), reject: (r) => void rejections.push(r) });
+  const result = await parseFeed(convertLines(lines, m, h), {
+    record: (r) => void records.push(r),
+    reject: (r) => void rejections.push(r),
+  });
   return {
     missingColumns: [],
     records: result.detailRecords,
     converted: records.length,
     rejected: rejections.length,
-    sample: records.slice(0, 10).map((r) => ({ line: r.lineNo, accountRef: r.accountRef, productCode: r.productCode, action: r.action, eligibleFrom: r.eligibleFrom, eligibleTo: r.eligibleTo })),
-    problems: rejections.slice(0, 50).map((r) => ({ line: r.lineNo, code: r.code, message: r.message })),
+    sample: records.slice(0, 10).map((r) => ({
+      line: r.lineNo,
+      accountRef: r.accountRef,
+      productCode: r.productCode,
+      action: r.action,
+      eligibleFrom: r.eligibleFrom,
+      eligibleTo: r.eligibleTo,
+    })),
+    problems: rejections
+      .slice(0, 50)
+      .map((r) => ({ line: r.lineNo, code: r.code, message: r.message })),
   };
 }

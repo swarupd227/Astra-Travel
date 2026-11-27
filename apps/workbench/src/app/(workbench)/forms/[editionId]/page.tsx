@@ -219,7 +219,9 @@ export default async function EditionPage({
           question={`Draft the tables and formula of the rate manual in document ${e.id} (${e.formNumber}, edition ${e.edition}).`}
           askLabel="Ask for a draft manual"
           description="Reads this filed manual page by page and drafts its tables and formula. A rating analyst compares the draft with the filed pages and loads it as a draft manual; nothing is published."
-          canAsk={me.permissions.includes('agents:use') && me.permissions.includes('proposals:create')}
+          canAsk={
+            me.permissions.includes('agents:use') && me.permissions.includes('proposals:create')
+          }
           asked={asked}
         />
       ) : (
@@ -231,7 +233,9 @@ export default async function EditionPage({
           question={`Propose the variable map for edition ${e.id}, the ${e.kind} "${e.title}" (${e.formNumber}, edition ${e.edition}).`}
           askLabel="Ask for a proposed map"
           description="Reads this form and proposes every variable with its type, filed range and source text. A product manager accepts, corrects or rejects each one; nothing is saved until then."
-          canAsk={me.permissions.includes('agents:use') && me.permissions.includes('proposals:create')}
+          canAsk={
+            me.permissions.includes('agents:use') && me.permissions.includes('proposals:create')
+          }
           asked={asked}
         />
       )}

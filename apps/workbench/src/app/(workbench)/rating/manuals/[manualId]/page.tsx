@@ -251,7 +251,9 @@ export default async function ManualPage({
           question={`Explain the parity differences of rate manual ${m.id} (${m.code}, version ${m.version}).`}
           askLabel="Ask for an explanation"
           description="Finds the worksheet step where the engine and the workbook diverge for each failed case, and cites the manual page and the workbook cell. Every citation is checked against the run, the manual and the imported file."
-          canAsk={me.permissions.includes('agents:use') && me.permissions.includes('proposals:create')}
+          canAsk={
+            me.permissions.includes('agents:use') && me.permissions.includes('proposals:create')
+          }
           asked={asked}
         />
       ) : null}

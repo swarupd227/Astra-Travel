@@ -86,34 +86,44 @@ export const PERMISSIONS = {
   'underwriting:read': 'View rule sets, sanctions lists and referrals',
   'underwriting:evaluate': 'Evaluate eligibility, record declarations and screen travellers',
   'underwriting:manage': 'Build rule sets and their test cases and load sanctions lists',
-  'underwriting:approve': 'Approve rule sets and sanctions lists loaded by someone else and publish rule sets',
+  'underwriting:approve':
+    'Approve rule sets and sanctions lists loaded by someone else and publish rule sets',
   'referrals:decide': 'Decide referrals and sanctions holds',
   'proposals:read': 'View what agents have proposed for forms, manuals and parity',
-  'proposals:create': 'Submit proposals for forms, manuals and parity (used by agents acting for a person)',
+  'proposals:create':
+    'Submit proposals for forms, manuals and parity (used by agents acting for a person)',
   'quotes:create': 'Create quotes, change their selections and bind them to policies',
   'quotes:read': 'View quotes',
-  'quotes:reselect': 'Change the optional benefits of one quote (held by a widget in a traveller’s browser; it cannot create or bind)',
+  'quotes:reselect':
+    'Change the optional benefits of one quote (held by a widget in a traveller’s browser; it cannot create or bind)',
   'policies:read': 'View policies, their history and their record at any date',
   'licences:manage': 'Record and revoke travel retailer registrations and producer licences',
   'onboarding:sandbox': 'Create an account’s sandbox and issue its sandbox credentials',
   'billing:read': 'View premium records, batches, commission rules and their status',
-  'billing:manage': 'Create commission and programme rules, send batches, recalculate held records and retry',
+  'billing:manage':
+    'Create commission and programme rules, send batches, recalculate held records and retry',
   'billing:approve': 'Approve commission and programme rules made by someone else',
-  'billing:confirm': 'Confirm receipt of batches and the payment and refund of their records (the billing system)',
+  'billing:confirm':
+    'Confirm receipt of batches and the payment and refund of their records (the billing system)',
   'servicing:execute': 'Preview and make changes, cancellations and corrections on policies',
   'servicing:review': 'Review the sample of changes made by the servicing agent',
   'documents:read': 'View document templates, issued documents and their delivery',
-  'documents:manage': 'Assemble document templates, issue notices and guides, and retry failed deliveries',
-  'documents:release': 'Release document templates assembled by someone else, and resolve document quality findings',
-  'reports:read': 'View sales, premium, take-up, cancellation and refund reports for the accounts you can see',
-  'reports:statutory': 'View and export statutory and statistical data by state, entity and benefit',
+  'documents:manage':
+    'Assemble document templates, issue notices and guides, and retry failed deliveries',
+  'documents:release':
+    'Release document templates assembled by someone else, and resolve document quality findings',
+  'reports:read':
+    'View sales, premium, take-up, cancellation and refund reports for the accounts you can see',
+  'reports:statutory':
+    'View and export statutory and statistical data by state, entity and benefit',
   'documents:receipts': 'Report what happened to documents that were sent (the delivery provider)',
   'data:read': 'View the data catalogue, the loads to the data platform and their files',
   'data:manage': 'Run a load to the data platform',
   'claims:feed': 'Read the policy and certificate data feed for claims',
   'launch:read': 'View whether each state is ready to launch and who has signed',
   'launch:signoff': 'Sign or withdraw the go-live approval for your own area',
-  'tasks:read': 'See the work queue: referrals, agent proposals, agent reviews and failed deliveries, with their timers and owners',
+  'tasks:read':
+    'See the work queue: referrals, agent proposals, agent reviews and failed deliveries, with their timers and owners',
   'tasks:work': 'Take work from the queue and hand it back',
   'tasks:assign': 'Assign work to other people and set how long each kind of work may wait',
 } as const;
@@ -143,7 +153,15 @@ const STAFF_BASE: Permission[] = [
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  product_manager: [...STAFF_BASE, 'launch:signoff', 'forms:manage', 'plans:manage', 'plans:approve', 'proposals:create', 'documents:manage'],
+  product_manager: [
+    ...STAFF_BASE,
+    'launch:signoff',
+    'forms:manage',
+    'plans:manage',
+    'plans:approve',
+    'proposals:create',
+    'documents:manage',
+  ],
   rating_analyst: [
     ...STAFF_BASE,
     'launch:signoff',
@@ -153,7 +171,14 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'rating:approve',
     'proposals:create',
   ],
-  underwriter: [...STAFF_BASE, 'card:read', 'underwriting:evaluate', 'underwriting:manage', 'underwriting:approve', 'referrals:decide'],
+  underwriter: [
+    ...STAFF_BASE,
+    'card:read',
+    'underwriting:evaluate',
+    'underwriting:manage',
+    'underwriting:approve',
+    'referrals:decide',
+  ],
   account_manager: [
     ...STAFF_BASE,
     'reports:read',
@@ -167,7 +192,14 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'proposals:create',
   ],
   service_rep: [...STAFF_BASE, 'card:read', 'cover:verify', 'quotes:create', 'servicing:execute'],
-  finance_analyst: [...STAFF_BASE, 'launch:signoff', 'card:read', 'billing:manage', 'reports:read', 'reports:statutory'],
+  finance_analyst: [
+    ...STAFF_BASE,
+    'launch:signoff',
+    'card:read',
+    'billing:manage',
+    'reports:read',
+    'reports:statutory',
+  ],
   card_programme_manager: [
     ...STAFF_BASE,
     'proposals:create',

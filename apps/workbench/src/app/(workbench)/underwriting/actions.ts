@@ -23,15 +23,22 @@ function buildInput(form: FormData) {
         lastName: text(form, 'lastName'),
         ...(dob ? { dateOfBirth: dob } : {}),
         ...(text(form, 'age') ? { age: num(text(form, 'age')) } : {}),
-        ...(text(form, 'costPerTraveller') ? { costPerTraveller: text(form, 'costPerTraveller') } : {}),
+        ...(text(form, 'costPerTraveller')
+          ? { costPerTraveller: text(form, 'costPerTraveller') }
+          : {}),
       },
     ],
     trip: {
       purchaseDate: text(form, 'purchaseDate'),
-      ...(text(form, 'initialDepositDate') ? { initialDepositDate: text(form, 'initialDepositDate') } : {}),
+      ...(text(form, 'initialDepositDate')
+        ? { initialDepositDate: text(form, 'initialDepositDate') }
+        : {}),
       departureDate: text(form, 'departureDate'),
       returnDate: text(form, 'returnDate'),
-      destinations: country || region ? [{ ...(country ? { country } : {}), ...(region ? { region } : {}) }] : [],
+      destinations:
+        country || region
+          ? [{ ...(country ? { country } : {}), ...(region ? { region } : {}) }]
+          : [],
     },
     insuredPercent: num(text(form, 'insuredPercent')) ?? 100,
     ableToTravel: able === 'yes' ? true : able === 'no' ? false : null,
@@ -75,7 +82,9 @@ export async function saveTestCase(_prev: ActionState, form: FormData): Promise<
           ...(rules.length ? { referralRules: rules } : {}),
           ...(waiver ? { waiver: waiver === 'yes' } : {}),
           ...(cfar ? { cfarOffered: cfar === 'yes' } : {}),
-          ...(text(form, 'expectedReason') ? { reasonsInclude: [text(form, 'expectedReason')] } : {}),
+          ...(text(form, 'expectedReason')
+            ? { reasonsInclude: [text(form, 'expectedReason')] }
+            : {}),
         },
       },
     });
@@ -83,13 +92,19 @@ export async function saveTestCase(_prev: ActionState, form: FormData): Promise<
     return fromError(err, form);
   }
   revalidatePath(`/underwriting/plans/${planId}`);
-  return { status: 'success', message: 'Test case saved. Run the tests on a rule set to check it.' };
+  return {
+    status: 'success',
+    message: 'Test case saved. Run the tests on a rule set to check it.',
+  };
 }
 
 export async function removeTestCase(_prev: ActionState, form: FormData): Promise<ActionState> {
   const planId = text(form, 'planId');
   try {
-    await api(`/v1/plans/${encodeURIComponent(planId)}/rule-test-cases/${encodeURIComponent(text(form, 'caseId'))}`, { method: 'DELETE' });
+    await api(
+      `/v1/plans/${encodeURIComponent(planId)}/rule-test-cases/${encodeURIComponent(text(form, 'caseId'))}`,
+      { method: 'DELETE' },
+    );
   } catch (err) {
     return fromError(err, form);
   }
@@ -101,7 +116,10 @@ export async function startRuleSet(_prev: ActionState, form: FormData): Promise<
   const planId = text(form, 'planId');
   let rs: RuleSet;
   try {
-    rs = await api<RuleSet>(`/v1/plans/${encodeURIComponent(planId)}/rule-sets`, { method: 'POST', body: { effectiveFrom: text(form, 'effectiveFrom') } });
+    rs = await api<RuleSet>(`/v1/plans/${encodeURIComponent(planId)}/rule-sets`, {
+      method: 'POST',
+      body: { effectiveFrom: text(form, 'effectiveFrom') },
+    });
   } catch (err) {
     return fromError(err, form);
   }
@@ -116,14 +134,24 @@ export async function saveRuleSet(_prev: SaveState, form: FormData): Promise<Sav
   try {
     document = JSON.parse(text(form, 'document')) as RuleSetDocument;
   } catch {
-    return { status: 'error', message: 'The rule set could not be read. Reload the page.', fieldErrors: {}, values: {} };
+    return {
+      status: 'error',
+      message: 'The rule set could not be read. Reload the page.',
+      fieldErrors: {},
+      values: {},
+    };
   }
   try {
-    const saved = await api<RuleSet>(`/v1/rule-sets/${encodeURIComponent(id)}`, { method: 'PUT', body: { document, effectiveFrom: text(form, 'effectiveFrom') } });
+    const saved = await api<RuleSet>(`/v1/rule-sets/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: { document, effectiveFrom: text(form, 'effectiveFrom') },
+    });
     revalidatePath(`/underwriting/rule-sets/${id}`);
     return {
       status: 'success',
-      message: saved.problems.length ? `Saved, with ${saved.problems.length} thing${saved.problems.length === 1 ? '' : 's'} to fix before approval.` : 'Saved. The draft has no problems and can be approved.',
+      message: saved.problems.length
+        ? `Saved, with ${saved.problems.length} thing${saved.problems.length === 1 ? '' : 's'} to fix before approval.`
+        : 'Saved. The draft has no problems and can be approved.',
       saved,
     };
   } catch (err) {
@@ -134,7 +162,10 @@ export async function saveRuleSet(_prev: SaveState, form: FormData): Promise<Sav
 export async function approveRuleSet(_prev: ActionState, form: FormData): Promise<ActionState> {
   const id = text(form, 'ruleSetId');
   try {
-    await api(`/v1/rule-sets/${encodeURIComponent(id)}/approve`, { method: 'POST', body: { note: text(form, 'note') } });
+    await api(`/v1/rule-sets/${encodeURIComponent(id)}/approve`, {
+      method: 'POST',
+      body: { note: text(form, 'note') },
+    });
   } catch (err) {
     return fromError(err, form);
   }
@@ -156,11 +187,19 @@ export async function publishRuleSet(_prev: ActionState, form: FormData): Promis
 export async function runRuleTests(_prev: ActionState, form: FormData): Promise<ActionState> {
   const id = text(form, 'ruleSetId');
   try {
-    const run = await api<{ total: number; passed: number }>(`/v1/rule-sets/${encodeURIComponent(id)}/test-runs`, { method: 'POST' });
+    const run = await api<{ total: number; passed: number }>(
+      `/v1/rule-sets/${encodeURIComponent(id)}/test-runs`,
+      { method: 'POST' },
+    );
     revalidatePath(`/underwriting/rule-sets/${id}`);
     return run.passed === run.total
       ? { status: 'success', message: `All ${run.total} test cases pass.` }
-      : { status: 'error', message: `${run.passed} of ${run.total} test cases pass.`, fieldErrors: {}, values: {} };
+      : {
+          status: 'error',
+          message: `${run.passed} of ${run.total} test cases pass.`,
+          fieldErrors: {},
+          values: {},
+        };
   } catch (err) {
     return fromError(err, form);
   }
@@ -170,7 +209,12 @@ export async function loadSanctionsList(_prev: ActionState, form: FormData): Pro
   const sdn = form.get('sdn');
   const alt = form.get('alt');
   if (!(sdn instanceof File) || sdn.size === 0) {
-    return { status: 'error', message: 'Choose SDN.CSV from the OFAC download.', fieldErrors: { sdn: 'Choose a file' }, values: {} };
+    return {
+      status: 'error',
+      message: 'Choose SDN.CSV from the OFAC download.',
+      fieldErrors: { sdn: 'Choose a file' },
+      values: {},
+    };
   }
   try {
     await api('/v1/sanctions-lists', {
@@ -186,10 +230,16 @@ export async function loadSanctionsList(_prev: ActionState, form: FormData): Pro
     return fromError(err, form);
   }
   revalidatePath('/underwriting/sanctions');
-  return { status: 'success', message: 'List loaded as a draft. Someone else approves it before it is used.' };
+  return {
+    status: 'success',
+    message: 'List loaded as a draft. Someone else approves it before it is used.',
+  };
 }
 
-export async function decideSanctionsList(_prev: ActionState, form: FormData): Promise<ActionState> {
+export async function decideSanctionsList(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
   try {
     await api(`/v1/sanctions-lists/${encodeURIComponent(text(form, 'listId'))}/decision`, {
       method: 'POST',
@@ -199,7 +249,13 @@ export async function decideSanctionsList(_prev: ActionState, form: FormData): P
     return fromError(err, form);
   }
   revalidatePath('/underwriting/sanctions');
-  return { status: 'success', message: text(form, 'decision') === 'approve' ? 'Approved. Screening now uses this list.' : 'Rejected.' };
+  return {
+    status: 'success',
+    message:
+      text(form, 'decision') === 'approve'
+        ? 'Approved. Screening now uses this list.'
+        : 'Rejected.',
+  };
 }
 
 export async function decideReferral(_prev: ActionState, form: FormData): Promise<ActionState> {

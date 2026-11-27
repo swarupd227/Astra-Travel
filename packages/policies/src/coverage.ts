@@ -24,7 +24,8 @@ const format = (ms: number) => {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 };
 
-export const addDays = (date: string, days: number): string => format(parse(date) + days * DAY).slice(0, 10);
+export const addDays = (date: string, days: number): string =>
+  format(parse(date) + days * DAY).slice(0, 10);
 
 export interface TripDates {
   purchaseDate: string;
@@ -45,7 +46,10 @@ export function coverageWindow(timing: Timing, trip: TripDates): { start: string
       : timing.end.kind === 'departure'
         ? `${trip.departureDate}T00:00`
         : format(parse(trip.departureDate) - timing.end.hours * 3_600_000);
-  if (end <= start) throw new CoverageError(`Cover would end (${end.replace('T', ' ')}) before it starts (${start.replace('T', ' ')}).`);
+  if (end <= start)
+    throw new CoverageError(
+      `Cover would end (${end.replace('T', ' ')}) before it starts (${start.replace('T', ' ')}).`,
+    );
   return { start, end };
 }
 
@@ -55,10 +59,12 @@ export function timingFor(doc: PlanDocument, benefit: string, group: string): Ti
 }
 
 /** The end of an annual term: 11:59 p.m. on the 364th day after the effective date (E05-F03-S03). */
-export const annualTermEnd = (effectiveDate: string): string => `${addDays(effectiveDate, 364)}T23:59`;
+export const annualTermEnd = (effectiveDate: string): string =>
+  `${addDays(effectiveDate, 364)}T23:59`;
 
 /** The review period ends at 11:59 p.m. the given number of days after the purchase date. */
-export const reviewPeriodEnd = (purchasedOn: string, days: number): string => `${addDays(purchasedOn, days)}T23:59`;
+export const reviewPeriodEnd = (purchasedOn: string, days: number): string =>
+  `${addDays(purchasedOn, days)}T23:59`;
 
 export interface BenefitCoverage {
   start: string;
@@ -81,11 +87,19 @@ export function policyCoverage(
     const b = cat.benefits.find((x) => x.code === code);
     if (!b) throw new CoverageError(`The catalogue has no benefit ${code}.`);
     const t = timingFor(doc, code, b.group);
-    if (!t) throw new CoverageError(`The plan has no coverage timing for ${b.name} (benefit group ${b.group.replace(/_/g, ' ')}), so its cover dates cannot be set.`, `timing.${b.group}`);
+    if (!t)
+      throw new CoverageError(
+        `The plan has no coverage timing for ${b.name} (benefit group ${b.group.replace(/_/g, ' ')}), so its cover dates cannot be set.`,
+        `timing.${b.group}`,
+      );
     perBenefit[code] = coverageWindow(t, trip);
   }
-  const starts = Object.values(perBenefit).map((c) => c.start).sort();
-  const ends = Object.values(perBenefit).map((c) => c.end).sort();
+  const starts = Object.values(perBenefit)
+    .map((c) => c.start)
+    .sort();
+  const ends = Object.values(perBenefit)
+    .map((c) => c.end)
+    .sort();
   if (starts.length === 0) throw new CoverageError('The policy has no benefits.');
   const start = starts[0]!;
   let end = ends.at(-1)!;
@@ -99,14 +113,28 @@ export function policyCoverage(
 }
 
 /** The filed limit of a benefit as the plan's values give it: its maximum amount and basis. */
-export function benefitLimits(doc: PlanDocument, cat: CatalogueDocument, code: string): { maximum: number | null; basis: string | null } {
+export function benefitLimits(
+  doc: PlanDocument,
+  cat: CatalogueDocument,
+  code: string,
+): { maximum: number | null; basis: string | null } {
   const b = cat.benefits.find((x) => x.code === code);
   if (!b?.maximum) return { maximum: null, basis: null };
   const key = (r: { source: string; key: string }) => `${r.source}:${r.key}`;
   const v = doc.values[key(b.maximum.variable)];
-  const basis = b.maximum.basis.kind === 'fixed' ? b.maximum.basis.basis.replace(/_/g, ' ') : (() => {
-    const x = doc.values[key(b.maximum!.basis.kind === 'variable' ? b.maximum!.basis.variable : { source: '', key: '' })];
-    return typeof x === 'string' ? x : null;
-  })();
+  const basis =
+    b.maximum.basis.kind === 'fixed'
+      ? b.maximum.basis.basis.replace(/_/g, ' ')
+      : (() => {
+          const x =
+            doc.values[
+              key(
+                b.maximum!.basis.kind === 'variable'
+                  ? b.maximum!.basis.variable
+                  : { source: '', key: '' },
+              )
+            ];
+          return typeof x === 'string' ? x : null;
+        })();
   return { maximum: typeof v === 'number' ? v : null, basis };
 }

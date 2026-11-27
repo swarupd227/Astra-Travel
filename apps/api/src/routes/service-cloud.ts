@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { CustomerViewRequestSchema, CustomerViewSchema, ResendDocumentsRequestSchema, ResendDocumentsResultSchema } from '@astra/contracts';
+import {
+  CustomerViewRequestSchema,
+  CustomerViewSchema,
+  ResendDocumentsRequestSchema,
+  ResendDocumentsResultSchema,
+} from '@astra/contracts';
 import { conflict, hasPermission, notFound, withTx, writeAudit } from '@astra/platform';
 import type { AppDeps } from '../app';
 import { externalCaseOf } from '../http/service-cloud';
@@ -19,7 +24,8 @@ export const serviceCloudRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, de
       config: { tenancy: 'account', permission: 'policies:read' },
       schema: {
         tags: ['Service Cloud'],
-        summary: 'A customer’s cover, documents and history, found by policy number, name and date of birth, or cardholder reference (E14-F02-S01)',
+        summary:
+          'A customer’s cover, documents and history, found by policy number, name and date of birth, or cardholder reference (E14-F02-S01)',
         description:
           'The caller signs in as the representative, so their role and account scope decide what is returned: certificates need card:read and documents documents:read. At most the ten most recent policies. Every lookup is audited with the kind of detail used and what was returned, not the detail itself.',
         body: CustomerViewRequestSchema,
@@ -34,7 +40,12 @@ export const serviceCloudRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, de
       return withTx(deps.pool, request.ctx, async (tx) => {
         let ids: string[] = [];
         if ('policyNumber' in q) {
-          ids = (await tx.query<{ id: string }>(`SELECT id FROM policies.policies WHERE upper(number) = upper($1)`, [q.policyNumber])).rows.map((r) => r.id);
+          ids = (
+            await tx.query<{ id: string }>(
+              `SELECT id FROM policies.policies WHERE upper(number) = upper($1)`,
+              [q.policyNumber],
+            )
+          ).rows.map((r) => r.id);
         } else if ('lastName' in q) {
           ids = (
             await tx.query<{ id: string }>(
@@ -47,12 +58,23 @@ export const serviceCloudRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, de
         }
         const policies = [];
         for (const id of ids.slice(0, LIMIT)) {
-          policies.push({ policy: await policyView(tx, id), documents: withDocuments ? await issuedDocuments(tx, 'd.policy_id = $1', [id]) : [] });
+          policies.push({
+            policy: await policyView(tx, id),
+            documents: withDocuments ? await issuedDocuments(tx, 'd.policy_id = $1', [id]) : [],
+          });
         }
         const certificates = [];
         if ('cardholderRef' in q && hasPermission(principal, 'card:read')) {
           const rows = (
-            await tx.query<{ certificate_number: string; code: string; name: string; account_id: string; account_ref: string; programme_id: string; eligibility: { productCode: string; from: string; to: string | null }[] }>(
+            await tx.query<{
+              certificate_number: string;
+              code: string;
+              name: string;
+              account_id: string;
+              account_ref: string;
+              programme_id: string;
+              eligibility: { productCode: string; from: string; to: string | null }[];
+            }>(
               `SELECT c.certificate_number, pr.code, pr.name, c.account_id, c.account_ref, c.programme_id,
                       (SELECT coalesce(jsonb_agg(jsonb_build_object('productCode', ep.product_code, 'from', ep.valid_from, 'to', ep.valid_to) ORDER BY ep.valid_from, ep.id), '[]')
                          FROM card.eligibility_periods ep WHERE ep.programme_id = c.programme_id AND ep.account_ref = c.account_ref) AS eligibility
@@ -69,7 +91,9 @@ export const serviceCloudRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, de
               accountId: c.account_id,
               cardholderRef: c.account_ref,
               eligibility: c.eligibility,
-              documents: withDocuments ? await issuedDocuments(tx, 'd.programme_id = $1', [c.programme_id]) : [],
+              documents: withDocuments
+                ? await issuedDocuments(tx, 'd.programme_id = $1', [c.programme_id])
+                : [],
             });
           }
         }
@@ -77,7 +101,17 @@ export const serviceCloudRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, de
           action: 'customer_view.read',
           resourceType: 'customer_view',
           resourceId: policies[0]?.policy.id ?? certificates[0]?.certificateNumber ?? 'none',
-          data: { by: 'policyNumber' in q ? 'policy_number' : 'lastName' in q ? 'name_and_date_of_birth' : 'cardholder_reference', policies: policies.map((p) => p.policy.number), certificates: certificates.map((c) => c.certificateNumber), ...(externalCase ? { externalCase } : {}) },
+          data: {
+            by:
+              'policyNumber' in q
+                ? 'policy_number'
+                : 'lastName' in q
+                  ? 'name_and_date_of_birth'
+                  : 'cardholder_reference',
+            policies: policies.map((p) => p.policy.number),
+            certificates: certificates.map((c) => c.certificateNumber),
+            ...(externalCase ? { externalCase } : {}),
+          },
         });
         return { policies, certificates, truncated: ids.length > LIMIT };
       });
@@ -91,7 +125,8 @@ export const serviceCloudRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, de
       schema: {
         tags: ['Service Cloud'],
         summary: 'Send a policy’s documents again to the address they were sent to (E14-F02-S02)',
-        description: 'Queues the email deliveries on record again; the address cannot be changed here (correct the policy first). Earlier attempts stay on record.',
+        description:
+          'Queues the email deliveries on record again; the address cannot be changed here (correct the policy first). Earlier attempts stay on record.',
         params: z.object({ policyId: z.uuid() }),
         body: ResendDocumentsRequestSchema,
         response: { 202: ResendDocumentsResultSchema, ...commonErrors },
@@ -101,7 +136,12 @@ export const serviceCloudRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, de
       const externalCase = externalCaseOf(request);
       const { documentIds, reason } = request.body;
       const out = await withTx(deps.pool, request.ctx, async (tx) => {
-        const p = (await tx.query<{ account_id: string; number: string }>(`SELECT account_id, number FROM policies.policies WHERE id = $1`, [request.params.policyId])).rows[0];
+        const p = (
+          await tx.query<{ account_id: string; number: string }>(
+            `SELECT account_id, number FROM policies.policies WHERE id = $1`,
+            [request.params.policyId],
+          )
+        ).rows[0];
         if (!p) throw notFound('The policy');
         const rows = (
           await tx.query<{ id: string; status: string; document_id: string; title: string }>(
@@ -112,11 +152,32 @@ export const serviceCloudRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, de
         ).rows;
         const missing = (documentIds ?? []).filter((id) => !rows.some((r) => r.document_id === id));
         if (missing.length) throw notFound('A document emailed for this policy');
-        if (rows.length === 0) throw conflict('None of this policy’s documents has been emailed, so there is nothing to send again.');
+        if (rows.length === 0)
+          throw conflict(
+            'None of this policy’s documents has been emailed, so there is nothing to send again.',
+          );
         const again = rows.filter((r) => r.status !== 'queued');
-        if (again.length) await tx.query(`UPDATE documents.deliveries SET status = 'queued', attempts = 0, next_attempt_at = now(), updated_at = now(), receipt = NULL, receipt_at = NULL, receipt_detail = NULL WHERE id = ANY ($1::uuid[])`, [again.map((r) => r.id)]);
-        await writeAudit(tx, request.ctx, { action: 'documents.resent', resourceType: 'policy', resourceId: request.params.policyId, accountId: p.account_id, reason, data: { number: p.number, documents: again.map((r) => r.document_id), ...(externalCase ? { externalCase } : {}) } });
-        return { queued: again.map((r) => ({ documentId: r.document_id, title: r.title })), alreadyQueued: rows.length - again.length };
+        if (again.length)
+          await tx.query(
+            `UPDATE documents.deliveries SET status = 'queued', attempts = 0, next_attempt_at = now(), updated_at = now(), receipt = NULL, receipt_at = NULL, receipt_detail = NULL WHERE id = ANY ($1::uuid[])`,
+            [again.map((r) => r.id)],
+          );
+        await writeAudit(tx, request.ctx, {
+          action: 'documents.resent',
+          resourceType: 'policy',
+          resourceId: request.params.policyId,
+          accountId: p.account_id,
+          reason,
+          data: {
+            number: p.number,
+            documents: again.map((r) => r.document_id),
+            ...(externalCase ? { externalCase } : {}),
+          },
+        });
+        return {
+          queued: again.map((r) => ({ documentId: r.document_id, title: r.title })),
+          alreadyQueued: rows.length - again.length,
+        };
       });
       return reply.code(202).send(out);
     },

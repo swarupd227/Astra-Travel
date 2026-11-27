@@ -57,7 +57,9 @@ export function locatePage(label: string, pages: PageText[]): number | null {
   const needle = norm(label);
   const hits = pages.filter((p) => norm(p.text).includes(needle));
   // A label such as "…-1" is also contained in "…-10": prefer a page where it is followed by a non-digit.
-  const exact = hits.filter((p) => new RegExp(`${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\d)`).test(norm(p.text)));
+  const exact = hits.filter((p) =>
+    new RegExp(`${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\d)`).test(norm(p.text)),
+  );
   if (exact.length === 1) return exact[0]!.page;
   if (exact.length > 1) return null;
   return null;
@@ -67,7 +69,16 @@ export function verifyManualTables(doc: ManualDocument, pages: PageText[]): Tabl
   return doc.tables.map((t) => {
     const documentPage = locatePage(t.page, pages);
     if (documentPage === null) {
-      return { tableId: t.id, pageLabel: t.page, documentPage: null, rows: t.rows.length, factorsFound: 0, missing: [], ok: false, detail: `The page “${t.page}” was not found as a single page of the document, so this table's factors could not be checked.` };
+      return {
+        tableId: t.id,
+        pageLabel: t.page,
+        documentPage: null,
+        rows: t.rows.length,
+        factorsFound: 0,
+        missing: [],
+        ok: false,
+        detail: `The page “${t.page}” was not found as a single page of the document, so this table's factors could not be checked.`,
+      };
     }
     const found = numbersOn(pages.find((p) => p.page === documentPage)!.text);
     const wanted = [
@@ -88,7 +99,9 @@ export function verifyManualTables(doc: ManualDocument, pages: PageText[]): Tabl
       factorsFound: wanted.length - missing.length,
       missing: missing.map((m) => m.label),
       ok,
-      detail: ok ? `All ${wanted.length} factors are on page ${documentPage}.` : `${missing.length} of ${wanted.length} factors are not on page ${documentPage}.`,
+      detail: ok
+        ? `All ${wanted.length} factors are on page ${documentPage}.`
+        : `${missing.length} of ${wanted.length} factors are not on page ${documentPage}.`,
     };
   });
 }

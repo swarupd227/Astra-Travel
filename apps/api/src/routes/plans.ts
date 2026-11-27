@@ -33,7 +33,13 @@ import {
   writeAudit,
   type Tx,
 } from '@astra/platform';
-import { diffPlans, planToQuote, requiredValues, validatePlan, type PlanVariables } from '@astra/plans';
+import {
+  diffPlans,
+  planToQuote,
+  requiredValues,
+  validatePlan,
+  type PlanVariables,
+} from '@astra/plans';
 import { QuoteRatingError, rateQuote, RatingError } from '@astra/rating';
 import { approvalFor } from '@astra/studio';
 import type { AppDeps } from '../app';
@@ -123,9 +129,23 @@ async function currentVersion(tx: Tx, planId: string): Promise<VersionRow | null
 async function catalogueFor(
   tx: Tx,
   id: string,
-): Promise<{ id: string; status: string; version: number; document: CatalogueDocument; schedule_edition_id: string; policy_edition_id: string | null }> {
+): Promise<{
+  id: string;
+  status: string;
+  version: number;
+  document: CatalogueDocument;
+  schedule_edition_id: string;
+  policy_edition_id: string | null;
+}> {
   const c = (
-    await tx.query<{ id: string; status: string; version: number; document: CatalogueDocument; schedule_edition_id: string; policy_edition_id: string | null }>(
+    await tx.query<{
+      id: string;
+      status: string;
+      version: number;
+      document: CatalogueDocument;
+      schedule_edition_id: string;
+      policy_edition_id: string | null;
+    }>(
       `SELECT id, status, version, document, schedule_edition_id, policy_edition_id FROM studio.benefit_catalogues WHERE id = $1`,
       [id],
     )
@@ -135,32 +155,62 @@ async function catalogueFor(
 }
 
 /** Variables of the approved maps of the plan's schedule and policy editions. */
-export async function variablesFor(tx: Tx, scheduleEditionId: string, policyEditionId: string | null): Promise<PlanVariables> {
-  const { rows } = await tx.query<{ source: string; key: string; label: string; type: VariableType; constraints: Record<string, unknown> }>(
+export async function variablesFor(
+  tx: Tx,
+  scheduleEditionId: string,
+  policyEditionId: string | null,
+): Promise<PlanVariables> {
+  const { rows } = await tx.query<{
+    source: string;
+    key: string;
+    label: string;
+    type: VariableType;
+    constraints: Record<string, unknown>;
+  }>(
     `SELECT CASE WHEN m.edition_id = $1 THEN 'schedule' ELSE 'policy' END AS source, v.key, v.label, v.type, v.constraints
        FROM studio.variable_maps m JOIN studio.form_variables v ON v.map_id = m.id
       WHERE m.status = 'approved' AND (m.edition_id = $1 OR m.edition_id = $2)`,
     [scheduleEditionId, policyEditionId],
   );
-  return new Map(rows.map((r) => [`${r.source}:${r.key}`, { label: r.label, type: r.type, constraints: r.constraints }]));
+  return new Map(
+    rows.map((r) => [
+      `${r.source}:${r.key}`,
+      { label: r.label, type: r.type, constraints: r.constraints },
+    ]),
+  );
 }
 
 /** The plan a version is checked against: account plans keep their state plan's structure, within the base plan's bounds. */
-async function parentFor(tx: Tx, plan: PlanRow): Promise<{ document: PlanDocument; kind: Plan['kind'] } | null> {
+async function parentFor(
+  tx: Tx,
+  plan: PlanRow,
+): Promise<{ document: PlanDocument; kind: Plan['kind'] } | null> {
   if (plan.kind !== 'account' || !plan.parent_plan_id) return null;
   const statePlan = await findPlan(tx, plan.parent_plan_id);
   const stateVersion = await currentVersion(tx, statePlan.id);
   if (!stateVersion) return null;
   const base = statePlan.parent_plan_id ? await currentVersion(tx, statePlan.parent_plan_id) : null;
-  return { kind: 'state', document: { ...stateVersion.document, bounds: base?.document.bounds ?? {} } };
+  return {
+    kind: 'state',
+    document: { ...stateVersion.document, bounds: base?.document.bounds ?? {} },
+  };
 }
 
 async function problemsOf(tx: Tx, plan: PlanRow, v: VersionRow) {
   const cat = await catalogueFor(tx, v.catalogue_id);
   const vars = await variablesFor(tx, plan.schedule_edition_id, plan.policy_edition_id);
-  const problems = validatePlan(v.document, cat.document, vars, await parentFor(tx, plan), plan.kind);
+  const problems = validatePlan(
+    v.document,
+    cat.document,
+    vars,
+    await parentFor(tx, plan),
+    plan.kind,
+  );
   if (plan.term !== 'annual' && v.document.settings.some((s) => s.setting === 'annual_term')) {
-    problems.push({ path: 'settings.annual_term', message: 'The annual term applies only to annual plans.' });
+    problems.push({
+      path: 'settings.annual_term',
+      message: 'The annual term applies only to annual plans.',
+    });
   }
   return problems;
 }
@@ -209,7 +259,12 @@ async function toPlan(tx: Tx, p: PlanRow): Promise<Plan> {
     createdBy: p.created_by,
     createdAt: p.created_at.toISOString(),
     current: current
-      ? { id: current.id, version: current.version, status: current.status, effectiveFrom: current.effective_from }
+      ? {
+          id: current.id,
+          version: current.version,
+          status: current.status,
+          effectiveFrom: current.effective_from,
+        }
       : null,
     draft: draft ? { id: draft.id, version: draft.version } : null,
   };
@@ -225,7 +280,12 @@ interface ManualRow {
   document: ManualDocument;
 }
 
-async function publishedManual(tx: Tx, state: string, benefit: string, date: string): Promise<ManualRow | null> {
+async function publishedManual(
+  tx: Tx,
+  state: string,
+  benefit: string,
+  date: string,
+): Promise<ManualRow | null> {
   return (
     (
       await tx.query<ManualRow>(
@@ -240,15 +300,27 @@ async function publishedManual(tx: Tx, state: string, benefit: string, date: str
 
 async function casesFor(tx: Tx, planId: string): Promise<CaseRow[]> {
   return (
-    await tx.query<CaseRow>(`SELECT id, name, input, expected FROM plans.test_cases WHERE plan_id = $1 ORDER BY name`, [planId])
+    await tx.query<CaseRow>(
+      `SELECT id, name, input, expected FROM plans.test_cases WHERE plan_id = $1 ORDER BY name`,
+      [planId],
+    )
   ).rows;
 }
 
 /** A run is current only for the same cases and the same version content. */
 const runHash = (cases: CaseRow[], v: VersionRow) =>
-  sha({ document: v.document, effectiveFrom: v.effective_from, cases: cases.map((c) => ({ id: c.id, input: c.input, expected: c.expected })) });
+  sha({
+    document: v.document,
+    effectiveFrom: v.effective_from,
+    cases: cases.map((c) => ({ id: c.id, input: c.input, expected: c.expected })),
+  });
 
-async function runCases(tx: Tx, plan: PlanRow, v: VersionRow, cases: CaseRow[]): Promise<PlanTestRun['results']> {
+async function runCases(
+  tx: Tx,
+  plan: PlanRow,
+  v: VersionRow,
+  cases: CaseRow[],
+): Promise<PlanTestRun['results']> {
   const cat = await catalogueFor(tx, v.catalogue_id);
   const results: PlanTestRun['results'] = [];
   for (const c of cases) {
@@ -261,7 +333,10 @@ async function runCases(tx: Tx, plan: PlanRow, v: VersionRow, cases: CaseRow[]):
       }
       const r = rateQuote(q, (benefit) => {
         const m = manuals.get(benefit);
-        if (!m) throw new RatingError(`No published ${benefit} manual is in effect in ${plan.state} on ${q.rateDate}.`);
+        if (!m)
+          throw new RatingError(
+            `No published ${benefit} manual is in effect in ${plan.state} on ${q.rateDate}.`,
+          );
         return m;
       });
       const perBenefit = Object.fromEntries(r.perBenefit.map((b) => [b.benefit, b.total]));
@@ -270,9 +345,11 @@ async function runCases(tx: Tx, plan: PlanRow, v: VersionRow, cases: CaseRow[]):
         misses.push(`policy total ${r.policyTotal}, expected ${c.expected.policyTotal}`);
       }
       for (const [b, want] of Object.entries(c.expected.perBenefit ?? {})) {
-        if (perBenefit[b] !== want) misses.push(`${b} ${perBenefit[b] ?? 'not rated'}, expected ${want}`);
+        if (perBenefit[b] !== want)
+          misses.push(`${b} ${perBenefit[b] ?? 'not rated'}, expected ${want}`);
       }
-      if (r.notRated.length) misses.push(...r.notRated.map((n) => `${n.benefit} not rated: ${n.reasons.join(' ')}`));
+      if (r.notRated.length)
+        misses.push(...r.notRated.map((n) => `${n.benefit} not rated: ${n.reasons.join(' ')}`));
       results.push({
         caseId: c.id,
         name: c.name,
@@ -282,23 +359,40 @@ async function runCases(tx: Tx, plan: PlanRow, v: VersionRow, cases: CaseRow[]):
       });
     } catch (err) {
       const message =
-        err instanceof QuoteRatingError ? err.problems.map((p) => p.message).join(' ') : err instanceof RatingError ? err.message : null;
+        err instanceof QuoteRatingError
+          ? err.problems.map((p) => p.message).join(' ')
+          : err instanceof RatingError
+            ? err.message
+            : null;
       if (message === null) throw err;
-      results.push({ caseId: c.id, name: c.name, passed: false, message: `Not rated: ${message}`, actual: null });
+      results.push({
+        caseId: c.id,
+        name: c.name,
+        passed: false,
+        message: `Not rated: ${message}`,
+        actual: null,
+      });
     }
   }
   return results;
 }
 
 /** Everything that stands between an approved version and publication (ADR 0007), with the links it would publish with. */
-async function readiness(tx: Tx, plan: PlanRow, v: VersionRow): Promise<{ ready: boolean; checks: Check[]; links: Record<string, string> }> {
+async function readiness(
+  tx: Tx,
+  plan: PlanRow,
+  v: VersionRow,
+): Promise<{ ready: boolean; checks: Check[]; links: Record<string, string> }> {
   const checks: Check[] = [];
   const links: Record<string, string> = {};
   const date = v.effective_from;
   checks.push({
     check: 'approved',
     passed: v.status === 'approved' || v.status === 'published',
-    detail: v.status === 'draft' ? 'Waiting for approval by a second person.' : `Approved by ${v.approved_by}.`,
+    detail:
+      v.status === 'draft'
+        ? 'Waiting for approval by a second person.'
+        : `Approved by ${v.approved_by}.`,
   });
   const cat = await catalogueFor(tx, v.catalogue_id);
   checks.push({
@@ -310,7 +404,11 @@ async function readiness(tx: Tx, plan: PlanRow, v: VersionRow): Promise<{ ready:
         : `Benefit catalogue version ${cat.version} is ${cat.status}; start a new draft on the current catalogue.`,
   });
   if (plan.kind === 'base') {
-    checks.push({ check: 'forms_filed', passed: false, detail: 'Base plans are templates: publish a state or account plan made from it.' });
+    checks.push({
+      check: 'forms_filed',
+      passed: false,
+      detail: 'Base plans are templates: publish a state or account plan made from it.',
+    });
     return { ready: false, checks, links };
   }
   const state = plan.state!;
@@ -326,11 +424,14 @@ async function readiness(tx: Tx, plan: PlanRow, v: VersionRow): Promise<{ ready:
     const a = await approvalFor(tx, { itemType: 'form_edition', itemId: e.id }, state, date);
     formsOk &&= a.approved;
     formDetails.push(`${e.form_number} (${e.edition}): ${a.reason}`);
-    links[e.id === plan.schedule_edition_id ? 'schedule' : 'policy'] = `${e.form_number} ed. ${e.edition}`;
+    links[e.id === plan.schedule_edition_id ? 'schedule' : 'policy'] =
+      `${e.form_number} ed. ${e.edition}`;
   }
   checks.push({ check: 'forms_filed', passed: formsOk, detail: formDetails.join(' ') });
 
-  const rated = [...new Set(v.document.benefits.map((b) => b.ratingBenefit).filter((b): b is string => !!b))];
+  const rated = [
+    ...new Set(v.document.benefits.map((b) => b.ratingBenefit).filter((b): b is string => !!b)),
+  ];
   const missing: string[] = [];
   for (const b of rated) {
     const m = await publishedManual(tx, state, b, date);
@@ -351,7 +452,9 @@ async function readiness(tx: Tx, plan: PlanRow, v: VersionRow): Promise<{ ready:
   checks.push({
     check: 'values',
     passed: problems.length === 0,
-    detail: problems.length ? problems.map((p) => p.message).join(' ') : 'Every value is within its filed range.',
+    detail: problems.length
+      ? problems.map((p) => p.message).join(' ')
+      : 'Every value is within its filed range.',
   });
 
   const cases = await casesFor(tx, plan.id);
@@ -362,10 +465,25 @@ async function readiness(tx: Tx, plan: PlanRow, v: VersionRow): Promise<{ ready:
     )
   ).rows[0];
   let tests: { passed: boolean; detail: string };
-  if (!cases.length) tests = { passed: rated.length === 0, detail: rated.length ? 'Add at least one rating test case for this plan.' : 'No rated benefits to test.' };
-  else if (!run) tests = { passed: false, detail: `${cases.length} test cases have not been run against this version.` };
-  else if (run.cases_hash !== runHash(cases, v)) tests = { passed: false, detail: 'The test cases changed since the last run; run them again.' };
-  else tests = { passed: run.passed === run.total, detail: `${run.passed} of ${run.total} test cases pass.` };
+  if (!cases.length)
+    tests = {
+      passed: rated.length === 0,
+      detail: rated.length
+        ? 'Add at least one rating test case for this plan.'
+        : 'No rated benefits to test.',
+    };
+  else if (!run)
+    tests = {
+      passed: false,
+      detail: `${cases.length} test cases have not been run against this version.`,
+    };
+  else if (run.cases_hash !== runHash(cases, v))
+    tests = { passed: false, detail: 'The test cases changed since the last run; run them again.' };
+  else
+    tests = {
+      passed: run.passed === run.total,
+      detail: `${run.passed} of ${run.total} test cases pass.`,
+    };
   checks.push({ check: 'tests', ...tests });
   return { ready: checks.every((c) => c.passed), checks, links };
 }
@@ -390,7 +508,10 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
         summary: 'List plans with their current version and draft',
         querystring: z.object({
           kind: z.enum(['base', 'state', 'account']).optional(),
-          state: z.string().regex(/^[A-Z]{2}$/).optional(),
+          state: z
+            .string()
+            .regex(/^[A-Z]{2}$/)
+            .optional(),
           parentPlanId: z.uuid().optional(),
         }),
         response: { 200: z.object({ items: z.array(PlanSchema) }), ...commonErrors },
@@ -416,9 +537,13 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
       config: { tenancy: 'platform', permission: 'plans:manage' },
       schema: {
         tags: ['Plans'],
-        summary: 'Create a base plan from an approved catalogue, a state variant of a base plan, or an account plan from a published state plan',
+        summary:
+          'Create a base plan from an approved catalogue, a state variant of a base plan, or an account plan from a published state plan',
         body: CreatePlanRequestSchema,
-        response: { 201: z.object({ plan: PlanSchema, draft: PlanVersionSchema }), ...commonErrors },
+        response: {
+          201: z.object({ plan: PlanSchema, draft: PlanVersionSchema }),
+          ...commonErrors,
+        },
       },
     },
     async (request, reply) => {
@@ -436,18 +561,27 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
         let parentId: string | null = null;
         if (b.kind === 'base') {
           const cat = await catalogueFor(tx, b.catalogueId);
-          if (cat.status !== 'approved') throw preconditionFailed(`Catalogue version ${cat.version} is ${cat.status}; plans are built from the approved catalogue.`);
+          if (cat.status !== 'approved')
+            throw preconditionFailed(
+              `Catalogue version ${cat.version} is ${cat.status}; plans are built from the approved catalogue.`,
+            );
           catalogueId = cat.id;
           document = PlanDocumentSchema.parse({});
           term = b.term;
         } else {
           const parent = await findPlan(tx, b.parentPlanId);
           const wanted = b.kind === 'state' ? 'base' : 'state';
-          if (parent.kind !== wanted) throw new AppError('validation_failed', `A ${b.kind} plan is made from a ${wanted} plan.`);
+          if (parent.kind !== wanted)
+            throw new AppError(
+              'validation_failed',
+              `A ${b.kind} plan is made from a ${wanted} plan.`,
+            );
           const from = await currentVersion(tx, parent.id);
           if (!from || (b.kind === 'account' && from.status !== 'published')) {
             throw preconditionFailed(
-              b.kind === 'state' ? `${parent.code} has no approved version yet.` : `${parent.code} has no published version yet.`,
+              b.kind === 'state'
+                ? `${parent.code} has no approved version yet.`
+                : `${parent.code} has no published version yet.`,
             );
           }
           catalogueId = from.catalogue_id;
@@ -458,7 +592,11 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
           if (b.kind === 'state') state = b.state;
           else {
             state = parent.state;
-            if (!(await tx.query(`SELECT 1 FROM platform.accounts WHERE id = $1`, [b.accountId])).rowCount) throw notFound('The account');
+            if (
+              !(await tx.query(`SELECT 1 FROM platform.accounts WHERE id = $1`, [b.accountId]))
+                .rowCount
+            )
+              throw notFound('The account');
             accountId = b.accountId;
           }
         }
@@ -467,7 +605,18 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
           await tx.query<PlanRow>(
             `INSERT INTO plans.plans (code, name, kind, term, parent_plan_id, state, account_id, schedule_edition_id, policy_edition_id, created_by)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-            [b.code, b.name, b.kind, term, parentId, state, accountId, cat.schedule_edition_id, cat.policy_edition_id, subject],
+            [
+              b.code,
+              b.name,
+              b.kind,
+              term,
+              parentId,
+              state,
+              accountId,
+              cat.schedule_edition_id,
+              cat.policy_edition_id,
+              subject,
+            ],
           )
         ).rows[0]!;
         const v = (
@@ -509,7 +658,10 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
     async (request) =>
       withTx(deps.pool, request.ctx, async (tx) => {
         const p = await findPlan(tx, request.params.planId);
-        const { rows } = await tx.query<VersionRow>(`SELECT * FROM plans.plan_versions WHERE plan_id = $1 ORDER BY version DESC`, [p.id]);
+        const { rows } = await tx.query<VersionRow>(
+          `SELECT * FROM plans.plan_versions WHERE plan_id = $1 ORDER BY version DESC`,
+          [p.id],
+        );
         return {
           plan: await toPlan(tx, p),
           versions: rows.map(toVersionSync),
@@ -533,7 +685,14 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
       const v = await withTx(deps.pool, request.ctx, async (tx) => {
         const p = await findPlan(tx, request.params.planId);
         await tx.query(`SELECT pg_advisory_xact_lock(hashtext('plan:' || $1))`, [p.id]);
-        if ((await tx.query(`SELECT 1 FROM plans.plan_versions WHERE plan_id = $1 AND status = 'draft'`, [p.id])).rowCount) {
+        if (
+          (
+            await tx.query(
+              `SELECT 1 FROM plans.plan_versions WHERE plan_id = $1 AND status = 'draft'`,
+              [p.id],
+            )
+          ).rowCount
+        ) {
           throw conflict('This plan already has a draft. Continue that one.');
         }
         const from = await currentVersion(tx, p.id);
@@ -545,12 +704,24 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
             [p.schedule_edition_id],
           )
         ).rows[0];
-        const next = (await tx.query<{ n: number }>(`SELECT max(version) + 1 AS n FROM plans.plan_versions WHERE plan_id = $1`, [p.id])).rows[0]!.n;
+        const next = (
+          await tx.query<{ n: number }>(
+            `SELECT max(version) + 1 AS n FROM plans.plan_versions WHERE plan_id = $1`,
+            [p.id],
+          )
+        ).rows[0]!.n;
         const row = (
           await tx.query<VersionRow>(
             `INSERT INTO plans.plan_versions (plan_id, version, effective_from, catalogue_id, document, contributors, created_by)
              VALUES ($1, $2, $3, $4, $5, ARRAY[$6], $6) RETURNING *`,
-            [p.id, next, request.body.effectiveFrom, cat?.id ?? from.catalogue_id, JSON.stringify(from.document), request.ctx.principal.subject],
+            [
+              p.id,
+              next,
+              request.body.effectiveFrom,
+              cat?.id ?? from.catalogue_id,
+              JSON.stringify(from.document),
+              request.ctx.principal.subject,
+            ],
           )
         ).rows[0]!;
         await writeAudit(tx, request.ctx, {
@@ -571,7 +742,8 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
       config: { tenancy: 'platform', permission: 'plans:read' },
       schema: {
         tags: ['Plans'],
-        summary: 'A plan version with its document; drafts list their problems against the current variable maps',
+        summary:
+          'A plan version with its document; drafts list their problems against the current variable maps',
         params: versionParams,
         response: { 200: PlanVersionSchema, ...commonErrors },
       },
@@ -589,8 +761,10 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
       config: { tenancy: 'platform', permission: 'plans:manage' },
       schema: {
         tags: ['Plans'],
-        summary: 'Save a draft (the problems are returned; a draft with problems cannot be approved)',
-        description: 'A value outside its filed range is refused at once, with the range in the message; other problems (missing values, upgrades not offered) are listed for the builder to finish.',
+        summary:
+          'Save a draft (the problems are returned; a draft with problems cannot be approved)',
+        description:
+          'A value outside its filed range is refused at once, with the range in the message; other problems (missing values, upgrades not offered) are listed for the builder to finish.',
         params: versionParams,
         body: z.object({ document: PlanDocumentSchema, effectiveFrom: z.iso.date().optional() }),
         response: { 200: PlanVersionSchema, ...commonErrors },
@@ -599,13 +773,24 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
     async (request) =>
       withTx(deps.pool, request.ctx, async (tx) => {
         const v = await findVersion(tx, request.params.versionId, true);
-        if (v.status !== 'draft') throw conflict(`Version ${v.version} is ${v.status} and cannot change. Start a new draft.`);
+        if (v.status !== 'draft')
+          throw conflict(
+            `Version ${v.version} is ${v.status} and cannot change. Start a new draft.`,
+          );
         const p = await findPlan(tx, v.plan_id);
-        const next = { ...v, document: request.body.document, effective_from: request.body.effectiveFrom ?? v.effective_from };
+        const next = {
+          ...v,
+          document: request.body.document,
+          effective_from: request.body.effectiveFrom ?? v.effective_from,
+        };
         const problems = await problemsOf(tx, p, next);
         // Values outside the filed range or the base plan's bounds are refused as they are entered (E01-F03-S01, S04).
         refuseProblems(
-          problems.filter((x) => /filed range|for account plans|is fixed by the base plan|must be one of|not in the approved variable maps/.test(x.message)),
+          problems.filter((x) =>
+            /filed range|for account plans|is fixed by the base plan|must be one of|not in the approved variable maps/.test(
+              x.message,
+            ),
+          ),
           'values outside what is filed or allowed',
         );
         const subject = request.ctx.principal.subject;
@@ -621,7 +806,10 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
           action: 'plan_version.edited',
           resourceType: 'plan',
           resourceId: p.id,
-          data: { version: v.version, changes: diffPlans(asDiffable(v), asDiffable(row)).changes.length },
+          data: {
+            version: v.version,
+            changes: diffPlans(asDiffable(v), asDiffable(row)).changes.length,
+          },
         });
         return toVersion(tx, p, row);
       }),
@@ -641,11 +829,18 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
     async (request, reply) => {
       await withTx(deps.pool, request.ctx, async (tx) => {
         const v = await findVersion(tx, request.params.versionId, true);
-        if (v.status !== 'draft') throw conflict(`Version ${v.version} is ${v.status} and cannot be discarded.`);
-        if (v.version === 1) throw conflict('The first version of a plan cannot be discarded; edit it instead.');
+        if (v.status !== 'draft')
+          throw conflict(`Version ${v.version} is ${v.status} and cannot be discarded.`);
+        if (v.version === 1)
+          throw conflict('The first version of a plan cannot be discarded; edit it instead.');
         await tx.query(`DELETE FROM plans.test_runs WHERE version_id = $1`, [v.id]);
         await tx.query(`DELETE FROM plans.plan_versions WHERE id = $1`, [v.id]);
-        await writeAudit(tx, request.ctx, { action: 'plan_version.discarded', resourceType: 'plan', resourceId: v.plan_id, data: { version: v.version } });
+        await writeAudit(tx, request.ctx, {
+          action: 'plan_version.discarded',
+          resourceType: 'plan',
+          resourceId: v.plan_id,
+          data: { version: v.version },
+        });
       });
       return reply.code(204).send(null);
     },
@@ -657,7 +852,8 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
       config: { tenancy: 'platform', permission: 'plans:approve' },
       schema: {
         tags: ['Plans'],
-        summary: 'Approve a draft built by someone else (E01-F04-S01); a draft with problems cannot be approved',
+        summary:
+          'Approve a draft built by someone else (E01-F04-S01); a draft with problems cannot be approved',
         params: versionParams,
         body: z.object({ note: z.string().trim().min(5).max(500) }),
         response: { 200: PlanVersionSchema, ...commonErrors },
@@ -669,11 +865,17 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
         if (v.status !== 'draft') throw conflict(`Version ${v.version} is already ${v.status}.`);
         const subject = request.ctx.principal.subject;
         if (v.contributors.includes(subject)) {
-          throw forbidden('A plan version must be approved by someone who did not build or edit it.');
+          throw forbidden(
+            'A plan version must be approved by someone who did not build or edit it.',
+          );
         }
         const p = await findPlan(tx, v.plan_id);
         refuseProblems(await problemsOf(tx, p, v), 'the draft is not complete');
-        const hash = sha({ document: v.document, effectiveFrom: v.effective_from, catalogueId: v.catalogue_id });
+        const hash = sha({
+          document: v.document,
+          effectiveFrom: v.effective_from,
+          catalogueId: v.catalogue_id,
+        });
         const row = (
           await tx.query<VersionRow>(
             `UPDATE plans.plan_versions SET status = 'approved', approved_by = $2, approved_at = now(), approval_note = $3, sha256 = $4
@@ -699,10 +901,15 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
       config: { tenancy: 'platform', permission: 'plans:read' },
       schema: {
         tags: ['Plans'],
-        summary: 'What stands between this version and publication: approval, catalogue, filed forms, rate manuals, values and tests',
+        summary:
+          'What stands between this version and publication: approval, catalogue, filed forms, rate manuals, values and tests',
         params: versionParams,
         response: {
-          200: z.object({ ready: z.boolean(), checks: z.array(PublishCheckSchema), links: z.record(z.string(), z.string()) }),
+          200: z.object({
+            ready: z.boolean(),
+            checks: z.array(PublishCheckSchema),
+            links: z.record(z.string(), z.string()),
+          }),
           ...commonErrors,
         },
       },
@@ -720,7 +927,8 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
       config: { tenancy: 'platform', permission: 'plans:approve' },
       schema: {
         tags: ['Plans'],
-        summary: 'Publish an approved state or account plan version; every check must pass (E10-F01-S02)',
+        summary:
+          'Publish an approved state or account plan version; every check must pass (E10-F01-S02)',
         params: versionParams,
         response: { 200: PlanVersionSchema, ...commonErrors },
       },
@@ -729,7 +937,8 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
       withTx(deps.pool, request.ctx, async (tx) => {
         const v = await findVersion(tx, request.params.versionId, true);
         const p = await findPlan(tx, v.plan_id);
-        if (v.status !== 'approved') throw conflict(`Only an approved version can be published; this one is ${v.status}.`);
+        if (v.status !== 'approved')
+          throw conflict(`Only an approved version can be published; this one is ${v.status}.`);
         const r = await readiness(tx, p, v);
         const failed = r.checks.filter((c) => !c.passed);
         if (failed.length) {
@@ -758,7 +967,9 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
           ).rows[0]!;
         } catch (err) {
           if ((err as { code?: string }).code === '23P01') {
-            throw conflict(`Another published version of ${p.code} already covers ${v.effective_from}.`);
+            throw conflict(
+              `Another published version of ${p.code} already covers ${v.effective_from}.`,
+            );
           }
           throw err;
         }
@@ -793,7 +1004,8 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
       config: { tenancy: 'platform', permission: 'plans:read' },
       schema: {
         tags: ['Plans'],
-        summary: 'What changed between two versions of a plan, or between a plan and the plan it comes from (E01-F04-S02)',
+        summary:
+          'What changed between two versions of a plan, or between a plan and the plan it comes from (E01-F04-S02)',
         params: versionParams,
         querystring: z.object({ with: z.uuid() }),
         response: { 200: PlanDiffSchema, ...commonErrors },
@@ -804,9 +1016,13 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
         // Versions not yet published are compared with the forms and manuals they would be published with.
         const side = async (id: string) => {
           const v = await findVersion(tx, id);
-          if (v.status === 'published' || v.status === 'superseded' || v.status === 'withdrawn') return asDiffable(v);
+          if (v.status === 'published' || v.status === 'superseded' || v.status === 'withdrawn')
+            return asDiffable(v);
           const plan = await findPlan(tx, v.plan_id);
-          return { ...asDiffable(v), links: plan.kind === 'base' ? {} : (await readiness(tx, plan, v)).links };
+          return {
+            ...asDiffable(v),
+            links: plan.kind === 'base' ? {} : (await readiness(tx, plan, v)).links,
+          };
         };
         return diffPlans(await side(request.query.with), await side(request.params.versionId));
       }),
@@ -822,7 +1038,14 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
         response: {
           200: z.object({
             items: z.array(
-              z.object({ id: z.uuid(), version: z.number().int(), formNumber: z.string(), edition: z.string(), title: z.string(), benefits: z.number().int() }),
+              z.object({
+                id: z.uuid(),
+                version: z.number().int(),
+                formNumber: z.string(),
+                edition: z.string(),
+                title: z.string(),
+                benefits: z.number().int(),
+              }),
             ),
           }),
           ...commonErrors,
@@ -831,13 +1054,27 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
     },
     async (request) =>
       withTx(deps.pool, request.ctx, async (tx) => {
-        const { rows } = await tx.query<{ id: string; version: number; form_number: string; edition: string; title: string; document: CatalogueDocument }>(
+        const { rows } = await tx.query<{
+          id: string;
+          version: number;
+          form_number: string;
+          edition: string;
+          title: string;
+          document: CatalogueDocument;
+        }>(
           `SELECT c.id, c.version, e.form_number, e.edition, e.title, c.document
              FROM studio.benefit_catalogues c JOIN studio.form_editions e ON e.id = c.schedule_edition_id
             WHERE c.status = 'approved' ORDER BY e.form_number, e.edition`,
         );
         return {
-          items: rows.map((r) => ({ id: r.id, version: r.version, formNumber: r.form_number, edition: r.edition, title: r.title, benefits: r.document.benefits.length })),
+          items: rows.map((r) => ({
+            id: r.id,
+            version: r.version,
+            formNumber: r.form_number,
+            edition: r.edition,
+            title: r.title,
+            benefits: r.document.benefits.length,
+          })),
         };
       }),
   );
@@ -848,14 +1085,20 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
       config: { tenancy: 'platform', permission: 'plans:read' },
       schema: {
         tags: ['Plans'],
-        summary: 'What the builder offers for this version: the catalogue, the filed variables and, for account plans, the bounds',
+        summary:
+          'What the builder offers for this version: the catalogue, the filed variables and, for account plans, the bounds',
         params: versionParams,
         response: {
           200: z.object({
             catalogue: CatalogueDocumentSchema,
             catalogueVersion: z.number().int(),
             variables: z.array(
-              z.object({ ref: z.string(), label: z.string(), type: z.string(), constraints: z.record(z.string(), z.unknown()) }),
+              z.object({
+                ref: z.string(),
+                label: z.string(),
+                type: z.string(),
+                constraints: z.record(z.string(), z.unknown()),
+              }),
             ),
             required: z.array(z.string()),
             bounds: PlanDocumentSchema.shape.bounds,
@@ -877,7 +1120,10 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
             .map(([ref, x]) => ({ ref, label: x.label, type: x.type, constraints: x.constraints }))
             .sort((a, b) => a.label.localeCompare(b.label)),
           required: requiredValues(v.document, cat.document),
-          bounds: plan.kind === 'base' ? v.document.bounds : ((await parentFor(tx, plan))?.document.bounds ?? {}),
+          bounds:
+            plan.kind === 'base'
+              ? v.document.bounds
+              : ((await parentFor(tx, plan))?.document.bounds ?? {}),
         };
       }),
   );
@@ -911,8 +1157,13 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
         summary: 'Add or replace a rating test case: a quote with the expected totals to the cent',
         params: planParams,
         body: PlanTestCaseSchema.omit({ id: true }).refine(
-          (c) => c.expected.policyTotal !== undefined || Object.keys(c.expected.perBenefit ?? {}).length > 0,
-          { message: 'Give the expected policy total or at least one benefit total.', path: ['expected'] },
+          (c) =>
+            c.expected.policyTotal !== undefined ||
+            Object.keys(c.expected.perBenefit ?? {}).length > 0,
+          {
+            message: 'Give the expected policy total or at least one benefit total.',
+            path: ['expected'],
+          },
         ),
         response: { 201: PlanTestCaseSchema, ...commonErrors },
       },
@@ -920,17 +1171,32 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
     async (request, reply) => {
       const c = await withTx(deps.pool, request.ctx, async (tx) => {
         const p = await findPlan(tx, request.params.planId);
-        if (p.kind === 'base') throw new AppError('validation_failed', 'Base plans are not rated; add test cases to a state or account plan.');
+        if (p.kind === 'base')
+          throw new AppError(
+            'validation_failed',
+            'Base plans are not rated; add test cases to a state or account plan.',
+          );
         const b = request.body;
         const row = (
           await tx.query<CaseRow>(
             `INSERT INTO plans.test_cases (plan_id, name, input, expected, created_by) VALUES ($1, $2, $3, $4, $5)
              ON CONFLICT (plan_id, name) DO UPDATE SET input = EXCLUDED.input, expected = EXCLUDED.expected
              RETURNING id, name, input, expected`,
-            [p.id, b.name, JSON.stringify(b.input), JSON.stringify(b.expected), request.ctx.principal.subject],
+            [
+              p.id,
+              b.name,
+              JSON.stringify(b.input),
+              JSON.stringify(b.expected),
+              request.ctx.principal.subject,
+            ],
           )
         ).rows[0]!;
-        await writeAudit(tx, request.ctx, { action: 'plan_test_case.saved', resourceType: 'plan', resourceId: p.id, data: { name: b.name, expected: b.expected } });
+        await writeAudit(tx, request.ctx, {
+          action: 'plan_test_case.saved',
+          resourceType: 'plan',
+          resourceId: p.id,
+          data: { name: b.name, expected: b.expected },
+        });
         return row;
       });
       return reply.code(201).send(c);
@@ -950,12 +1216,17 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
     },
     async (request, reply) => {
       await withTx(deps.pool, request.ctx, async (tx) => {
-        const r = await tx.query<{ name: string }>(`DELETE FROM plans.test_cases WHERE id = $1 AND plan_id = $2 RETURNING name`, [
-          request.params.caseId,
-          request.params.planId,
-        ]);
+        const r = await tx.query<{ name: string }>(
+          `DELETE FROM plans.test_cases WHERE id = $1 AND plan_id = $2 RETURNING name`,
+          [request.params.caseId, request.params.planId],
+        );
         if (!r.rows[0]) throw notFound('The test case');
-        await writeAudit(tx, request.ctx, { action: 'plan_test_case.removed', resourceType: 'plan', resourceId: request.params.planId, data: { name: r.rows[0].name } });
+        await writeAudit(tx, request.ctx, {
+          action: 'plan_test_case.removed',
+          resourceType: 'plan',
+          resourceId: request.params.planId,
+          data: { name: r.rows[0].name },
+        });
       });
       return reply.code(204).send(null);
     },
@@ -967,7 +1238,8 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
       config: { tenancy: 'platform', permission: 'plans:manage' },
       schema: {
         tags: ['Plans'],
-        summary: 'Rate every test case with this version and the published manuals, and compare to the cent',
+        summary:
+          'Rate every test case with this version and the published manuals, and compare to the cent',
         params: versionParams,
         response: { 201: PlanTestRunSchema, ...commonErrors },
       },
@@ -984,7 +1256,14 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
         const ranAt = (
           await tx.query<{ ran_at: Date }>(
             `INSERT INTO plans.test_runs (version_id, ran_by, total, passed, cases_hash, results) VALUES ($1, $2, $3, $4, $5, $6) RETURNING ran_at`,
-            [v.id, request.ctx.principal.subject, results.length, passed, runHash(cases, v), JSON.stringify(results)],
+            [
+              v.id,
+              request.ctx.principal.subject,
+              results.length,
+              passed,
+              runHash(cases, v),
+              JSON.stringify(results),
+            ],
           )
         ).rows[0]!.ran_at;
         await writeAudit(tx, request.ctx, {
@@ -993,7 +1272,13 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
           resourceId: p.id,
           data: { version: v.version, total: results.length, passed },
         });
-        return { versionId: v.id, ranAt: ranAt.toISOString(), total: results.length, passed, results };
+        return {
+          versionId: v.id,
+          ranAt: ranAt.toISOString(),
+          total: results.length,
+          passed,
+          results,
+        };
       });
       return reply.code(201).send(run);
     },
@@ -1013,13 +1298,25 @@ export const planRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
     async (request) =>
       withTx(deps.pool, request.ctx, async (tx) => {
         const r = (
-          await tx.query<{ version_id: string; ran_at: Date; total: number; passed: number; results: PlanTestRun['results'] }>(
+          await tx.query<{
+            version_id: string;
+            ran_at: Date;
+            total: number;
+            passed: number;
+            results: PlanTestRun['results'];
+          }>(
             `SELECT version_id, ran_at, total, passed, results FROM plans.test_runs WHERE version_id = $1 ORDER BY ran_at DESC LIMIT 1`,
             [request.params.versionId],
           )
         ).rows[0];
         if (!r) throw notFound('A test run');
-        return { versionId: r.version_id, ranAt: r.ran_at.toISOString(), total: r.total, passed: r.passed, results: r.results };
+        return {
+          versionId: r.version_id,
+          ranAt: r.ran_at.toISOString(),
+          total: r.total,
+          passed: r.passed,
+          results: r.results,
+        };
       }),
   );
 };

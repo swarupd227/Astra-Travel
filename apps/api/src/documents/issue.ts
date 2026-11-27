@@ -1,8 +1,31 @@
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
-import { DocumentIssued, type DocumentKind, type PolicyEvent, type PolicySnapshot } from '@astra/contracts';
-import { BUILDER_VERSION, cancellationNotice, changeNotice, filedFormDocument, purchaseConfirmation, renderPdf, toText, type DocModel } from '@astra/documents';
-import { AppError, conflict, notFound, publishEvent, writeAudit, type FileStore, type RequestContext, type Tx } from '@astra/platform';
+import {
+  DocumentIssued,
+  type DocumentKind,
+  type PolicyEvent,
+  type PolicySnapshot,
+} from '@astra/contracts';
+import {
+  BUILDER_VERSION,
+  cancellationNotice,
+  changeNotice,
+  filedFormDocument,
+  purchaseConfirmation,
+  renderPdf,
+  toText,
+  type DocModel,
+} from '@astra/documents';
+import {
+  AppError,
+  conflict,
+  notFound,
+  publishEvent,
+  writeAudit,
+  type FileStore,
+  type RequestContext,
+  type Tx,
+} from '@astra/platform';
 import { project } from '@astra/policies';
 
 /**
@@ -40,27 +63,74 @@ export async function storeDocument(tx: Tx, files: FileStore, input: StoreInput)
   if (input.replaces) {
     await tx.query(
       `UPDATE documents.documents SET status = 'issued', failure = NULL, title = $2, template_id = $3, source = $4, text = $5, file_key = $6, sha256 = $7, size_bytes = $8, issued_at = now() WHERE id = $1`,
-      [id, input.title, input.templateId, input.source, text, stored.key, stored.sha256, stored.sizeBytes],
+      [
+        id,
+        input.title,
+        input.templateId,
+        input.source,
+        text,
+        stored.key,
+        stored.sha256,
+        stored.sizeBytes,
+      ],
     );
   } else {
     await tx.query(
       `INSERT INTO documents.documents (id, account_id, kind, title, policy_id, programme_id, template_id, event_seq, source, version, status, text, file_key, sha256, size_bytes, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'issued', $11, $12, $13, $14, $15)`,
-      [id, input.accountId, input.kind, input.title, input.policyId, input.programmeId, input.templateId, input.eventSeq, input.source, input.version, text, stored.key, stored.sha256, stored.sizeBytes, input.actor],
+      [
+        id,
+        input.accountId,
+        input.kind,
+        input.title,
+        input.policyId,
+        input.programmeId,
+        input.templateId,
+        input.eventSeq,
+        input.source,
+        input.version,
+        text,
+        stored.key,
+        stored.sha256,
+        stored.sizeBytes,
+        input.actor,
+      ],
     );
   }
-  await tx.query(`INSERT INTO documents.deliveries (document_id, account_id, channel, status, delivered_at) VALUES ($1, $2, 'account', 'available', now())`, [id, input.accountId]);
+  await tx.query(
+    `INSERT INTO documents.deliveries (document_id, account_id, channel, status, delivered_at) VALUES ($1, $2, 'account', 'available', now())`,
+    [id, input.accountId],
+  );
   if (input.email) {
-    await tx.query(`INSERT INTO documents.deliveries (document_id, account_id, channel, recipient, status, next_attempt_at) VALUES ($1, $2, 'email', $3, 'queued', now())`, [id, input.accountId, input.email]);
+    await tx.query(
+      `INSERT INTO documents.deliveries (document_id, account_id, channel, recipient, status, next_attempt_at) VALUES ($1, $2, 'email', $3, 'queued', now())`,
+      [id, input.accountId, input.email],
+    );
   }
   return id;
 }
 
-async function recordFailure(tx: Tx, input: Pick<StoreInput, 'accountId' | 'kind' | 'title' | 'policyId' | 'programmeId' | 'eventSeq' | 'actor'>, reason: string): Promise<string> {
+async function recordFailure(
+  tx: Tx,
+  input: Pick<
+    StoreInput,
+    'accountId' | 'kind' | 'title' | 'policyId' | 'programmeId' | 'eventSeq' | 'actor'
+  >,
+  reason: string,
+): Promise<string> {
   return (
     await tx.query<{ id: string }>(
       `INSERT INTO documents.documents (account_id, kind, title, policy_id, programme_id, event_seq, status, failure, created_by) VALUES ($1, $2, $3, $4, $5, $6, 'failed', $7, $8) RETURNING id`,
-      [input.accountId, input.kind, input.title, input.policyId, input.programmeId, input.eventSeq, reason, input.actor],
+      [
+        input.accountId,
+        input.kind,
+        input.title,
+        input.policyId,
+        input.programmeId,
+        input.eventSeq,
+        reason,
+        input.actor,
+      ],
     )
   ).rows[0]!.id;
 }
@@ -72,7 +142,11 @@ export interface IssuedRef {
   failure: string | null;
 }
 
-const TITLES: Record<string, string> = { schedule: 'Schedule', policy: 'Policy', purchase_confirmation: 'Purchase Confirmation' };
+const TITLES: Record<string, string> = {
+  schedule: 'Schedule',
+  policy: 'Policy',
+  purchase_confirmation: 'Purchase Confirmation',
+};
 
 /**
  * The documents a policy has from bind: the purchase confirmation always, and the schedule and the policy form
@@ -85,19 +159,46 @@ export async function issuePolicyDocuments(
   ctx: RequestContext,
   p: { policyId: string; accountId: string; snapshot: PolicySnapshot; planVersionId: string },
 ): Promise<IssuedRef[]> {
-  const plan = (await tx.query<{ policy_edition_id: string | null }>(`SELECT p.policy_edition_id FROM plans.plans p JOIN plans.plan_versions v ON v.plan_id = p.id WHERE v.id = $1`, [p.planVersionId])).rows[0]!;
-  const have = (await tx.query<{ id: string; kind: DocumentKind; status: 'issued' | 'failed' }>(`SELECT id, kind, status FROM documents.documents WHERE policy_id = $1 AND kind IN ('purchase_confirmation', 'schedule', 'policy')`, [p.policyId])).rows;
-  const wanted: DocumentKind[] = ['purchase_confirmation', 'schedule', ...(plan.policy_edition_id ? (['policy'] as const) : [])];
+  const plan = (
+    await tx.query<{ policy_edition_id: string | null }>(
+      `SELECT p.policy_edition_id FROM plans.plans p JOIN plans.plan_versions v ON v.plan_id = p.id WHERE v.id = $1`,
+      [p.planVersionId],
+    )
+  ).rows[0]!;
+  const have = (
+    await tx.query<{ id: string; kind: DocumentKind; status: 'issued' | 'failed' }>(
+      `SELECT id, kind, status FROM documents.documents WHERE policy_id = $1 AND kind IN ('purchase_confirmation', 'schedule', 'policy')`,
+      [p.policyId],
+    )
+  ).rows;
+  const wanted: DocumentKind[] = [
+    'purchase_confirmation',
+    'schedule',
+    ...(plan.policy_edition_id ? (['policy'] as const) : []),
+  ];
   const out: IssuedRef[] = [];
   const actor = ctx.principal.subject;
   // A sandbox account's documents are made but never emailed.
-  const sandbox = (await tx.query<{ sandbox: boolean }>(`SELECT sandbox FROM platform.accounts WHERE id = $1`, [p.accountId])).rows[0]?.sandbox ?? false;
+  const sandbox =
+    (
+      await tx.query<{ sandbox: boolean }>(`SELECT sandbox FROM platform.accounts WHERE id = $1`, [
+        p.accountId,
+      ])
+    ).rows[0]?.sandbox ?? false;
   const email = sandbox ? null : p.snapshot.purchaser.email;
 
   for (const kind of wanted) {
     const existing = have.find((h) => h.kind === kind);
     if (existing?.status === 'issued') continue;
-    const base = { accountId: p.accountId, kind, title: TITLES[kind]!, policyId: p.policyId, programmeId: null, eventSeq: null, actor };
+    const base = {
+      accountId: p.accountId,
+      kind,
+      title: TITLES[kind]!,
+      policyId: p.policyId,
+      programmeId: null,
+      eventSeq: null,
+      actor,
+    };
     let model: DocModel | null = null;
     let templateId: string | null = null;
     let source = `builder ${BUILDER_VERSION}`;
@@ -107,17 +208,29 @@ export async function issuePolicyDocuments(
         model = purchaseConfirmation(p.snapshot);
       } else {
         const t = (
-          await tx.query<{ id: string; version: number; text: string; form_number: string; edition: string }>(
+          await tx.query<{
+            id: string;
+            version: number;
+            text: string;
+            form_number: string;
+            edition: string;
+          }>(
             `SELECT t.id, t.version, t.text, e.form_number, e.edition FROM documents.templates t JOIN studio.form_editions e ON e.id = t.edition_id
               WHERE t.plan_version_id = $1 AND t.kind = $2 AND t.status = 'released'`,
             [p.planVersionId, kind],
           )
         ).rows[0];
-        if (!t) reason = `The plan version has no released ${kind} template. Release one, then issue the documents again.`;
+        if (!t)
+          reason = `The plan version has no released ${kind} template. Release one, then issue the documents again.`;
         else {
           templateId = t.id;
           source = `template v${t.version} · builder ${BUILDER_VERSION}`;
-          model = filedFormDocument(`${p.snapshot.plan.name} ${TITLES[kind]}`, p.snapshot, `${t.form_number} ed. ${t.edition}`, t.text);
+          model = filedFormDocument(
+            `${p.snapshot.plan.name} ${TITLES[kind]}`,
+            p.snapshot,
+            `${t.form_number} ed. ${t.edition}`,
+            t.text,
+          );
         }
       }
     } catch (err) {
@@ -126,13 +239,27 @@ export async function issuePolicyDocuments(
     let ref: IssuedRef;
     if (model) {
       try {
-        const id = await storeDocument(tx, files, { ...base, title: model.title, templateId, source, version: null, model, email, replaces: existing?.id });
+        const id = await storeDocument(tx, files, {
+          ...base,
+          title: model.title,
+          templateId,
+          source,
+          version: null,
+          model,
+          email,
+          replaces: existing?.id,
+        });
         ref = { id, kind, status: 'issued', failure: null };
       } catch (err) {
         if (err instanceof AppError) throw err;
         // Rendering or storing failed; SQL errors have thrown already because they abort the transaction.
         const msg = `The document could not be produced: ${err instanceof Error ? err.message : String(err)}`;
-        ref = { id: existing?.id ?? (await recordFailure(tx, base, msg)), kind, status: 'failed', failure: msg };
+        ref = {
+          id: existing?.id ?? (await recordFailure(tx, base, msg)),
+          kind,
+          status: 'failed',
+          failure: msg,
+        };
       }
     } else if (existing) {
       ref = { id: existing.id, kind, status: 'failed', failure: reason };
@@ -140,7 +267,19 @@ export async function issuePolicyDocuments(
       ref = { id: await recordFailure(tx, base, reason!), kind, status: 'failed', failure: reason };
     }
     out.push(ref);
-    await publishEvent(tx, ctx, DocumentIssued, { documentId: ref.id, kind, policyId: p.policyId, policyNumber: p.snapshot.number, status: ref.status }, { accountId: p.accountId });
+    await publishEvent(
+      tx,
+      ctx,
+      DocumentIssued,
+      {
+        documentId: ref.id,
+        kind,
+        policyId: p.policyId,
+        policyNumber: p.snapshot.number,
+        status: ref.status,
+      },
+      { accountId: p.accountId },
+    );
   }
   if (out.length) {
     await writeAudit(tx, ctx, {
@@ -148,13 +287,24 @@ export async function issuePolicyDocuments(
       resourceType: 'policy',
       resourceId: p.policyId,
       accountId: p.accountId,
-      data: { number: p.snapshot.number, documents: out.map((o) => ({ id: o.id, kind: o.kind, status: o.status })) },
+      data: {
+        number: p.snapshot.number,
+        documents: out.map((o) => ({ id: o.id, kind: o.kind, status: o.status })),
+      },
     });
   }
   return out;
 }
 
-const toEvent = (e: { seq: string | number; type: PolicyEvent['type']; occurred_at: Date; actor: string; actor_name: string | null; reason: string | null; data: Record<string, unknown> }): PolicyEvent => ({
+const toEvent = (e: {
+  seq: string | number;
+  type: PolicyEvent['type'];
+  occurred_at: Date;
+  actor: string;
+  actor_name: string | null;
+  reason: string | null;
+  data: Record<string, unknown>;
+}): PolicyEvent => ({
   seq: Number(e.seq),
   type: e.type,
   occurredAt: e.occurred_at.toISOString(),
@@ -165,21 +315,46 @@ const toEvent = (e: { seq: string | number; type: PolicyEvent['type']; occurred_
 });
 
 export async function loadEvents(tx: Tx, policyId: string): Promise<PolicyEvent[]> {
-  return (await tx.query<Parameters<typeof toEvent>[0]>(`SELECT seq, type, occurred_at, actor, actor_name, reason, data FROM policies.policy_events WHERE policy_id = $1 ORDER BY seq`, [policyId])).rows.map(toEvent);
+  return (
+    await tx.query<Parameters<typeof toEvent>[0]>(
+      `SELECT seq, type, occurred_at, actor, actor_name, reason, data FROM policies.policy_events WHERE policy_id = $1 ORDER BY seq`,
+      [policyId],
+    )
+  ).rows.map(toEvent);
 }
 
 /**
  * The notice for one change to a policy: what changed for a change of details, or the end of cover for a
  * cancellation or expiry (E09-F01-S03). One notice per event.
  */
-export async function issueNotice(tx: Tx, files: FileStore, ctx: RequestContext, policyId: string, eventSeq: number): Promise<IssuedRef> {
-  const pol = (await tx.query<{ id: string; account_id: string }>(`SELECT id, account_id FROM policies.policies WHERE id = $1`, [policyId])).rows[0];
+export async function issueNotice(
+  tx: Tx,
+  files: FileStore,
+  ctx: RequestContext,
+  policyId: string,
+  eventSeq: number,
+): Promise<IssuedRef> {
+  const pol = (
+    await tx.query<{ id: string; account_id: string }>(
+      `SELECT id, account_id FROM policies.policies WHERE id = $1`,
+      [policyId],
+    )
+  ).rows[0];
   if (!pol) throw notFound('The policy');
   const events = await loadEvents(tx, policyId);
   const ev = events.find((e) => e.seq === eventSeq);
   if (!ev) throw notFound('That event of the policy');
-  if (ev.type === 'bound') throw new AppError('validation_failed', 'The purchase confirmation covers the bind; a notice is for a change or a cancellation.');
-  const dup = (await tx.query<{ id: string }>(`SELECT id FROM documents.documents WHERE policy_id = $1 AND event_seq = $2 AND status = 'issued'`, [policyId, eventSeq])).rows[0];
+  if (ev.type === 'bound')
+    throw new AppError(
+      'validation_failed',
+      'The purchase confirmation covers the bind; a notice is for a change or a cancellation.',
+    );
+  const dup = (
+    await tx.query<{ id: string }>(
+      `SELECT id FROM documents.documents WHERE policy_id = $1 AND event_seq = $2 AND status = 'issued'`,
+      [policyId, eventSeq],
+    )
+  ).rows[0];
   if (dup) throw conflict('A notice has already been issued for this event.');
   const before = project(events.filter((e) => e.seq < eventSeq))!;
   const after = project(events.filter((e) => e.seq <= eventSeq))!;
@@ -187,7 +362,11 @@ export async function issueNotice(tx: Tx, files: FileStore, ctx: RequestContext,
   let model: DocModel;
   if (ev.type === 'status_changed') {
     const to = ev.data.to as 'cancelled' | 'expired';
-    if (to !== 'cancelled' && to !== 'expired') throw new AppError('validation_failed', 'Only a cancellation or expiry has a notice of its own.');
+    if (to !== 'cancelled' && to !== 'expired')
+      throw new AppError(
+        'validation_failed',
+        'Only a cancellation or expiry has a notice of its own.',
+      );
     kind = 'cancellation_notice';
     model = cancellationNotice(after.record, ev, to);
   } else {
@@ -205,10 +384,28 @@ export async function issueNotice(tx: Tx, files: FileStore, ctx: RequestContext,
     source: `builder ${BUILDER_VERSION}`,
     version: null,
     model,
-    email: (await tx.query<{ sandbox: boolean }>(`SELECT sandbox FROM platform.accounts WHERE id = $1`, [pol.account_id])).rows[0]?.sandbox ? null : after.record.purchaser.email,
+    email: (
+      await tx.query<{ sandbox: boolean }>(`SELECT sandbox FROM platform.accounts WHERE id = $1`, [
+        pol.account_id,
+      ])
+    ).rows[0]?.sandbox
+      ? null
+      : after.record.purchaser.email,
     actor: ctx.principal.subject,
   });
-  await publishEvent(tx, ctx, DocumentIssued, { documentId: id, kind, policyId, policyNumber: after.record.number, status: 'issued' }, { accountId: pol.account_id });
-  await writeAudit(tx, ctx, { action: 'documents.notice_issued', resourceType: 'policy', resourceId: policyId, accountId: pol.account_id, data: { documentId: id, kind, eventSeq } });
+  await publishEvent(
+    tx,
+    ctx,
+    DocumentIssued,
+    { documentId: id, kind, policyId, policyNumber: after.record.number, status: 'issued' },
+    { accountId: pol.account_id },
+  );
+  await writeAudit(tx, ctx, {
+    action: 'documents.notice_issued',
+    resourceType: 'policy',
+    resourceId: policyId,
+    accountId: pol.account_id,
+    data: { documentId: id, kind, eventSeq },
+  });
   return { id, kind, status: 'issued', failure: null };
 }

@@ -119,7 +119,12 @@ export function rateQuote(q: QuoteRatingRequest, manualFor: ManualResolver): Quo
         continue;
       }
       try {
-        lines.push({ benefit: b.benefit, travellerId: t.id, result: rate(manual, request), request });
+        lines.push({
+          benefit: b.benefit,
+          travellerId: t.id,
+          result: rate(manual, request),
+          request,
+        });
       } catch (err) {
         if (!(err instanceof RatingError)) throw err;
         problems.push({

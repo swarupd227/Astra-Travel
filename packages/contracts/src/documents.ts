@@ -5,7 +5,14 @@ import { z } from 'zod';
 export const TEMPLATE_KINDS = ['schedule', 'policy'] as const;
 export type TemplateKind = (typeof TEMPLATE_KINDS)[number];
 
-export const DOCUMENT_KINDS = ['schedule', 'policy', 'purchase_confirmation', 'change_notice', 'cancellation_notice', 'guide_to_benefits'] as const;
+export const DOCUMENT_KINDS = [
+  'schedule',
+  'policy',
+  'purchase_confirmation',
+  'change_notice',
+  'cancellation_notice',
+  'guide_to_benefits',
+] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 export const DOCUMENT_KIND_LABELS: Record<DocumentKind, string> = {
@@ -35,7 +42,13 @@ export const TemplateSchema = z.object({
   kind: z.enum(TEMPLATE_KINDS),
   version: z.number().int(),
   status: z.enum(['draft', 'released', 'superseded']),
-  form: z.object({ editionId: z.uuid(), formNumber: z.string(), edition: z.string(), mapId: z.uuid(), mapVersion: z.number().int() }),
+  form: z.object({
+    editionId: z.uuid(),
+    formNumber: z.string(),
+    edition: z.string(),
+    mapId: z.uuid(),
+    mapVersion: z.number().int(),
+  }),
   /** The assembled wording, with the plan's values in the filed format. */
   text: z.string(),
   problems: z.array(z.object({ variable: z.string().nullable(), message: z.string() })),
@@ -52,10 +65,20 @@ export const TemplateSchema = z.object({
 });
 export type Template = z.infer<typeof TemplateSchema>;
 
-export const TemplateSummarySchema = TemplateSchema.omit({ text: true, problems: true, removed: true, checks: true });
+export const TemplateSummarySchema = TemplateSchema.omit({
+  text: true,
+  problems: true,
+  removed: true,
+  checks: true,
+});
 
-export const CreateTemplateRequestSchema = z.object({ planVersionId: z.uuid(), kind: z.enum(TEMPLATE_KINDS) });
-export const ReleaseTemplateRequestSchema = z.object({ note: z.string().trim().max(1000).optional() });
+export const CreateTemplateRequestSchema = z.object({
+  planVersionId: z.uuid(),
+  kind: z.enum(TEMPLATE_KINDS),
+});
+export const ReleaseTemplateRequestSchema = z.object({
+  note: z.string().trim().max(1000).optional(),
+});
 
 // ---------------- Issued documents ----------------
 
@@ -97,7 +120,9 @@ export const IssuedDocumentSchema = z.object({
 });
 export type IssuedDocument = z.infer<typeof IssuedDocumentSchema>;
 
-export const IssuedDocumentDetailSchema = IssuedDocumentSchema.extend({ text: z.string().nullable() });
+export const IssuedDocumentDetailSchema = IssuedDocumentSchema.extend({
+  text: z.string().nullable(),
+});
 
 export const FailedDeliverySchema = DocumentDeliverySchema.extend({
   documentId: z.uuid(),
@@ -132,8 +157,18 @@ export type DocumentFinding = z.infer<typeof DocumentFindingSchema>;
 /** What the email provider reports about messages it accepted (E14-F03-S03). */
 export const DeliveryReceiptsSchema = z.object({
   receipts: z
-    .array(z.object({ deliveryId: z.uuid(), status: z.enum(['delivered', 'bounced']), at: z.iso.datetime({ offset: true }), detail: z.string().trim().max(400).optional() }))
+    .array(
+      z.object({
+        deliveryId: z.uuid(),
+        status: z.enum(['delivered', 'bounced']),
+        at: z.iso.datetime({ offset: true }),
+        detail: z.string().trim().max(400).optional(),
+      }),
+    )
     .min(1)
     .max(500),
 });
-export const DeliveryReceiptsResultSchema = z.object({ recorded: z.number().int(), ignored: z.array(z.object({ deliveryId: z.uuid(), reason: z.string() })) });
+export const DeliveryReceiptsResultSchema = z.object({
+  recorded: z.number().int(),
+  ignored: z.array(z.object({ deliveryId: z.uuid(), reason: z.string() })),
+});

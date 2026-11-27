@@ -34,19 +34,32 @@ const GOLDEN = [
   { excerpt: '[ten (10) - fifteen (15)]', type: 'time_period' },
   { excerpt: '[twenty-five percent (25%) – one hundred percent (100%)]', type: 'percentage_range' },
   { excerpt: '[$0-$5,000,000]', type: 'numeric_range' },
-  { excerpt: '[[Optional] Trip Delay maximum [$100-$10,000] per person]', type: 'optional_benefit' },
+  {
+    excerpt: '[[Optional] Trip Delay maximum [$100-$10,000] per person]',
+    type: 'optional_benefit',
+  },
   { excerpt: '[$100-$10,000]', type: 'numeric_range' },
   { excerpt: '[PER PERSON] [PER TRIP]', type: 'limit_basis' },
 ];
 
-test('AG-01 finds every variable of the quoted wording (live model)', async ({ page, isMobile }) => {
-  test.skip(isMobile || !live, 'Needs ANTHROPIC_API_KEY, AGENTS_LIVE=true and an approved AG-01 version');
+test('AG-01 finds every variable of the quoted wording (live model)', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(
+    isMobile || !live,
+    'Needs ANTHROPIC_API_KEY, AGENTS_LIVE=true and an approved AG-01 version',
+  );
   test.setTimeout(900_000);
   const run = Date.now().toString(36);
   await signIn(page, 'compliance.officer', '/forms');
   await page.getByRole('button', { name: 'Load edition' }).click();
   const load = page.getByRole('dialog', { name: 'Load a form edition' });
-  await load.getByLabel('Document').setInputFiles({ name: `live_${run}.txt`, mimeType: 'text/plain', buffer: Buffer.from(`${WORDING}\n(run ${run})`) });
+  await load.getByLabel('Document').setInputFiles({
+    name: `live_${run}.txt`,
+    mimeType: 'text/plain',
+    buffer: Buffer.from(`${WORDING}\n(run ${run})`),
+  });
   await load.getByLabel('Form number').fill(`live_${run}`);
   await load.getByLabel('Edition').fill('2026-04');
   await load.getByLabel('Title').fill(`Live agent test ${run}`);
@@ -56,12 +69,27 @@ test('AG-01 finds every variable of the quoted wording (live model)', async ({ p
 
   await signIn(page, 'product.manager', page.url().split('?')[0]!);
   await page.getByRole('button', { name: 'Ask for a proposed map' }).click();
-  await expect(page.getByRole('link', { name: /variables|variable/i }).first()).toBeVisible({ timeout: 600_000 });
-  await page.getByRole('link', { name: /variables|variable/i }).first().click();
-  await expect(page.getByRole('heading', { name: 'Variable map' })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole('link', { name: /variables|variable/i }).first()).toBeVisible({
+    timeout: 600_000,
+  });
+  await page
+    .getByRole('link', { name: /variables|variable/i })
+    .first()
+    .click();
+  await expect(page.getByRole('heading', { name: 'Variable map' })).toBeVisible({
+    timeout: 60_000,
+  });
 
   // Compare what was proposed with the hand-made list: every golden excerpt appears with the right type.
   const rows = await page.getByRole('row').allInnerTexts();
-  const missing = GOLDEN.filter((g) => !rows.some((r) => r.includes(g.excerpt) && r.toLowerCase().includes(g.type.replace(/_/g, ' '))));
-  expect(missing, `Not proposed with the right type: ${missing.map((m) => m.excerpt).join(' | ')}`).toEqual([]);
+  const missing = GOLDEN.filter(
+    (g) =>
+      !rows.some(
+        (r) => r.includes(g.excerpt) && r.toLowerCase().includes(g.type.replace(/_/g, ' ')),
+      ),
+  );
+  expect(
+    missing,
+    `Not proposed with the right type: ${missing.map((m) => m.excerpt).join(' | ')}`,
+  ).toEqual([]);
 });

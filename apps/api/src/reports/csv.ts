@@ -5,7 +5,8 @@
  */
 export function csvCell(value: string | number | null | undefined): string {
   let s = value === null || value === undefined ? '' : String(value);
-  if (/^[=+@\t\r]/.test(s) || (s.startsWith('-') && !/^-\d+(\.\d+)?$/.test(s) && s !== '--')) s = `'${s}`;
+  if (/^[=+@\t\r]/.test(s) || (s.startsWith('-') && !/^-\d+(\.\d+)?$/.test(s) && s !== '--'))
+    s = `'${s}`;
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

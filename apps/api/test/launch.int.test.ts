@@ -16,8 +16,20 @@ const get = async (token: string, states = 'DE') => {
   expect(res.statusCode, res.body).toBe(200);
   return res.json();
 };
-const sign = (token: string, area: string, reportHash: string, decision = 'signed', states = ['DE']) =>
-  send(t, 'POST', '/v1/launch-readiness/signoffs', token, { states, area, decision, reportHash, note: 'Checked the report for the launch.' });
+const sign = (
+  token: string,
+  area: string,
+  reportHash: string,
+  decision = 'signed',
+  states = ['DE'],
+) =>
+  send(t, 'POST', '/v1/launch-readiness/signoffs', token, {
+    states,
+    area,
+    decision,
+    reportHash,
+    note: 'Checked the report for the launch.',
+  });
 
 async function asOwner<T>(fn: (c: pg.Client) => Promise<T>): Promise<T> {
   const c = new pg.Client({ connectionString: requireEnv('TEST_DATABASE_OWNER_URL') });
@@ -39,7 +51,11 @@ beforeAll(async () => {
     actuarial: st.tokens.analyst,
     compliance: st.tokens.compliance,
     finance: await t.idp.token({ roles: ['finance_analyst'], sub: 'fin-1', name: 'Finn Finance' }),
-    both: await t.idp.token({ roles: ['product_manager', 'finance_analyst'], sub: 'two-hats', name: 'Two Hats' }),
+    both: await t.idp.token({
+      roles: ['product_manager', 'finance_analyst'],
+      sub: 'two-hats',
+      name: 'Two Hats',
+    }),
   };
 }, 300_000);
 afterAll(async () => t.close());
@@ -49,12 +65,29 @@ describe('launch readiness (E16-F01-S01)', () => {
     const report = await get(people.compliance, 'DE,NY');
     expect(report.states).toEqual(['DE', 'NY']);
     const [de, ny] = report.byState;
-    expect(ny).toMatchObject({ state: 'NY', ready: false, plans: [], checks: [{ code: 'plan', passed: false }] });
+    expect(ny).toMatchObject({
+      state: 'NY',
+      ready: false,
+      plans: [],
+      checks: [{ code: 'plan', passed: false }],
+    });
     expect(de.plans.length).toBeGreaterThan(0);
     const codes = de.plans[0].checks.map((c: { code: string }) => c.code);
-    expect(codes).toEqual(expect.arrayContaining(['eligibility_rules', 'manual_TCAN', 'parity_TCAN', 'manual_filing_TCAN', 'schedule_template', 'schedule_filing']));
+    expect(codes).toEqual(
+      expect.arrayContaining([
+        'eligibility_rules',
+        'manual_TCAN',
+        'parity_TCAN',
+        'manual_filing_TCAN',
+        'schedule_template',
+        'schedule_filing',
+      ]),
+    );
     for (const code of ['eligibility_rules', 'manual_TCAN', 'parity_TCAN', 'schedule_template']) {
-      expect(de.plans[0].checks.find((c: { code: string }) => c.code === code), code).toMatchObject({ passed: true });
+      expect(
+        de.plans[0].checks.find((c: { code: string }) => c.code === code),
+        code,
+      ).toMatchObject({ passed: true });
     }
     expect(report.ready).toBe(false);
     expect(report.goLiveApproved).toBe(false);
@@ -98,16 +131,29 @@ describe('go-live sign-off (E16-F02-S01)', () => {
     const last = await sign(people.finance, 'finance', h);
     expect(last.statusCode, last.body).toBe(200);
     expect(last.json()).toMatchObject({ goLiveApproved: true });
-    expect(last.json().signoffs.map((s: { area: string; signed: boolean }) => [s.area, s.signed])).toEqual([['product', true], ['actuarial', true], ['compliance', true], ['finance', true]]);
+    expect(
+      last.json().signoffs.map((s: { area: string; signed: boolean }) => [s.area, s.signed]),
+    ).toEqual([
+      ['product', true],
+      ['actuarial', true],
+      ['compliance', true],
+      ['finance', true],
+    ]);
   });
 
   it('can be withdrawn, keeps every decision, and lapses when the report changes', async () => {
     const report = await get(people.compliance);
     const withdrawn = await sign(people.compliance, 'compliance', report.reportHash, 'withdrawn');
     expect(withdrawn.json()).toMatchObject({ goLiveApproved: false });
-    expect((await sign(people.compliance, 'compliance', report.reportHash)).json().goLiveApproved).toBe(true);
+    expect(
+      (await sign(people.compliance, 'compliance', report.reportHash)).json().goLiveApproved,
+    ).toBe(true);
     // A filing is withdrawn: the report changes, so nobody's signature carries over.
-    await asOwner((c) => c.query(`UPDATE compliance.filings SET status = 'withdrawn', effective_to = current_date - 1 WHERE state = 'DE' AND item_type = 'rate_manual'`));
+    await asOwner((c) =>
+      c.query(
+        `UPDATE compliance.filings SET status = 'withdrawn', effective_to = current_date - 1 WHERE state = 'DE' AND item_type = 'rate_manual'`,
+      ),
+    );
     const changed = await get(people.product);
     expect(changed.reportHash).not.toBe(report.reportHash);
     expect(changed).toMatchObject({ ready: false, goLiveApproved: false });

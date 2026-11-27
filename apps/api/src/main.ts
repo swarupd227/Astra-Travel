@@ -32,7 +32,16 @@ const app = await buildApp({
   secrets: SecretBox.fromEnv(),
   files: new LocalFileStore(config.FILE_STORE_DIR),
   ...(config.IDP_ADMIN_URL && config.IDP_ADMIN_CLIENT_ID && config.IDP_ADMIN_CLIENT_SECRET
-    ? { credentials: new KeycloakIssuer({ url: config.IDP_ADMIN_URL, realm: config.IDP_REALM, adminClientId: config.IDP_ADMIN_CLIENT_ID, adminClientSecret: config.IDP_ADMIN_CLIENT_SECRET, audience: config.OIDC_AUDIENCE, partnerGroup: 'astra-partner-developer' }) }
+    ? {
+        credentials: new KeycloakIssuer({
+          url: config.IDP_ADMIN_URL,
+          realm: config.IDP_REALM,
+          adminClientId: config.IDP_ADMIN_CLIENT_ID,
+          adminClientSecret: config.IDP_ADMIN_CLIENT_SECRET,
+          audience: config.OIDC_AUDIENCE,
+          partnerGroup: 'astra-partner-developer',
+        }),
+      }
     : {}),
   people: new PeopleDirectory(pool, logger),
   authenticator: new Authenticator({

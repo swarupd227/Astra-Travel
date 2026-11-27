@@ -48,8 +48,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
     throw new Error(`Invalid worker configuration: ${issues}`);
   }
-  if (parsed.data.BILLING_URL && !parsed.data.BILLING_SIGNING_SECRET) throw new Error('Invalid worker configuration: BILLING_SIGNING_SECRET is required with BILLING_URL.');
-  if (parsed.data.SMTP_URL && !parsed.data.MAIL_FROM) throw new Error('Invalid worker configuration: MAIL_FROM is required with SMTP_URL.');
+  if (parsed.data.BILLING_URL && !parsed.data.BILLING_SIGNING_SECRET)
+    throw new Error(
+      'Invalid worker configuration: BILLING_SIGNING_SECRET is required with BILLING_URL.',
+    );
+  if (parsed.data.SMTP_URL && !parsed.data.MAIL_FROM)
+    throw new Error('Invalid worker configuration: MAIL_FROM is required with SMTP_URL.');
   if (parsed.data.NODE_ENV === 'production' && parsed.data.ALLOW_PRIVATE_WEBHOOK_TARGETS) {
     throw new Error('ALLOW_PRIVATE_WEBHOOK_TARGETS must not be enabled in production.');
   }

@@ -1,5 +1,10 @@
 import { Download, FileSpreadsheet } from 'lucide-react';
-import { BOOKING_COLUMNS, MAX_BOOKINGS_PER_FILE, type Account, type BookingFile } from '@astra/contracts';
+import {
+  BOOKING_COLUMNS,
+  MAX_BOOKINGS_PER_FILE,
+  type Account,
+  type BookingFile,
+} from '@astra/contracts';
 import { api, getMe } from '@/lib/api';
 import { sentenceCase } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
@@ -12,30 +17,48 @@ import { BookingFileForm } from './file-form';
 
 export const metadata = { title: 'Booking files' };
 
-export default async function BookingFilesPage({ searchParams }: { searchParams: Promise<{ accountId?: string }> }) {
+export default async function BookingFilesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ accountId?: string }>;
+}) {
   const me = (await getMe())!;
   if (!me.permissions.includes('quotes:read')) return <AccessDenied permission="quotes:read" />;
   const { accountId } = await searchParams;
   const q = accountId && /^[0-9a-f-]{36}$/i.test(accountId) ? `&accountId=${accountId}` : '';
-  const [files, accounts] = await Promise.all([load(() => api<{ items: BookingFile[] }>(`/v1/booking-files?limit=50${q}`)), load(() => api<{ items: Account[] }>('/v1/accounts?limit=100'))]);
+  const [files, accounts] = await Promise.all([
+    load(() => api<{ items: BookingFile[] }>(`/v1/booking-files?limit=50${q}`)),
+    load(() => api<{ items: Account[] }>('/v1/accounts?limit=100')),
+  ]);
   if (files.error) return <ErrorPanel error={files.error} />;
   const list = accounts.data?.items ?? [];
   const names = new Map(list.map((a) => [a.id, a.name]));
   const canSend = me.permissions.includes('quotes:create');
   return (
     <>
-      <PageHeader eyebrow="Channels" title="Booking files" description={`For accounts without an API. Each booking is quoted and bound through the same rules as the API, and the result file lists every booking as accepted or rejected with its reasons. A file holds at most ${MAX_BOOKINGS_PER_FILE} bookings and cannot be loaded twice.`} />
+      <PageHeader
+        eyebrow="Channels"
+        title="Booking files"
+        description={`For accounts without an API. Each booking is quoted and bound through the same rules as the API, and the result file lists every booking as accepted or rejected with its reasons. A file holds at most ${MAX_BOOKINGS_PER_FILE} bookings and cannot be loaded twice.`}
+      />
       {canSend ? (
         <Card className="mb-6">
           <CardHeader title="Send a file" description={`Columns: ${BOOKING_COLUMNS.join(', ')}.`} />
           <div className="p-5">
-            <BookingFileForm accounts={list.map((a) => ({ id: a.id, name: a.name }))} fixedAccountId={q ? accountId! : null} />
+            <BookingFileForm
+              accounts={list.map((a) => ({ id: a.id, name: a.name }))}
+              fixedAccountId={q ? accountId! : null}
+            />
           </div>
         </Card>
       ) : null}
       <Card>
         {files.data.items.length === 0 ? (
-          <EmptyState icon={<FileSpreadsheet className="size-5" />} title="No files yet" description="Files sent by accounts, or on their behalf, are listed here." />
+          <EmptyState
+            icon={<FileSpreadsheet className="size-5" />}
+            title="No files yet"
+            description="Files sent by accounts, or on their behalf, are listed here."
+          />
         ) : (
           <Table caption="Booking files">
             <THead>
@@ -58,8 +81,20 @@ export default async function BookingFilesPage({ searchParams }: { searchParams:
                   <TD>{f.fileName}</TD>
                   <TD>{names.get(f.accountId) ?? f.accountId.slice(0, 8)}</TD>
                   <TD>
-                    <Badge tone={f.status === 'completed' ? 'success' : f.status === 'rejected' ? 'danger' : 'warning'}>{sentenceCase(f.status)}</Badge>
-                    {f.reason ? <span className="mt-1 block max-w-xs text-xs text-danger">{f.reason}</span> : null}
+                    <Badge
+                      tone={
+                        f.status === 'completed'
+                          ? 'success'
+                          : f.status === 'rejected'
+                            ? 'danger'
+                            : 'warning'
+                      }
+                    >
+                      {sentenceCase(f.status)}
+                    </Badge>
+                    {f.reason ? (
+                      <span className="mt-1 block max-w-xs text-xs text-danger">{f.reason}</span>
+                    ) : null}
                   </TD>
                   <TD className="text-right">{f.bookings}</TD>
                   <TD className="text-right">{f.accepted}</TD>
@@ -69,7 +104,11 @@ export default async function BookingFilesPage({ searchParams }: { searchParams:
                   </TD>
                   <TD>
                     {f.status === 'completed' ? (
-                      <a href={`/api/booking-files/${f.id}/result`} className={buttonClass('ghost', 'sm')} aria-label={`Download the result of ${f.fileName}`}>
+                      <a
+                        href={`/api/booking-files/${f.id}/result`}
+                        className={buttonClass('ghost', 'sm')}
+                        aria-label={`Download the result of ${f.fileName}`}
+                      >
                         <Download aria-hidden className="size-3.5" /> Result
                       </a>
                     ) : null}

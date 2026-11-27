@@ -18,8 +18,16 @@ export async function createPlan(_prev: ActionState, form: FormData): Promise<Ac
     kind === 'base'
       ? { ...common, term: text(form, 'term'), catalogueId: text(form, 'catalogueId') }
       : kind === 'state'
-        ? { ...common, parentPlanId: text(form, 'parentPlanId'), state: text(form, 'state').toUpperCase() }
-        : { ...common, parentPlanId: text(form, 'parentPlanId'), accountId: text(form, 'accountId') };
+        ? {
+            ...common,
+            parentPlanId: text(form, 'parentPlanId'),
+            state: text(form, 'state').toUpperCase(),
+          }
+        : {
+            ...common,
+            parentPlanId: text(form, 'parentPlanId'),
+            accountId: text(form, 'accountId'),
+          };
   let created: { plan: Plan; draft: PlanVersion };
   try {
     created = await api<{ plan: Plan; draft: PlanVersion }>('/v1/plans', { method: 'POST', body });
@@ -39,7 +47,12 @@ export async function saveVersion(_prev: SaveState, form: FormData): Promise<Sav
   try {
     document = JSON.parse(text(form, 'document')) as PlanDocument;
   } catch {
-    return { status: 'error', message: 'The plan could not be read. Reload the page.', fieldErrors: {}, values: {} };
+    return {
+      status: 'error',
+      message: 'The plan could not be read. Reload the page.',
+      fieldErrors: {},
+      values: {},
+    };
   }
   try {
     const saved = await api<PlanVersion>(`/v1/plan-versions/${encodeURIComponent(id)}`, {
@@ -62,7 +75,10 @@ export async function saveVersion(_prev: SaveState, form: FormData): Promise<Sav
 export async function approveVersion(_prev: ActionState, form: FormData): Promise<ActionState> {
   const id = text(form, 'versionId');
   try {
-    await api(`/v1/plan-versions/${encodeURIComponent(id)}/approve`, { method: 'POST', body: { note: text(form, 'note') } });
+    await api(`/v1/plan-versions/${encodeURIComponent(id)}/approve`, {
+      method: 'POST',
+      body: { note: text(form, 'note') },
+    });
   } catch (err) {
     return fromError(err, form);
   }
@@ -99,11 +115,18 @@ export async function startDraft(_prev: ActionState, form: FormData): Promise<Ac
 export async function runTests(_prev: ActionState, form: FormData): Promise<ActionState> {
   const id = text(form, 'versionId');
   try {
-    const run = await api<PlanTestRun>(`/v1/plan-versions/${encodeURIComponent(id)}/test-runs`, { method: 'POST' });
+    const run = await api<PlanTestRun>(`/v1/plan-versions/${encodeURIComponent(id)}/test-runs`, {
+      method: 'POST',
+    });
     revalidatePath(`/plans/versions/${id}`);
     return run.passed === run.total
       ? { status: 'success', message: `All ${run.total} test cases pass.` }
-      : { status: 'error', message: `${run.passed} of ${run.total} test cases pass.`, fieldErrors: {}, values: {} };
+      : {
+          status: 'error',
+          message: `${run.passed} of ${run.total} test cases pass.`,
+          fieldErrors: {},
+          values: {},
+        };
   } catch (err) {
     return fromError(err, form);
   }
@@ -124,7 +147,8 @@ export async function saveTestCase(_prev: ActionState, form: FormData): Promise<
         id: `T${i + 1}`,
         age: optionalNumber(age ?? '') ?? null,
         costPerTraveller: cost ?? '',
-        preExistingWaived: waived === '' || waived === undefined ? null : /^(y|yes|true)$/i.test(waived),
+        preExistingWaived:
+          waived === '' || waived === undefined ? null : /^(y|yes|true)$/i.test(waived),
       };
     });
   const region = text(form, 'destinationRegion');
@@ -162,13 +186,19 @@ export async function saveTestCase(_prev: ActionState, form: FormData): Promise<
     return fromError(err, form);
   }
   revalidatePath(`/plans/${planId}`);
-  return { status: 'success', message: 'Test case saved. Run the tests on the version to check it.' };
+  return {
+    status: 'success',
+    message: 'Test case saved. Run the tests on the version to check it.',
+  };
 }
 
 export async function removeTestCase(_prev: ActionState, form: FormData): Promise<ActionState> {
   const planId = text(form, 'planId');
   try {
-    await api(`/v1/plans/${encodeURIComponent(planId)}/test-cases/${encodeURIComponent(text(form, 'caseId'))}`, { method: 'DELETE' });
+    await api(
+      `/v1/plans/${encodeURIComponent(planId)}/test-cases/${encodeURIComponent(text(form, 'caseId'))}`,
+      { method: 'DELETE' },
+    );
   } catch (err) {
     return fromError(err, form);
   }

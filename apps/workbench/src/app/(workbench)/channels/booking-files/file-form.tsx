@@ -6,7 +6,13 @@ import { Field, FormMessage, Input, Select, SubmitButton } from '@/components/ui
 import { idle } from '@/lib/actions';
 import { sendBookingFile } from './actions';
 
-export function BookingFileForm({ accounts, fixedAccountId }: { accounts: { id: string; name: string }[]; fixedAccountId: string | null }) {
+export function BookingFileForm({
+  accounts,
+  fixedAccountId,
+}: {
+  accounts: { id: string; name: string }[];
+  fixedAccountId: string | null;
+}) {
   const [state, action] = useActionState(sendBookingFile, idle);
   return (
     <form action={action} className="space-y-4">
@@ -26,7 +32,21 @@ export function BookingFileForm({ accounts, fixedAccountId }: { accounts: { id: 
             )}
           </Field>
         )}
-        <Field label="Bookings file" hint="CSV, one row per traveller; rows with the same booking_ref are one booking.">{(f) => <Input id={f.id} name="file" type="file" accept=".csv,text/csv,text/plain" required aria-describedby={f.describedBy} />}</Field>
+        <Field
+          label="Bookings file"
+          hint="CSV, one row per traveller; rows with the same booking_ref are one booking."
+        >
+          {(f) => (
+            <Input
+              id={f.id}
+              name="file"
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              required
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
       </div>
       <FormMessage state={state} />
       <SubmitButton pendingLabel="Processing the bookings…">

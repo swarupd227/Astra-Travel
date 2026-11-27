@@ -109,4 +109,3 @@ jobs:
           docker build -f infra/docker/Dockerfile --target worker -t astra-worker:ci .
       - name: Build the workbench image
         run: docker build -f infra/docker/Dockerfile --target workbench --build-arg OIDC_ISSUER=https://login.example.invalid/v2.0 -t astra-workbench:ci .
-

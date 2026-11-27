@@ -12,12 +12,21 @@ import { LocalTime } from '@/components/ui/time';
 
 export const metadata = { title: 'Agent changes' };
 
-export default async function AgentSamplePage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
+export default async function AgentSamplePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ days?: string }>;
+}) {
   const me = (await getMe())!;
-  if (!me.permissions.includes('servicing:review')) return <AccessDenied permission="servicing:review" />;
+  if (!me.permissions.includes('servicing:review'))
+    return <AccessDenied permission="servicing:review" />;
   const { days } = await searchParams;
   const window = days && /^\d{1,2}$/.test(days) ? Number(days) : 7;
-  const res = await load(() => api<{ total: number; items: z.infer<typeof AgentSampleItemSchema>[] }>(`/v1/servicing/agent-sample?days=${window}&size=10`));
+  const res = await load(() =>
+    api<{ total: number; items: z.infer<typeof AgentSampleItemSchema>[] }>(
+      `/v1/servicing/agent-sample?days=${window}&size=10`,
+    ),
+  );
   if (res.error) return <ErrorPanel error={res.error} />;
   const { total, items } = res.data;
   return (
@@ -29,7 +38,11 @@ export default async function AgentSamplePage({ searchParams }: { searchParams: 
       />
       <Card>
         {items.length === 0 ? (
-          <EmptyState icon={<Bot className="size-5" />} title="Nothing to review" description="The servicing agent has made no changes in this period." />
+          <EmptyState
+            icon={<Bot className="size-5" />}
+            title="Nothing to review"
+            description="The servicing agent has made no changes in this period."
+          />
         ) : (
           <Table caption="Sample of the servicing agent’s changes">
             <THead>
@@ -45,13 +58,18 @@ export default async function AgentSamplePage({ searchParams }: { searchParams: 
               {items.map((i) => (
                 <TR key={`${i.policyId}-${i.seq}`}>
                   <TD>
-                    <Link href={`/policies/${i.policyId}`} className="font-medium text-fg hover:text-primary hover:underline">
+                    <Link
+                      href={`/policies/${i.policyId}`}
+                      className="font-medium text-fg hover:text-primary hover:underline"
+                    >
                       {i.policyNumber}
                     </Link>
                   </TD>
                   <TD>
                     {sentenceCase(i.transaction)}
-                    {i.summary ? <span className="block max-w-sm text-xs text-muted">{i.summary}</span> : null}
+                    {i.summary ? (
+                      <span className="block max-w-sm text-xs text-muted">{i.summary}</span>
+                    ) : null}
                   </TD>
                   <TD className="max-w-xs text-sm">{i.reason ?? '—'}</TD>
                   <TD>{i.amount ?? '—'}</TD>

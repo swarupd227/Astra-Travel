@@ -142,13 +142,19 @@ export async function buildApp(deps: AppDeps) {
     },
   });
   // Browsers may call the API from the configured origins and, for the widget, from the origins each account lists.
-  const staticOrigins = new Set((deps.config.CORS_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean));
+  const staticOrigins = new Set(
+    (deps.config.CORS_ORIGINS ?? '')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean),
+  );
   let widgetOrigins = { at: 0, set: new Set<string>() };
   await app.register(cors, {
     origin: (origin, callback) => {
       if (!origin) return callback(null, false);
       if (staticOrigins.has(origin)) return callback(null, true);
-      if (Date.now() - widgetOrigins.at < 30_000) return callback(null, widgetOrigins.set.has(origin));
+      if (Date.now() - widgetOrigins.at < 30_000)
+        return callback(null, widgetOrigins.set.has(origin));
       deps.pool.query<{ origin: string }>('SELECT origin FROM channels.widget_origins()').then(
         (r) => {
           widgetOrigins = { at: Date.now(), set: new Set(r.rows.map((x) => x.origin)) };
@@ -199,7 +205,8 @@ export async function buildApp(deps: AppDeps) {
     max: deps.config.RATE_LIMIT_PER_MINUTE,
     timeWindow: '1 minute',
     keyGenerator: (req) => req.ctx?.principal.subject ?? req.ip,
-    allowList: (req) => req.url.startsWith('/health/') || req.headers[INTERNAL_HEADER] === INTERNAL_KEY,
+    allowList: (req) =>
+      req.url.startsWith('/health/') || req.headers[INTERNAL_HEADER] === INTERNAL_KEY,
   });
 
   // Authorisation runs before body validation, so callers without access learn nothing about request shapes.
@@ -211,7 +218,10 @@ export async function buildApp(deps: AppDeps) {
       throw new AppError('forbidden', 'This operation is only available to Assurant staff.');
     }
     // A browser-held channel token is limited to its one quote.
-    if (principal.quoteId && (request.params as { quoteId?: string } | undefined)?.quoteId !== principal.quoteId) {
+    if (
+      principal.quoteId &&
+      (request.params as { quoteId?: string } | undefined)?.quoteId !== principal.quoteId
+    ) {
       throw new AppError('forbidden', 'This token is limited to one quote.');
     }
     if (config.permission && !hasPermission(principal, config.permission)) {

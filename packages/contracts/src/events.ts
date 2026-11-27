@@ -313,7 +313,15 @@ export const AgentProposalRaised = defineEvent({
   source: 'astra.agents',
   schema: z.object({
     proposalId: z.uuid(),
-    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality', 'account_onboarding', 'feed_mapping', 'feed_rejections']),
+    kind: z.enum([
+      'variable_map',
+      'rate_manual',
+      'parity_explanation',
+      'document_quality',
+      'account_onboarding',
+      'feed_mapping',
+      'feed_rejections',
+    ]),
     agentId: z.string(),
     subjectId: z.uuid(),
     items: z.number().int(),
@@ -326,7 +334,15 @@ export const AgentProposalResolved = defineEvent({
   source: 'astra.agents',
   schema: z.object({
     proposalId: z.uuid(),
-    kind: z.enum(['variable_map', 'rate_manual', 'parity_explanation', 'document_quality', 'account_onboarding', 'feed_mapping', 'feed_rejections']),
+    kind: z.enum([
+      'variable_map',
+      'rate_manual',
+      'parity_explanation',
+      'document_quality',
+      'account_onboarding',
+      'feed_mapping',
+      'feed_rejections',
+    ]),
     agentId: z.string(),
     accepted: z.number().int(),
     corrected: z.number().int(),
@@ -367,21 +383,38 @@ export const DocumentTemplateReleased = defineEvent({
   type: 'DocumentTemplateReleased',
   version: 1,
   source: 'astra.documents',
-  schema: z.object({ templateId: z.uuid(), planCode: z.string(), kind: z.enum(['schedule', 'policy']), version: z.number().int() }),
+  schema: z.object({
+    templateId: z.uuid(),
+    planCode: z.string(),
+    kind: z.enum(['schedule', 'policy']),
+    version: z.number().int(),
+  }),
 });
 
 export const DocumentIssued = defineEvent({
   type: 'DocumentIssued',
   version: 1,
   source: 'astra.documents',
-  schema: z.object({ documentId: z.uuid(), kind: z.string(), policyId: z.uuid().nullable(), policyNumber: z.string().nullable(), status: z.enum(['issued', 'failed']) }),
+  schema: z.object({
+    documentId: z.uuid(),
+    kind: z.string(),
+    policyId: z.uuid().nullable(),
+    policyNumber: z.string().nullable(),
+    status: z.enum(['issued', 'failed']),
+  }),
 });
 
 export const DocumentDeliveryFailed = defineEvent({
   type: 'DocumentDeliveryFailed',
   version: 1,
   source: 'astra.documents',
-  schema: z.object({ deliveryId: z.uuid(), documentId: z.uuid(), channel: z.string(), reason: z.string(), attempts: z.number().int() }),
+  schema: z.object({
+    deliveryId: z.uuid(),
+    documentId: z.uuid(),
+    channel: z.string(),
+    reason: z.string(),
+    attempts: z.number().int(),
+  }),
 });
 
 export const PolicyChanged = defineEvent({
@@ -403,21 +436,39 @@ export const PolicyCancelled = defineEvent({
   type: 'PolicyCancelled',
   version: 1,
   source: 'astra.policies',
-  schema: z.object({ policyId: z.uuid(), number: z.string(), refund: z.string(), basis: z.string(), reason: z.string() }),
+  schema: z.object({
+    policyId: z.uuid(),
+    number: z.string(),
+    refund: z.string(),
+    basis: z.string(),
+    reason: z.string(),
+  }),
 });
 
 export const BillingBatchCreated = defineEvent({
   type: 'BillingBatchCreated',
   version: 1,
   source: 'astra.billing',
-  schema: z.object({ batchId: z.uuid(), number: z.number().int(), count: z.number().int(), premium: z.string(), commission: z.string(), tax: z.string() }),
+  schema: z.object({
+    batchId: z.uuid(),
+    number: z.number().int(),
+    count: z.number().int(),
+    premium: z.string(),
+    commission: z.string(),
+    tax: z.string(),
+  }),
 });
 
 export const BillingBatchConfirmed = defineEvent({
   type: 'BillingBatchConfirmed',
   version: 1,
   source: 'astra.billing',
-  schema: z.object({ batchId: z.uuid(), number: z.number().int(), accepted: z.number().int(), rejected: z.number().int() }),
+  schema: z.object({
+    batchId: z.uuid(),
+    number: z.number().int(),
+    accepted: z.number().int(),
+    rejected: z.number().int(),
+  }),
 });
 
 /** Raised when a batch did not go well: totals differ, billing did not answer, or it was rejected. */
@@ -425,7 +476,12 @@ export const BillingBatchFailed = defineEvent({
   type: 'BillingBatchFailed',
   version: 1,
   source: 'astra.billing',
-  schema: z.object({ batchId: z.uuid(), number: z.number().int(), status: z.enum(['mismatch', 'unconfirmed', 'rejected']), reason: z.string() }),
+  schema: z.object({
+    batchId: z.uuid(),
+    number: z.number().int(),
+    status: z.enum(['mismatch', 'unconfirmed', 'rejected']),
+    reason: z.string(),
+  }),
 });
 
 /** Raised 60 and 30 days before a licence or registration expires (E07-F03-S01). */
@@ -433,7 +489,16 @@ export const LicenceExpiring = defineEvent({
   type: 'LicenceExpiring',
   version: 1,
   source: 'astra.accounts',
-  schema: z.object({ accountId: z.uuid(), licenceId: z.uuid(), kind: z.string(), state: z.string(), number: z.string(), expiresOn: z.string(), daysLeft: z.number().int(), threshold: z.number().int() }),
+  schema: z.object({
+    accountId: z.uuid(),
+    licenceId: z.uuid(),
+    kind: z.string(),
+    state: z.string(),
+    number: z.string(),
+    expiresOn: z.string(),
+    daysLeft: z.number().int(),
+    threshold: z.number().int(),
+  }),
 });
 
 export const EVENT_CATALOGUE = [

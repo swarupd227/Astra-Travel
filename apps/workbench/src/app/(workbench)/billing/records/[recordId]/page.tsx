@@ -6,7 +6,14 @@ import { api, ApiProblem, getMe } from '@/lib/api';
 import { sentenceCase } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
-import { Badge, Card, CardHeader, DescriptionList, Notice, PageHeader } from '@/components/ui/primitives';
+import {
+  Badge,
+  Card,
+  CardHeader,
+  DescriptionList,
+  Notice,
+  PageHeader,
+} from '@/components/ui/primitives';
 import { buttonClass } from '@/components/ui/button';
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
@@ -15,9 +22,16 @@ import { RECORD_TONES } from '../../tones';
 
 export const metadata = { title: 'Premium record' };
 
-const money = (v: string) => `${v.startsWith('-') ? '−' : ''}$${Number(v.replace('-', '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (v: string) =>
+  `${v.startsWith('-') ? '−' : ''}$${Number(v.replace('-', '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export default async function RecordPage({ params, searchParams }: { params: Promise<{ recordId: string }>; searchParams: Promise<{ recalculated?: string }> }) {
+export default async function RecordPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ recordId: string }>;
+  searchParams: Promise<{ recalculated?: string }>;
+}) {
   const me = (await getMe())!;
   if (!me.permissions.includes('billing:read')) return <AccessDenied permission="billing:read" />;
   const { recordId } = await params;
@@ -29,7 +43,10 @@ export default async function RecordPage({ params, searchParams }: { params: Pro
   const r = res.data;
   return (
     <>
-      <Link href="/billing" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg">
+      <Link
+        href="/billing"
+        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg"
+      >
         <ChevronLeft aria-hidden className="size-4" /> Premium records
       </Link>
       <PageHeader
@@ -87,9 +104,24 @@ export default async function RecordPage({ params, searchParams }: { params: Pro
                 { term: 'Premium', value: <span className="font-mono">{money(r.premium)}</span> },
                 { term: 'Charged', value: <span className="font-mono">{money(r.charge)}</span> },
                 { term: 'Refunded', value: <span className="font-mono">{money(r.refund)}</span> },
-                { term: 'Kept by the plan’s rule', value: <span className="font-mono">{money(r.retained)}</span> },
-                { term: 'Commission', value: r.commission ? <span className="font-mono">{money(r.commission.amount)} ({r.commission.rule})</span> : '—' },
-                { term: 'Premium tax', value: r.tax ? <span className="font-mono">{money(r.tax)}</span> : '—' },
+                {
+                  term: 'Kept by the plan’s rule',
+                  value: <span className="font-mono">{money(r.retained)}</span>,
+                },
+                {
+                  term: 'Commission',
+                  value: r.commission ? (
+                    <span className="font-mono">
+                      {money(r.commission.amount)} ({r.commission.rule})
+                    </span>
+                  ) : (
+                    '—'
+                  ),
+                },
+                {
+                  term: 'Premium tax',
+                  value: r.tax ? <span className="font-mono">{money(r.tax)}</span> : '—',
+                },
               ]}
             />
           </div>
@@ -99,25 +131,55 @@ export default async function RecordPage({ params, searchParams }: { params: Pro
           <div className="p-5">
             <DescriptionList
               items={[
-                { term: 'Policy', value: r.policyId ? <Link className="text-primary hover:underline" href={`/policies/${r.policyId}`}>{r.policyNumber}</Link> : '—' },
+                {
+                  term: 'Policy',
+                  value: r.policyId ? (
+                    <Link className="text-primary hover:underline" href={`/policies/${r.policyId}`}>
+                      {r.policyNumber}
+                    </Link>
+                  ) : (
+                    '—'
+                  ),
+                },
                 { term: 'State', value: r.state ?? '—' },
                 { term: 'When', value: <LocalTime iso={r.occurredAt} /> },
-                { term: 'Batch', value: r.batchId ? <Link className="text-primary hover:underline" href="/billing/batches">Open batches</Link> : 'Not yet batched' },
+                {
+                  term: 'Batch',
+                  value: r.batchId ? (
+                    <Link className="text-primary hover:underline" href="/billing/batches">
+                      Open batches
+                    </Link>
+                  ) : (
+                    'Not yet batched'
+                  ),
+                },
                 { term: 'Billing reference', value: r.billingReference ?? '—' },
-                { term: 'Rating worksheets', value: r.worksheetIds.length ? <span className="font-mono text-xs">{r.worksheetIds.length} linked</span> : '—' },
+                {
+                  term: 'Rating worksheets',
+                  value: r.worksheetIds.length ? (
+                    <span className="font-mono text-xs">{r.worksheetIds.length} linked</span>
+                  ) : (
+                    '—'
+                  ),
+                },
               ]}
             />
           </div>
         </Card>
         <Card>
-          <CardHeader title="Billing basis" description="The account’s agreed basis and its calculation, as the quote stored them." />
+          <CardHeader
+            title="Billing basis"
+            description="The account’s agreed basis and its calculation, as the quote stored them."
+          />
           <div className="p-5">
             {r.basis ? (
               <dl className="space-y-1 text-sm">
                 {Object.entries(r.basis).map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-3">
                     <dt className="text-muted">{sentenceCase(k.replace(/([A-Z])/g, ' $1'))}</dt>
-                    <dd className="font-mono text-xs">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</dd>
+                    <dd className="font-mono text-xs">
+                      {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -129,7 +191,10 @@ export default async function RecordPage({ params, searchParams }: { params: Pro
       </div>
 
       <Card className="mb-6">
-        <CardHeader title="By underwriting entity" description="Each benefit’s premium goes to the company named in the plan; the entities always add up to the premium." />
+        <CardHeader
+          title="By underwriting entity"
+          description="Each benefit’s premium goes to the company named in the plan; the entities always add up to the premium."
+        />
         <Table caption="Allocation by entity">
           <THead>
             <tr>
@@ -146,8 +211,12 @@ export default async function RecordPage({ params, searchParams }: { params: Pro
                 <TD>{a.entity}</TD>
                 <TD>{a.arrangement ?? '—'}</TD>
                 <TD className="text-right font-mono text-xs">{money(a.premium)}</TD>
-                <TD className="text-right font-mono text-xs">{a.taxRatePercent === null ? '—' : `${a.taxRatePercent}%`}</TD>
-                <TD className="text-right font-mono text-xs">{a.tax === null ? '—' : money(a.tax)}</TD>
+                <TD className="text-right font-mono text-xs">
+                  {a.taxRatePercent === null ? '—' : `${a.taxRatePercent}%`}
+                </TD>
+                <TD className="text-right font-mono text-xs">
+                  {a.tax === null ? '—' : money(a.tax)}
+                </TD>
               </TR>
             ))}
           </tbody>

@@ -9,12 +9,19 @@ export const metadata = { title: 'Eligibility check' };
 
 export default async function CheckPage() {
   const me = (await getMe())!;
-  if (!me.permissions.includes('underwriting:evaluate')) return <AccessDenied permission="underwriting:evaluate" />;
-  const [states, accounts] = await Promise.all([load(() => api<{ items: Plan[] }>('/v1/plans?kind=state')), load(() => api<{ items: Plan[] }>('/v1/plans?kind=account'))]);
+  if (!me.permissions.includes('underwriting:evaluate'))
+    return <AccessDenied permission="underwriting:evaluate" />;
+  const [states, accounts] = await Promise.all([
+    load(() => api<{ items: Plan[] }>('/v1/plans?kind=state')),
+    load(() => api<{ items: Plan[] }>('/v1/plans?kind=account')),
+  ]);
   if (states.error) return <ErrorPanel error={states.error} />;
   const versions = [...states.data.items, ...(accounts.data?.items ?? [])]
     .filter((p) => p.current)
-    .map((p) => ({ id: p.current!.id, label: `${p.code} · ${p.state} · version ${p.current!.version} (${p.current!.status})` }));
+    .map((p) => ({
+      id: p.current!.id,
+      label: `${p.code} · ${p.state} · version ${p.current!.version} (${p.current!.status})`,
+    }));
   return (
     <>
       <PageHeader

@@ -32,7 +32,12 @@ export function toText(doc: DocModel): string {
 
 /** A filed form's assembled text as paragraphs: blank lines separate them, single line breaks are kept. */
 export function paragraphs(text: string): Block[] {
-  return text
-    .split(/\f/)
-    .flatMap((page, i) => [...(i > 0 ? ([{ kind: 'pagebreak' }] as Block[]) : []), ...page.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean).map((p): Block => ({ kind: 'paragraph', text: p }))]);
+  return text.split(/\f/).flatMap((page, i) => [
+    ...(i > 0 ? ([{ kind: 'pagebreak' }] as Block[]) : []),
+    ...page
+      .split(/\n{2,}/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p): Block => ({ kind: 'paragraph', text: p })),
+  ]);
 }

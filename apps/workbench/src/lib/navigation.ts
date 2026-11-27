@@ -57,7 +57,8 @@ export const NAVIGATION: NavSection[] = [
         label: 'Work queue',
         icon: 'inbox',
         permission: 'tasks:read',
-        description: 'Referrals, agent work and failed deliveries waiting for a person, with timers and owners.',
+        description:
+          'Referrals, agent work and failed deliveries waiting for a person, with timers and owners.',
       },
       {
         href: '/search',
@@ -116,14 +117,16 @@ export const NAVIGATION: NavSection[] = [
         label: 'Launch readiness',
         icon: 'check',
         permission: 'launch:read',
-        description: 'What each state still needs before it can be sold, and the go-live sign-offs.',
+        description:
+          'What each state still needs before it can be sold, and the go-live sign-offs.',
       },
       {
         href: '/compliance/statutory',
         label: 'Statutory data',
         icon: 'table',
         permission: 'reports:statutory',
-        description: 'Premium and policy data by state, entity and benefit, reconciled to the premium records.',
+        description:
+          'Premium and policy data by state, entity and benefit, reconciled to the premium records.',
       },
       {
         href: '/compliance/filings',
@@ -176,7 +179,8 @@ export const NAVIGATION: NavSection[] = [
         label: 'Account reports',
         icon: 'activity',
         permission: 'reports:read',
-        description: 'Sales, premium, take-up, cancellations and refunds by account, segment, state and benefit.',
+        description:
+          'Sales, premium, take-up, cancellations and refunds by account, segment, state and benefit.',
       },
     ],
   },
@@ -188,7 +192,8 @@ export const NAVIGATION: NavSection[] = [
         label: 'Premium records',
         icon: 'table',
         permission: 'billing:read',
-        description: 'A record for every bind, change and cancellation, with commission, tax and entity split.',
+        description:
+          'A record for every bind, change and cancellation, with commission, tax and entity split.',
       },
       {
         href: '/billing/batches',
@@ -202,7 +207,8 @@ export const NAVIGATION: NavSection[] = [
         label: 'Commission and programme rules',
         icon: 'stamp',
         permission: 'billing:read',
-        description: 'How each account’s commission and each card programme’s premium is calculated.',
+        description:
+          'How each account’s commission and each card programme’s premium is calculated.',
       },
     ],
   },
@@ -214,7 +220,8 @@ export const NAVIGATION: NavSection[] = [
         label: 'Document templates',
         icon: 'file',
         permission: 'documents:read',
-        description: 'Schedules and policies assembled from filed forms, checked and released by a second person.',
+        description:
+          'Schedules and policies assembled from filed forms, checked and released by a second person.',
       },
       {
         href: '/documents/failures',
@@ -233,7 +240,8 @@ export const NAVIGATION: NavSection[] = [
         label: 'Eligibility check',
         icon: 'check',
         permission: 'underwriting:evaluate',
-        description: 'Run a case through limits, sanctions screening, duplicate cover, referral rules, the waiver and CFAR.',
+        description:
+          'Run a case through limits, sanctions screening, duplicate cover, referral rules, the waiver and CFAR.',
       },
       {
         href: '/underwriting/plans',

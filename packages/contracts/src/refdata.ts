@@ -92,7 +92,8 @@ export const REFDATA_DATASETS = {
   },
   state_disclosures: {
     name: 'State disclosures',
-    description: 'The disclosure each state requires before a policy is bound. Its version is stored with the traveller’s acknowledgement.',
+    description:
+      'The disclosure each state requires before a policy is bound. Its version is stored with the traveller’s acknowledgement.',
     keyField: 'state',
     expectedSource: 'State filings and Assurant compliance',
     entry: z.object({

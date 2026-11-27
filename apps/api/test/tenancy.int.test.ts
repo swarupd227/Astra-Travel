@@ -93,7 +93,12 @@ beforeEach(async () => {
 /** A well-formed ID that exists nowhere: the cross-account answer must be the same as for a missing resource. */
 const ABSENT = '00000000-0000-4000-8000-0000000000aa';
 
-type Probe = { method: 'GET' | 'POST' | 'PUT' | 'DELETE'; url: () => string; payload?: () => unknown; headers?: Record<string, string> };
+type Probe = {
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  url: () => string;
+  payload?: () => unknown;
+  headers?: Record<string, string>;
+};
 
 /** Partner B attacking partner A's data, one probe per account-scoped route. */
 const PROBES: Record<string, Probe[]> = {
@@ -175,68 +180,255 @@ const PROBES: Record<string, Probe[]> = {
     { method: 'GET', url: () => `/v1/quotes?accountId=${accountA}` },
   ],
   'GET /v1/quotes/:quoteId': [{ method: 'GET', url: () => `/v1/quotes/${ABSENT}` }],
-  'PUT /v1/quotes/:quoteId/selection': [{ method: 'PUT', url: () => `/v1/quotes/${ABSENT}/selection`, payload: () => ({ selection: [] }) }],
+  'PUT /v1/quotes/:quoteId/selection': [
+    {
+      method: 'PUT',
+      url: () => `/v1/quotes/${ABSENT}/selection`,
+      payload: () => ({ selection: [] }),
+    },
+  ],
   'POST /v1/quotes/:quoteId/bind': [
     {
       method: 'POST',
       url: () => `/v1/quotes/${ABSENT}/bind`,
-      payload: () => ({ ableToTravel: true, acknowledgement: { disclosureVersion: 'v1', acknowledgedBy: 'Pat Sample' }, payment: { reference: 'PAY-TENANT-1', amount: '10.00' }, purchaser: { name: 'Pat Sample' } }),
+      payload: () => ({
+        ableToTravel: true,
+        acknowledgement: { disclosureVersion: 'v1', acknowledgedBy: 'Pat Sample' },
+        payment: { reference: 'PAY-TENANT-1', amount: '10.00' },
+        purchaser: { name: 'Pat Sample' },
+      }),
     },
   ],
-  'GET /v1/reports/accounts': [{ method: 'GET', url: () => '/v1/reports/accounts?from=2026-01-01&to=2026-12-31' }, { method: 'GET', url: () => `/v1/reports/accounts?from=2026-01-01&to=2026-12-31&accountId=${accountA}` }],
-  'GET /v1/reports/accounts.csv': [{ method: 'GET', url: () => `/v1/reports/accounts.csv?from=2026-01-01&to=2026-12-31&accountId=${accountA}` }],
-  'POST /v1/service/customer-view': [{ method: 'POST', url: () => '/v1/service/customer-view', payload: () => ({ lastName: 'Sample', dateOfBirth: '1980-05-05' }) }],
-  'POST /v1/policies/:policyId/documents/resend': [{ method: 'POST', url: () => `/v1/policies/${ABSENT}/documents/resend`, payload: () => ({ reason: 'Probe' }) }],
-  'POST /v1/card-programmes/:programmeId/mapped-feeds': [{ method: 'POST', url: () => `/v1/card-programmes/${ABSENT}/mapped-feeds?mode=test&sequence=1&kind=CHANGE&asOfDate=2026-01-01`, payload: () => 'a\nb\n', headers: { 'content-type': 'application/octet-stream' } }],
-  'POST /v1/card-programmes/:programmeId/samples': [{ method: 'POST', url: () => `/v1/card-programmes/${ABSENT}/samples`, payload: () => 'a,b\n1,2\n', headers: { 'content-type': 'text/plain' } }],
-  'GET /v1/card-programmes/:programmeId/samples': [{ method: 'GET', url: () => `/v1/card-programmes/${ABSENT}/samples` }],
-  'GET /v1/card-programmes/:programmeId/samples/:sampleId': [{ method: 'GET', url: () => `/v1/card-programmes/${ABSENT}/samples/${ABSENT}` }],
-  'POST /v1/card-programmes/:programmeId/mapping-preview': [{ method: 'POST', url: () => `/v1/card-programmes/${ABSENT}/mapping-preview`, payload: () => ({ sampleId: ABSENT, document: { delimiter: ',', columns: { accountRef: { column: 'a' }, productCode: { constant: 'X' }, action: { constant: 'A' }, eligibleFrom: { column: 'b', format: 'YYYY-MM-DD' }, eligibleTo: null } } }) }],
-  'GET /v1/card-programmes/:programmeId/mappings': [{ method: 'GET', url: () => `/v1/card-programmes/${ABSENT}/mappings` }],
-  'GET /v1/search': [{ method: 'GET', url: () => '/v1/search?q=ATP' }, { method: 'GET', url: () => '/v1/search?q=Sample' }],
+  'GET /v1/reports/accounts': [
+    { method: 'GET', url: () => '/v1/reports/accounts?from=2026-01-01&to=2026-12-31' },
+    {
+      method: 'GET',
+      url: () => `/v1/reports/accounts?from=2026-01-01&to=2026-12-31&accountId=${accountA}`,
+    },
+  ],
+  'GET /v1/reports/accounts.csv': [
+    {
+      method: 'GET',
+      url: () => `/v1/reports/accounts.csv?from=2026-01-01&to=2026-12-31&accountId=${accountA}`,
+    },
+  ],
+  'POST /v1/service/customer-view': [
+    {
+      method: 'POST',
+      url: () => '/v1/service/customer-view',
+      payload: () => ({ lastName: 'Sample', dateOfBirth: '1980-05-05' }),
+    },
+  ],
+  'POST /v1/policies/:policyId/documents/resend': [
+    {
+      method: 'POST',
+      url: () => `/v1/policies/${ABSENT}/documents/resend`,
+      payload: () => ({ reason: 'Probe' }),
+    },
+  ],
+  'POST /v1/card-programmes/:programmeId/mapped-feeds': [
+    {
+      method: 'POST',
+      url: () =>
+        `/v1/card-programmes/${ABSENT}/mapped-feeds?mode=test&sequence=1&kind=CHANGE&asOfDate=2026-01-01`,
+      payload: () => 'a\nb\n',
+      headers: { 'content-type': 'application/octet-stream' },
+    },
+  ],
+  'POST /v1/card-programmes/:programmeId/samples': [
+    {
+      method: 'POST',
+      url: () => `/v1/card-programmes/${ABSENT}/samples`,
+      payload: () => 'a,b\n1,2\n',
+      headers: { 'content-type': 'text/plain' },
+    },
+  ],
+  'GET /v1/card-programmes/:programmeId/samples': [
+    { method: 'GET', url: () => `/v1/card-programmes/${ABSENT}/samples` },
+  ],
+  'GET /v1/card-programmes/:programmeId/samples/:sampleId': [
+    { method: 'GET', url: () => `/v1/card-programmes/${ABSENT}/samples/${ABSENT}` },
+  ],
+  'POST /v1/card-programmes/:programmeId/mapping-preview': [
+    {
+      method: 'POST',
+      url: () => `/v1/card-programmes/${ABSENT}/mapping-preview`,
+      payload: () => ({
+        sampleId: ABSENT,
+        document: {
+          delimiter: ',',
+          columns: {
+            accountRef: { column: 'a' },
+            productCode: { constant: 'X' },
+            action: { constant: 'A' },
+            eligibleFrom: { column: 'b', format: 'YYYY-MM-DD' },
+            eligibleTo: null,
+          },
+        },
+      }),
+    },
+  ],
+  'GET /v1/card-programmes/:programmeId/mappings': [
+    { method: 'GET', url: () => `/v1/card-programmes/${ABSENT}/mappings` },
+  ],
+  'GET /v1/search': [
+    { method: 'GET', url: () => '/v1/search?q=ATP' },
+    { method: 'GET', url: () => '/v1/search?q=Sample' },
+  ],
   'GET /v1/policies': [
     { method: 'GET', url: () => '/v1/policies' },
     { method: 'GET', url: () => `/v1/policies?accountId=${accountA}` },
   ],
   'GET /v1/policies/:policyId': [{ method: 'GET', url: () => `/v1/policies/${ABSENT}` }],
-  'GET /v1/policies/:policyId/documents': [{ method: 'GET', url: () => `/v1/policies/${ABSENT}/documents` }],
-  'POST /v1/policies/:policyId/documents/issue': [{ method: 'POST', url: () => `/v1/policies/${ABSENT}/documents/issue`, payload: () => ({}) }],
-  'POST /v1/policies/:policyId/notices': [{ method: 'POST', url: () => `/v1/policies/${ABSENT}/notices`, payload: () => ({ eventSeq: 1 }) }],
+  'GET /v1/policies/:policyId/documents': [
+    { method: 'GET', url: () => `/v1/policies/${ABSENT}/documents` },
+  ],
+  'POST /v1/policies/:policyId/documents/issue': [
+    { method: 'POST', url: () => `/v1/policies/${ABSENT}/documents/issue`, payload: () => ({}) },
+  ],
+  'POST /v1/policies/:policyId/notices': [
+    {
+      method: 'POST',
+      url: () => `/v1/policies/${ABSENT}/notices`,
+      payload: () => ({ eventSeq: 1 }),
+    },
+  ],
   'GET /v1/documents/:id': [{ method: 'GET', url: () => `/v1/documents/${ABSENT}` }],
   'GET /v1/documents/:id/file': [{ method: 'GET', url: () => `/v1/documents/${ABSENT}/file` }],
   'GET /v1/document-failures': [{ method: 'GET', url: () => '/v1/document-failures' }],
-  'POST /v1/document-deliveries/:id/retry': [{ method: 'POST', url: () => `/v1/document-deliveries/${ABSENT}/retry`, payload: () => ({}) }],
-  'POST /v1/card-programmes/:programmeId/guides': [{ method: 'POST', url: () => `/v1/card-programmes/${programmeA}/guides`, payload: () => ({ planCode: 'ANY-PLAN' }) }],
-  'GET /v1/card-programmes/:programmeId/guides': [{ method: 'GET', url: () => `/v1/card-programmes/${programmeA}/guides` }],
-  'POST /v1/policies/:policyId/servicing/preview': [{ method: 'POST', url: () => `/v1/policies/${ABSENT}/servicing/preview`, payload: () => ({ type: 'cancel', reason: 'Probe', noLoss: true }) }],
-  'POST /v1/policies/:policyId/servicing': [{ method: 'POST', url: () => `/v1/policies/${ABSENT}/servicing`, payload: () => ({ request: { type: 'cancel', reason: 'Probe', noLoss: true }, confirmAmount: '0.00' }) }],
-  'GET /v1/premium-records': [{ method: 'GET', url: () => '/v1/premium-records' }, { method: 'GET', url: () => `/v1/premium-records?accountId=${accountA}` }],
+  'POST /v1/document-deliveries/:id/retry': [
+    { method: 'POST', url: () => `/v1/document-deliveries/${ABSENT}/retry`, payload: () => ({}) },
+  ],
+  'POST /v1/card-programmes/:programmeId/guides': [
+    {
+      method: 'POST',
+      url: () => `/v1/card-programmes/${programmeA}/guides`,
+      payload: () => ({ planCode: 'ANY-PLAN' }),
+    },
+  ],
+  'GET /v1/card-programmes/:programmeId/guides': [
+    { method: 'GET', url: () => `/v1/card-programmes/${programmeA}/guides` },
+  ],
+  'POST /v1/policies/:policyId/servicing/preview': [
+    {
+      method: 'POST',
+      url: () => `/v1/policies/${ABSENT}/servicing/preview`,
+      payload: () => ({ type: 'cancel', reason: 'Probe', noLoss: true }),
+    },
+  ],
+  'POST /v1/policies/:policyId/servicing': [
+    {
+      method: 'POST',
+      url: () => `/v1/policies/${ABSENT}/servicing`,
+      payload: () => ({
+        request: { type: 'cancel', reason: 'Probe', noLoss: true },
+        confirmAmount: '0.00',
+      }),
+    },
+  ],
+  'GET /v1/premium-records': [
+    { method: 'GET', url: () => '/v1/premium-records' },
+    { method: 'GET', url: () => `/v1/premium-records?accountId=${accountA}` },
+  ],
   'GET /v1/premium-records/:id': [{ method: 'GET', url: () => `/v1/premium-records/${ABSENT}` }],
-  'GET /v1/policies/:policyId/premium-records': [{ method: 'GET', url: () => `/v1/policies/${ABSENT}/premium-records` }],
-  'POST /v1/premium-records/:id/recalculate': [{ method: 'POST', url: () => `/v1/premium-records/${ABSENT}/recalculate`, payload: () => ({}) }],
-  'POST /v1/commission-rules': [{ method: 'POST', url: () => '/v1/commission-rules', payload: () => ({ accountId: accountA, effectiveFrom: '2026-01-01', document: { kind: 'none' } }) }],
-  'GET /v1/commission-rules': [{ method: 'GET', url: () => '/v1/commission-rules' }, { method: 'GET', url: () => `/v1/commission-rules?accountId=${accountA}` }],
-  'POST /v1/commission-rules/:id/approve': [{ method: 'POST', url: () => `/v1/commission-rules/${ABSENT}/approve`, payload: () => ({}) }],
-  'POST /v1/programme-premium-rules': [{ method: 'POST', url: () => '/v1/programme-premium-rules', payload: () => ({ programmeId: programmeA, effectiveFrom: '2026-01-01', rate: '1.0000' }) }],
-  'GET /v1/programme-premium-rules': [{ method: 'GET', url: () => '/v1/programme-premium-rules' }, { method: 'GET', url: () => `/v1/programme-premium-rules?programmeId=${programmeA}` }],
-  'POST /v1/programme-premium-rules/:id/approve': [{ method: 'POST', url: () => `/v1/programme-premium-rules/${ABSENT}/approve`, payload: () => ({}) }],
-  'POST /v1/programme-premium': [{ method: 'POST', url: () => '/v1/programme-premium', payload: () => ({ programmeId: programmeA, month: '2026-03' }) }],
-  'GET /v1/accounts/:id/profile': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/profile` }],
-  'GET /v1/accounts/:id/onboarding': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/onboarding` }],
-  'GET /v1/accounts/:id/segment-changes': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/segment-changes` }],
+  'GET /v1/policies/:policyId/premium-records': [
+    { method: 'GET', url: () => `/v1/policies/${ABSENT}/premium-records` },
+  ],
+  'POST /v1/premium-records/:id/recalculate': [
+    { method: 'POST', url: () => `/v1/premium-records/${ABSENT}/recalculate`, payload: () => ({}) },
+  ],
+  'POST /v1/commission-rules': [
+    {
+      method: 'POST',
+      url: () => '/v1/commission-rules',
+      payload: () => ({
+        accountId: accountA,
+        effectiveFrom: '2026-01-01',
+        document: { kind: 'none' },
+      }),
+    },
+  ],
+  'GET /v1/commission-rules': [
+    { method: 'GET', url: () => '/v1/commission-rules' },
+    { method: 'GET', url: () => `/v1/commission-rules?accountId=${accountA}` },
+  ],
+  'POST /v1/commission-rules/:id/approve': [
+    { method: 'POST', url: () => `/v1/commission-rules/${ABSENT}/approve`, payload: () => ({}) },
+  ],
+  'POST /v1/programme-premium-rules': [
+    {
+      method: 'POST',
+      url: () => '/v1/programme-premium-rules',
+      payload: () => ({ programmeId: programmeA, effectiveFrom: '2026-01-01', rate: '1.0000' }),
+    },
+  ],
+  'GET /v1/programme-premium-rules': [
+    { method: 'GET', url: () => '/v1/programme-premium-rules' },
+    { method: 'GET', url: () => `/v1/programme-premium-rules?programmeId=${programmeA}` },
+  ],
+  'POST /v1/programme-premium-rules/:id/approve': [
+    {
+      method: 'POST',
+      url: () => `/v1/programme-premium-rules/${ABSENT}/approve`,
+      payload: () => ({}),
+    },
+  ],
+  'POST /v1/programme-premium': [
+    {
+      method: 'POST',
+      url: () => '/v1/programme-premium',
+      payload: () => ({ programmeId: programmeA, month: '2026-03' }),
+    },
+  ],
+  'GET /v1/accounts/:id/profile': [
+    { method: 'GET', url: () => `/v1/accounts/${accountA}/profile` },
+  ],
+  'GET /v1/accounts/:id/onboarding': [
+    { method: 'GET', url: () => `/v1/accounts/${accountA}/onboarding` },
+  ],
+  'GET /v1/accounts/:id/segment-changes': [
+    { method: 'GET', url: () => `/v1/accounts/${accountA}/segment-changes` },
+  ],
   'GET /v1/segment-changes': [{ method: 'GET', url: () => '/v1/segment-changes' }],
-  'GET /v1/accounts/:id/collected-variables': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/collected-variables` }],
-  'GET /v1/licences': [{ method: 'GET', url: () => '/v1/licences' }, { method: 'GET', url: () => `/v1/licences?accountId=${accountA}` }],
-  'GET /v1/accounts/:id/documents': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/documents` }],
-  'GET /v1/account-documents/:id/text': [{ method: 'GET', url: () => `/v1/account-documents/${ABSENT}/text` }],
-  'GET /v1/accounts/:id/sandbox': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/sandbox` }],
-  'GET /v1/accounts/:id/channels': [{ method: 'GET', url: () => `/v1/accounts/${accountA}/channels` }],
-  'POST /v1/quotes/:quoteId/widget-sessions': [{ method: 'POST', url: () => `/v1/quotes/${ABSENT}/widget-sessions`, payload: () => ({}) }],
+  'GET /v1/accounts/:id/collected-variables': [
+    { method: 'GET', url: () => `/v1/accounts/${accountA}/collected-variables` },
+  ],
+  'GET /v1/licences': [
+    { method: 'GET', url: () => '/v1/licences' },
+    { method: 'GET', url: () => `/v1/licences?accountId=${accountA}` },
+  ],
+  'GET /v1/accounts/:id/documents': [
+    { method: 'GET', url: () => `/v1/accounts/${accountA}/documents` },
+  ],
+  'GET /v1/account-documents/:id/text': [
+    { method: 'GET', url: () => `/v1/account-documents/${ABSENT}/text` },
+  ],
+  'GET /v1/accounts/:id/sandbox': [
+    { method: 'GET', url: () => `/v1/accounts/${accountA}/sandbox` },
+  ],
+  'GET /v1/accounts/:id/channels': [
+    { method: 'GET', url: () => `/v1/accounts/${accountA}/channels` },
+  ],
+  'POST /v1/quotes/:quoteId/widget-sessions': [
+    { method: 'POST', url: () => `/v1/quotes/${ABSENT}/widget-sessions`, payload: () => ({}) },
+  ],
   'GET /v1/quotes/:quoteId/offer': [{ method: 'GET', url: () => `/v1/quotes/${ABSENT}/offer` }],
   'GET /v1/quotes/:quoteId/wording': [{ method: 'GET', url: () => `/v1/quotes/${ABSENT}/wording` }],
-  'POST /v1/booking-files': [{ method: 'POST', url: () => `/v1/booking-files?fileName=probe.csv&accountId=${accountA}`, payload: () => 'booking_ref\nX\n', headers: { 'content-type': 'text/csv' } }],
-  'GET /v1/booking-files': [{ method: 'GET', url: () => '/v1/booking-files' }, { method: 'GET', url: () => `/v1/booking-files?accountId=${accountA}` }],
-  'GET /v1/booking-files/:id/result': [{ method: 'GET', url: () => `/v1/booking-files/${ABSENT}/result` }],
+  'POST /v1/booking-files': [
+    {
+      method: 'POST',
+      url: () => `/v1/booking-files?fileName=probe.csv&accountId=${accountA}`,
+      payload: () => 'booking_ref\nX\n',
+      headers: { 'content-type': 'text/csv' },
+    },
+  ],
+  'GET /v1/booking-files': [
+    { method: 'GET', url: () => '/v1/booking-files' },
+    { method: 'GET', url: () => `/v1/booking-files?accountId=${accountA}` },
+  ],
+  'GET /v1/booking-files/:id/result': [
+    { method: 'GET', url: () => `/v1/booking-files/${ABSENT}/result` },
+  ],
 };
 
 describe('route catalogue', () => {
@@ -276,7 +468,9 @@ describe('cross-account access', () => {
           expect(body, route).not.toContain(programmeA);
           expect(body, route).not.toContain(feedA);
         } else {
-          expect([403, 404], `${route} answered ${res.statusCode} ${body.slice(0, 300)}`).toContain(res.statusCode);
+          expect([403, 404], `${route} answered ${res.statusCode} ${body.slice(0, 300)}`).toContain(
+            res.statusCode,
+          );
         }
       }
     }

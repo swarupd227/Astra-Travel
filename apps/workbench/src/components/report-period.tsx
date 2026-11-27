@@ -14,7 +14,11 @@ export function periodFrom(sp: { from?: string; to?: string }): { from: string; 
 
 export function PeriodForm({ from, to, csvHref }: { from: string; to: string; csvHref: string }) {
   return (
-    <form method="get" className="flex flex-wrap items-end gap-3 p-4" aria-label="Choose the period">
+    <form
+      method="get"
+      className="flex flex-wrap items-end gap-3 p-4"
+      aria-label="Choose the period"
+    >
       <label className="text-sm">
         <span className="mb-1 block font-medium text-fg">From</span>
         <Input type="date" name="from" defaultValue={from} required />

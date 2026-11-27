@@ -13,7 +13,14 @@ export interface TotalsInput {
   taxCents: number;
 }
 
-export function emptyTotals(): { count: number; premium: number; charges: number; refunds: number; commission: number; tax: number } {
+export function emptyTotals(): {
+  count: number;
+  premium: number;
+  charges: number;
+  refunds: number;
+  commission: number;
+  tax: number;
+} {
   return { count: 0, premium: 0, charges: 0, refunds: 0, commission: 0, tax: 0 };
 }
 
@@ -28,7 +35,14 @@ export function addToTotals(t: TotalsAccumulator, r: TotalsInput): void {
   t.tax += r.taxCents;
 }
 
-export const totalsOf = (t: TotalsAccumulator): ControlTotals => ({ count: t.count, premium: fromCents(t.premium), charges: fromCents(t.charges), refunds: fromCents(t.refunds), commission: fromCents(t.commission), tax: fromCents(t.tax) });
+export const totalsOf = (t: TotalsAccumulator): ControlTotals => ({
+  count: t.count,
+  premium: fromCents(t.premium),
+  charges: fromCents(t.charges),
+  refunds: fromCents(t.refunds),
+  commission: fromCents(t.commission),
+  tax: fromCents(t.tax),
+});
 
 export interface BatchHeader {
   type: 'header';
@@ -39,8 +53,12 @@ export interface BatchHeader {
 }
 
 /** The trailer closes the file with the totals the header promised. */
-export const trailerLine = (totals: ControlTotals): string => JSON.stringify({ type: 'trailer', totals });
-export const headerLine = (h: Omit<BatchHeader, 'type' | 'format'>, totals: ControlTotals): string => JSON.stringify({ type: 'header', format: 'astra-premium-records/1', ...h, totals });
+export const trailerLine = (totals: ControlTotals): string =>
+  JSON.stringify({ type: 'trailer', totals });
+export const headerLine = (
+  h: Omit<BatchHeader, 'type' | 'format'>,
+  totals: ControlTotals,
+): string => JSON.stringify({ type: 'header', format: 'astra-premium-records/1', ...h, totals });
 
 export interface CheckResult {
   ok: boolean;
@@ -48,11 +66,16 @@ export interface CheckResult {
 }
 
 /** Compares what billing says it received with the batch's control totals. */
-export function compareTotals(sent: ControlTotals, received: { count: number; premium: string; commission: string; tax: string }): CheckResult {
+export function compareTotals(
+  sent: ControlTotals,
+  received: { count: number; premium: string; commission: string; tax: string },
+): CheckResult {
   const differences: string[] = [];
-  if (received.count !== sent.count) differences.push(`record count: sent ${sent.count}, received ${received.count}`);
+  if (received.count !== sent.count)
+    differences.push(`record count: sent ${sent.count}, received ${received.count}`);
   for (const k of ['premium', 'commission', 'tax'] as const) {
-    if (toCents(received[k]) !== toCents(sent[k])) differences.push(`${k}: sent ${sent[k]}, received ${received[k]}`);
+    if (toCents(received[k]) !== toCents(sent[k]))
+      differences.push(`${k}: sent ${sent[k]}, received ${received[k]}`);
   }
   return { ok: differences.length === 0, differences };
 }

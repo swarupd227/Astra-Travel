@@ -41,8 +41,17 @@ export class KeycloakIssuer implements CredentialIssuer {
   }
 
   private async adminToken(): Promise<string> {
-    const res = await this.f(this.tokenUrl, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'client_credentials', client_id: this.o.adminClientId, client_secret: this.o.adminClientSecret }) });
-    if (!res.ok) throw new Error(`The identity provider refused the admin credentials (HTTP ${res.status}).`);
+    const res = await this.f(this.tokenUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: this.o.adminClientId,
+        client_secret: this.o.adminClientSecret,
+      }),
+    });
+    if (!res.ok)
+      throw new Error(`The identity provider refused the admin credentials (HTTP ${res.status}).`);
     return ((await res.json()) as { access_token: string }).access_token;
   }
 
@@ -50,7 +59,19 @@ export class KeycloakIssuer implements CredentialIssuer {
     const token = await this.adminToken();
     const clientId = `astra-sbx-${account.code.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${randomBytes(3).toString('hex')}`;
     const clientSecret = randomBytes(32).toString('base64url');
-    const mapper = (name: string, claim: string, value: string, json = 'String') => ({ name, protocol: 'openid-connect', protocolMapper: 'oidc-hardcoded-claim-mapper', config: { 'claim.name': claim, 'claim.value': value, 'jsonType.label': json, 'access.token.claim': 'true', 'id.token.claim': 'false', 'introspection.token.claim': 'true' } });
+    const mapper = (name: string, claim: string, value: string, json = 'String') => ({
+      name,
+      protocol: 'openid-connect',
+      protocolMapper: 'oidc-hardcoded-claim-mapper',
+      config: {
+        'claim.name': claim,
+        'claim.value': value,
+        'jsonType.label': json,
+        'access.token.claim': 'true',
+        'id.token.claim': 'false',
+        'introspection.token.claim': 'true',
+      },
+    });
     const res = await this.f(`${this.o.url}/admin/realms/${this.o.realm}/clients`, {
       method: 'POST',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
@@ -68,23 +89,42 @@ export class KeycloakIssuer implements CredentialIssuer {
         serviceAccountsEnabled: true,
         attributes: { 'access.token.lifespan': '300' },
         protocolMappers: [
-          { name: 'audience', protocol: 'openid-connect', protocolMapper: 'oidc-audience-mapper', config: { 'included.custom.audience': this.o.audience, 'access.token.claim': 'true', 'id.token.claim': 'false', 'introspection.token.claim': 'true' } },
+          {
+            name: 'audience',
+            protocol: 'openid-connect',
+            protocolMapper: 'oidc-audience-mapper',
+            config: {
+              'included.custom.audience': this.o.audience,
+              'access.token.claim': 'true',
+              'id.token.claim': 'false',
+              'introspection.token.claim': 'true',
+            },
+          },
           mapper('account', 'account_id', account.id),
           mapper('partner-group', 'groups', JSON.stringify([this.o.partnerGroup]), 'JSON'),
         ],
       }),
     });
-    if (res.status !== 201) throw new Error(`The identity provider did not create the client (HTTP ${res.status}).`);
+    if (res.status !== 201)
+      throw new Error(`The identity provider did not create the client (HTTP ${res.status}).`);
     return { clientId, clientSecret, tokenUrl: this.tokenUrl };
   }
 
   async revoke(clientId: string): Promise<void> {
     const token = await this.adminToken();
-    const find = await this.f(`${this.o.url}/admin/realms/${this.o.realm}/clients?clientId=${encodeURIComponent(clientId)}`, { headers: { authorization: `Bearer ${token}` } });
-    if (!find.ok) throw new Error(`The identity provider could not look up the client (HTTP ${find.status}).`);
+    const find = await this.f(
+      `${this.o.url}/admin/realms/${this.o.realm}/clients?clientId=${encodeURIComponent(clientId)}`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    if (!find.ok)
+      throw new Error(`The identity provider could not look up the client (HTTP ${find.status}).`);
     const found = (await find.json()) as { id: string }[];
     if (!found[0]) return;
-    const del = await this.f(`${this.o.url}/admin/realms/${this.o.realm}/clients/${found[0].id}`, { method: 'DELETE', headers: { authorization: `Bearer ${token}` } });
-    if (!del.ok && del.status !== 404) throw new Error(`The identity provider did not remove the client (HTTP ${del.status}).`);
+    const del = await this.f(`${this.o.url}/admin/realms/${this.o.realm}/clients/${found[0].id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    if (!del.ok && del.status !== 404)
+      throw new Error(`The identity provider did not remove the client (HTTP ${del.status}).`);
   }
 }

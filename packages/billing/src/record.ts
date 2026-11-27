@@ -10,7 +10,8 @@ import { fromCents, mulPercent, spread } from './money';
 
 export type Arrangement = 'VSC' | 'ABIC' | 'VSC_CLIP';
 export type Entity = 'VSC' | 'ABIC' | 'UNASSIGNED';
-export const entityOf = (a: Arrangement | null): Entity => (a === null ? 'UNASSIGNED' : a === 'ABIC' ? 'ABIC' : 'VSC');
+export const entityOf = (a: Arrangement | null): Entity =>
+  a === null ? 'UNASSIGNED' : a === 'ABIC' ? 'ABIC' : 'VSC';
 
 export interface RecordInput {
   /** The signed amount of the transaction in cents: charge minus refund. */
@@ -35,7 +36,13 @@ export interface RecordInput {
 export interface RecordMoney {
   perBenefit: { code: string; premium: string }[];
   perTraveller: { travellerId: string; premium: string }[];
-  allocation: { entity: Entity; arrangement: Arrangement | null; premium: string; taxRatePercent: number | null; tax: string | null }[];
+  allocation: {
+    entity: Entity;
+    arrangement: Arrangement | null;
+    premium: string;
+    taxRatePercent: number | null;
+    tax: string | null;
+  }[];
   commission: { amount: string; ratePercent: string; rule: string } | null;
   taxCents: number | null;
   commissionCents: number | null;
@@ -44,8 +51,14 @@ export interface RecordMoney {
 
 export function buildMoney(i: RecordInput): RecordMoney {
   const issues: string[] = [];
-  const perBenefitCents = spread(i.premiumCents, i.benefits.map((b) => b.weight));
-  const perTravellerCents = spread(i.premiumCents, i.travellers.map((t) => t.weight));
+  const perBenefitCents = spread(
+    i.premiumCents,
+    i.benefits.map((b) => b.weight),
+  );
+  const perTravellerCents = spread(
+    i.premiumCents,
+    i.travellers.map((t) => t.weight),
+  );
 
   // Entity allocation follows each benefit's underwriting arrangement.
   const lines = new Map<string, { arrangement: Arrangement | null; cents: number }>();
@@ -55,7 +68,15 @@ export function buildMoney(i: RecordInput): RecordMoney {
     cur.cents += perBenefitCents[k]!;
     lines.set(key, cur);
   });
-  if (lines.has('UNASSIGNED') && lines.get('UNASSIGNED')!.cents !== 0) issues.push(`Benefit ${i.benefits.filter((b) => b.arrangement === null).map((b) => b.code).join(', ')} has no underwriting arrangement, so its premium cannot be allocated to an entity.`);
+  if (lines.has('UNASSIGNED') && lines.get('UNASSIGNED')!.cents !== 0)
+    issues.push(
+      `Benefit ${i.benefits
+        .filter((b) => b.arrangement === null)
+        .map((b) => b.code)
+        .join(
+          ', ',
+        )} has no underwriting arrangement, so its premium cannot be allocated to an entity.`,
+    );
 
   let taxSum = 0;
   let taxComplete = true;
@@ -67,10 +88,17 @@ export function buildMoney(i: RecordInput): RecordMoney {
     else if (rate === undefined) {
       tax = null;
       taxComplete = false;
-      if (entity !== 'UNASSIGNED') issues.push(`No premium tax rate is loaded for ${i.state} and ${entity} on ${i.date}.`);
+      if (entity !== 'UNASSIGNED')
+        issues.push(`No premium tax rate is loaded for ${i.state} and ${entity} on ${i.date}.`);
     } else tax = mulPercent(l.cents, rate);
     if (tax !== null) taxSum += tax;
-    return { entity, arrangement: l.arrangement, premium: fromCents(l.cents), taxRatePercent: rate ?? null, tax: tax === null ? null : fromCents(tax) };
+    return {
+      entity,
+      arrangement: l.arrangement,
+      premium: fromCents(l.cents),
+      taxRatePercent: rate ?? null,
+      tax: tax === null ? null : fromCents(tax),
+    };
   });
   const taxCents = taxComplete ? taxSum : null;
 
@@ -81,22 +109,41 @@ export function buildMoney(i: RecordInput): RecordMoney {
     commission = { amount: '0.00', ratePercent: '0.0000', rule: 'No premium moved' };
     commissionCents = 0;
   } else if (i.premiumCents > 0) {
-    if (!i.commission.rule) issues.push(`${i.accountLabel} has no approved commission rule on ${i.date}. Approve one (or one that pays none) and recalculate.`);
+    if (!i.commission.rule)
+      issues.push(
+        `${i.accountLabel} has no approved commission rule on ${i.date}. Approve one (or one that pays none) and recalculate.`,
+      );
     else {
-      const r = commissionOnCharge(i.commission.rule, { premiumCents: i.premiumCents, monthPremiumBeforeCents: i.commission.monthPremiumBeforeCents, monthPolicies: i.commission.monthPolicies });
+      const r = commissionOnCharge(i.commission.rule, {
+        premiumCents: i.premiumCents,
+        monthPremiumBeforeCents: i.commission.monthPremiumBeforeCents,
+        monthPolicies: i.commission.monthPolicies,
+      });
       commissionCents = r.cents;
       commission = { amount: fromCents(r.cents), ratePercent: r.ratePercent, rule: r.rule };
     }
   } else if (i.commission.originalRatePercent === null) {
-    issues.push('The commission earned on the original premium is not known, so the clawback cannot be calculated.');
+    issues.push(
+      'The commission earned on the original premium is not known, so the clawback cannot be calculated.',
+    );
   } else {
     commissionCents = clawback(i.premiumCents, i.commission.originalRatePercent);
-    commission = { amount: fromCents(commissionCents), ratePercent: i.commission.originalRatePercent.toFixed(4), rule: 'Clawback at the rate earned on the original premium' };
+    commission = {
+      amount: fromCents(commissionCents),
+      ratePercent: i.commission.originalRatePercent.toFixed(4),
+      rule: 'Clawback at the rate earned on the original premium',
+    };
   }
 
   return {
-    perBenefit: i.benefits.map((b, k) => ({ code: b.code, premium: fromCents(perBenefitCents[k]!) })),
-    perTraveller: i.travellers.map((t, k) => ({ travellerId: t.id, premium: fromCents(perTravellerCents[k]!) })),
+    perBenefit: i.benefits.map((b, k) => ({
+      code: b.code,
+      premium: fromCents(perBenefitCents[k]!),
+    })),
+    perTraveller: i.travellers.map((t, k) => ({
+      travellerId: t.id,
+      premium: fromCents(perTravellerCents[k]!),
+    })),
     allocation,
     commission,
     taxCents,

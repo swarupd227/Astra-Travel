@@ -25,7 +25,9 @@ export const meRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps) => {
              WHERE workbench.staff.last_seen_at < now() - interval '5 minutes' OR workbench.staff.permissions IS DISTINCT FROM EXCLUDED.permissions`,
             [p.subject, p.name, p.email, p.roles, p.permissions],
           )
-          .catch((err: unknown) => request.log.warn({ err }, 'could not record the signed-in person'));
+          .catch((err: unknown) =>
+            request.log.warn({ err }, 'could not record the signed-in person'),
+          );
       }
       return {
         subject: p.subject,

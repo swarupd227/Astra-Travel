@@ -18,13 +18,26 @@ export interface DataField {
 }
 
 export interface DataEntity {
-  name: 'plans' | 'accounts' | 'policies' | 'travellers' | 'trips' | 'benefits' | 'premiums' | 'transactions';
+  name:
+    | 'plans'
+    | 'accounts'
+    | 'policies'
+    | 'travellers'
+    | 'trips'
+    | 'benefits'
+    | 'premiums'
+    | 'transactions';
   description: string;
   key: string[];
   fields: DataField[];
 }
 
-const f = (name: string, type: DataField['type'], description: string, opts: { optional?: boolean; personal?: boolean } = {}): DataField => ({
+const f = (
+  name: string,
+  type: DataField['type'],
+  description: string,
+  opts: { optional?: boolean; personal?: boolean } = {},
+): DataField => ({
   name,
   type,
   required: !opts.optional,
@@ -46,7 +59,9 @@ export const DATA_CATALOGUE: readonly DataEntity[] = [
       f('kind', 'text', 'base, state or account.'),
       f('term', 'text', 'single_trip or annual.'),
       f('state', 'text', 'The state it is filed for; empty for a base plan.', { optional: true }),
-      f('account_id', 'uuid', 'The account it belongs to; only for an account plan.', { optional: true }),
+      f('account_id', 'uuid', 'The account it belongs to; only for an account plan.', {
+        optional: true,
+      }),
     ],
   },
   {
@@ -118,14 +133,17 @@ export const DATA_CATALOGUE: readonly DataEntity[] = [
       f('benefit_group', 'text', 'The group it belongs to.'),
       f('underwriter', 'text', 'The underwriting arrangement.', { optional: true }),
       f('limits', 'json', 'The limits that apply.'),
-      f('premium', 'decimal', 'Premium for the benefit; empty when it is not priced separately.', { optional: true }),
+      f('premium', 'decimal', 'Premium for the benefit; empty when it is not priced separately.', {
+        optional: true,
+      }),
       f('coverage_start', 'timestamp', 'When this benefit starts.'),
       f('coverage_end', 'timestamp', 'When this benefit ends.'),
     ],
   },
   {
     name: 'premiums',
-    description: 'A premium record: money charged or refunded by one transaction, or a card programme’s premium for a month.',
+    description:
+      'A premium record: money charged or refunded by one transaction, or a card programme’s premium for a month.',
     key: ['premium_id'],
     fields: [
       f('premium_id', 'uuid', 'Identifier of the record.'),
@@ -133,14 +151,21 @@ export const DATA_CATALOGUE: readonly DataEntity[] = [
       f('type', 'text', 'bind, change, cancellation or programme.'),
       f('account_id', 'uuid', 'The account.'),
       f('policy_id', 'uuid', 'The policy; empty for a card programme.', { optional: true }),
-      f('transaction_id', 'integer', 'The policy transaction that moved the money; empty for a card programme.', { optional: true }),
+      f(
+        'transaction_id',
+        'integer',
+        'The policy transaction that moved the money; empty for a card programme.',
+        { optional: true },
+      ),
       f('state', 'text', 'State; empty for a card programme.', { optional: true }),
       f('status', 'text', 'held, ready, batched, sent, confirmed or rejected by billing.'),
       f('premium', 'decimal', 'Charge less refund.'),
       f('charge', 'decimal', 'Amount charged.'),
       f('refund', 'decimal', 'Amount refunded.'),
       f('tax', 'decimal', 'Premium tax; empty while a rate is missing.', { optional: true }),
-      f('commission', 'decimal', 'Commission; empty while it cannot be worked out.', { optional: true }),
+      f('commission', 'decimal', 'Commission; empty while it cannot be worked out.', {
+        optional: true,
+      }),
       f('per_benefit', 'json', 'Premium by benefit.'),
       f('allocation', 'json', 'Premium and tax by underwriting entity.'),
       f('occurred_at', 'timestamp', 'When the money moved.'),
@@ -168,7 +193,15 @@ export const DataCatalogueSchema = z.object({
       name: z.string(),
       description: z.string(),
       key: z.array(z.string()),
-      fields: z.array(z.object({ name: z.string(), type: z.string(), required: z.boolean(), classification: z.enum(['business', 'personal']), description: z.string() })),
+      fields: z.array(
+        z.object({
+          name: z.string(),
+          type: z.string(),
+          required: z.boolean(),
+          classification: z.enum(['business', 'personal']),
+          description: z.string(),
+        }),
+      ),
     }),
   ),
 });
@@ -183,14 +216,25 @@ export const DataLoadSchema = z.object({
   rejected: z.number().int(),
   maxLagSeconds: z.number().int(),
   checks: z.array(z.object({ name: z.string(), passed: z.boolean(), detail: z.string() })),
-  files: z.array(z.object({ name: z.string(), rows: z.number().int(), sha256: z.string(), bytes: z.number().int() })),
+  files: z.array(
+    z.object({
+      name: z.string(),
+      rows: z.number().int(),
+      sha256: z.string(),
+      bytes: z.number().int(),
+    }),
+  ),
 });
 export type DataLoad = z.infer<typeof DataLoadSchema>;
 
 export const DataLoadStatusSchema = z.object({
   items: z.array(DataLoadSchema),
   /** Changes not yet loaded, and whether the 15-minute target is being met. */
-  pending: z.object({ count: z.number().int(), oldestSeconds: z.number().int().nullable(), withinTarget: z.boolean() }),
+  pending: z.object({
+    count: z.number().int(),
+    oldestSeconds: z.number().int().nullable(),
+    withinTarget: z.boolean(),
+  }),
   targetSeconds: z.number().int(),
   /** Where loads are delivered. No data platform connection has been supplied, so they are files in the platform's store. */
   destination: z.string(),
@@ -209,9 +253,30 @@ export const ClaimsPolicySchema = z.object({
   purchasedOn: z.string(),
   coverageStart: z.string(),
   coverageEnd: z.string(),
-  travellers: z.array(z.object({ travellerId: z.string(), firstName: z.string(), lastName: z.string(), dateOfBirth: z.string().nullable() })),
-  trip: z.object({ departureDate: z.string().nullable(), returnDate: z.string().nullable(), destinations: z.array(z.object({ country: z.string().nullable(), region: z.string().nullable() })) }),
-  benefits: z.array(z.object({ code: z.string(), name: z.string(), limits: z.unknown(), coverageStart: z.string(), coverageEnd: z.string() })),
+  travellers: z.array(
+    z.object({
+      travellerId: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
+      dateOfBirth: z.string().nullable(),
+    }),
+  ),
+  trip: z.object({
+    departureDate: z.string().nullable(),
+    returnDate: z.string().nullable(),
+    destinations: z.array(
+      z.object({ country: z.string().nullable(), region: z.string().nullable() }),
+    ),
+  }),
+  benefits: z.array(
+    z.object({
+      code: z.string(),
+      name: z.string(),
+      limits: z.unknown(),
+      coverageStart: z.string(),
+      coverageEnd: z.string(),
+    }),
+  ),
 });
 
 export const ClaimsCertificateSchema = z.object({
@@ -226,7 +291,9 @@ export const ClaimsCertificateSchema = z.object({
   cardholderRef: z.string(),
   issuedAt: z.iso.datetime(),
   /** When the cardholder was eligible, from the issuer's feeds. */
-  eligibility: z.array(z.object({ productCode: z.string(), from: z.string(), to: z.string().nullable() })),
+  eligibility: z.array(
+    z.object({ productCode: z.string(), from: z.string(), to: z.string().nullable() }),
+  ),
   /** The Guide to Benefits in force, which sets the benefits and limits of a card programme. */
   guideDocumentId: z.uuid().nullable(),
 });
@@ -237,6 +304,10 @@ export const ClaimsFeedSchema = z.object({
   policies: z.array(ClaimsPolicySchema),
   certificates: z.array(ClaimsCertificateSchema),
   /** Pass these back to get what changed since. */
-  next: z.object({ policyCursor: z.number().int(), certificateCursor: z.string(), more: z.boolean() }),
+  next: z.object({
+    policyCursor: z.number().int(),
+    certificateCursor: z.string(),
+    more: z.boolean(),
+  }),
 });
 export type ClaimsFeed = z.infer<typeof ClaimsFeedSchema>;

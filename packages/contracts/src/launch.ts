@@ -6,14 +6,21 @@ export const SIGNOFF_AREAS = ['product', 'actuarial', 'compliance', 'finance'] a
 export type SignoffArea = (typeof SIGNOFF_AREAS)[number];
 
 /** The role that signs for each area. */
-export const SIGNOFF_ROLES: Record<SignoffArea, 'product_manager' | 'rating_analyst' | 'compliance_officer' | 'finance_analyst'> = {
+export const SIGNOFF_ROLES: Record<
+  SignoffArea,
+  'product_manager' | 'rating_analyst' | 'compliance_officer' | 'finance_analyst'
+> = {
   product: 'product_manager',
   actuarial: 'rating_analyst',
   compliance: 'compliance_officer',
   finance: 'finance_analyst',
 };
 
-export const ReadinessCheckSchema = z.object({ code: z.string(), passed: z.boolean(), detail: z.string() });
+export const ReadinessCheckSchema = z.object({
+  code: z.string(),
+  passed: z.boolean(),
+  detail: z.string(),
+});
 
 export const ReadinessSchema = z.object({
   states: z.array(z.string()),
@@ -26,7 +33,15 @@ export const ReadinessSchema = z.object({
       state: z.string(),
       ready: z.boolean(),
       checks: z.array(ReadinessCheckSchema),
-      plans: z.array(z.object({ code: z.string(), name: z.string(), version: z.number().int(), ready: z.boolean(), checks: z.array(ReadinessCheckSchema) })),
+      plans: z.array(
+        z.object({
+          code: z.string(),
+          name: z.string(),
+          version: z.number().int(),
+          ready: z.boolean(),
+          checks: z.array(ReadinessCheckSchema),
+        }),
+      ),
     }),
   ),
   signoffs: z.array(
@@ -45,7 +60,10 @@ export const ReadinessSchema = z.object({
 export type Readiness = z.infer<typeof ReadinessSchema>;
 
 export const SignoffRequestSchema = z.object({
-  states: z.array(z.string().regex(/^[A-Z]{2}$/)).min(1).max(60),
+  states: z
+    .array(z.string().regex(/^[A-Z]{2}$/))
+    .min(1)
+    .max(60),
   area: z.enum(SIGNOFF_AREAS),
   decision: z.enum(['signed', 'withdrawn']),
   /** The hash of the report the person read; refused if the report has changed since. */

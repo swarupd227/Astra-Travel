@@ -16,14 +16,18 @@ type Failures = { documents: IssuedDocument[]; deliveries: z.infer<typeof Failed
 
 export default async function FailuresPage() {
   const me = (await getMe())!;
-  if (!me.permissions.includes('documents:read')) return <AccessDenied permission="documents:read" />;
+  if (!me.permissions.includes('documents:read'))
+    return <AccessDenied permission="documents:read" />;
   const res = await load(() => api<Failures>('/v1/document-failures'));
   if (res.error) return <ErrorPanel error={res.error} />;
   const { documents, deliveries } = res.data;
   const canManage = me.permissions.includes('documents:manage');
   return (
     <>
-      <Link href="/documents" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg">
+      <Link
+        href="/documents"
+        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg"
+      >
         <ChevronLeft aria-hidden className="size-4" /> Document templates
       </Link>
       <PageHeader
@@ -33,12 +37,19 @@ export default async function FailuresPage() {
       />
       {documents.length === 0 && deliveries.length === 0 ? (
         <Card>
-          <EmptyState icon={<CheckCircle2 className="size-5" />} title="Nothing has failed" description="Every document was produced and every delivery that was tried has gone out or is still being tried." />
+          <EmptyState
+            icon={<CheckCircle2 className="size-5" />}
+            title="Nothing has failed"
+            description="Every document was produced and every delivery that was tried has gone out or is still being tried."
+          />
         </Card>
       ) : null}
       {documents.length ? (
         <Card className="mb-6">
-          <CardHeader title="Documents not produced" description="Usually the plan version has no released template. Release one, then issue the documents again." />
+          <CardHeader
+            title="Documents not produced"
+            description="Usually the plan version has no released template. Release one, then issue the documents again."
+          />
           <Table caption="Documents not produced">
             <THead>
               <tr>
@@ -55,7 +66,10 @@ export default async function FailuresPage() {
                 <TR key={d.id}>
                   <TD>
                     {d.policyId ? (
-                      <Link href={`/policies/${d.policyId}`} className="font-medium text-fg hover:text-primary hover:underline">
+                      <Link
+                        href={`/policies/${d.policyId}`}
+                        className="font-medium text-fg hover:text-primary hover:underline"
+                      >
                         {d.policyNumber}
                       </Link>
                     ) : (
@@ -64,7 +78,11 @@ export default async function FailuresPage() {
                   </TD>
                   <TD>{sentenceCase(d.kind)}</TD>
                   <TD className="max-w-md text-sm">{d.failure}</TD>
-                  <TD>{canManage && d.policyId ? <IssueMissingForm policyId={d.policyId} label="Issue again" /> : null}</TD>
+                  <TD>
+                    {canManage && d.policyId ? (
+                      <IssueMissingForm policyId={d.policyId} label="Issue again" />
+                    ) : null}
+                  </TD>
                 </TR>
               ))}
             </tbody>
@@ -73,7 +91,10 @@ export default async function FailuresPage() {
       ) : null}
       {deliveries.length ? (
         <Card>
-          <CardHeader title="Emails not delivered" description="Each was tried several times with waits between. The reason is the mail server’s or the platform’s own answer." />
+          <CardHeader
+            title="Emails not delivered"
+            description="Each was tried several times with waits between. The reason is the mail server’s or the platform’s own answer."
+          />
           <Table caption="Failed email deliveries">
             <THead>
               <tr>
@@ -92,7 +113,10 @@ export default async function FailuresPage() {
                 <TR key={d.id}>
                   <TD>{d.policyNumber ?? '—'}</TD>
                   <TD>
-                    <Link href={`/documents/${d.documentId}`} className="text-fg hover:text-primary hover:underline">
+                    <Link
+                      href={`/documents/${d.documentId}`}
+                      className="text-fg hover:text-primary hover:underline"
+                    >
                       {sentenceCase(d.documentKind)}
                     </Link>
                   </TD>

@@ -9,9 +9,14 @@ import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 
 export const metadata = { title: 'Statutory data' };
 
-export default async function StatutoryPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
+export default async function StatutoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
   const me = (await getMe())!;
-  if (!me.permissions.includes('reports:statutory')) return <AccessDenied permission="reports:statutory" />;
+  if (!me.permissions.includes('reports:statutory'))
+    return <AccessDenied permission="reports:statutory" />;
   const p = periodFrom(await searchParams);
   const res = await load(() => api<StatutoryReport>('/v1/reports/statutory', { query: p }));
   if (res.error) return <ErrorPanel error={res.error} />;
@@ -28,9 +33,16 @@ export default async function StatutoryPage({ searchParams }: { searchParams: Pr
         <PeriodForm {...p} csvHref={`/api/reports/statutory?from=${p.from}&to=${p.to}`} />
       </Card>
       <div className="mb-6">
-        <Notice tone={rec.reconciled ? 'success' : 'danger'} title={rec.reconciled ? 'Reconciled to the accounting totals' : 'Not reconciled'}>
-          {rec.records} premium records total {rec.recordPremium}; the report totals {rec.reportPremium} (difference {rec.premiumDifference}). Tax on the records is {rec.recordTax}; in the report {rec.reportTax} (difference {rec.taxDifference}).
-          {rec.unbalancedRecords.length ? ` Records whose lines do not add up: ${rec.unbalancedRecords.join(', ')}.` : ''}
+        <Notice
+          tone={rec.reconciled ? 'success' : 'danger'}
+          title={rec.reconciled ? 'Reconciled to the accounting totals' : 'Not reconciled'}
+        >
+          {rec.records} premium records total {rec.recordPremium}; the report totals{' '}
+          {rec.reportPremium} (difference {rec.premiumDifference}). Tax on the records is{' '}
+          {rec.recordTax}; in the report {rec.reportTax} (difference {rec.taxDifference}).
+          {rec.unbalancedRecords.length
+            ? ` Records whose lines do not add up: ${rec.unbalancedRecords.join(', ')}.`
+            : ''}
         </Notice>
       </div>
       <div className="space-y-6">
@@ -67,7 +79,10 @@ export default async function StatutoryPage({ searchParams }: { searchParams: Pr
         </Card>
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
-            <CardHeader title="Premium and tax by state and entity" description="A record without tax is waiting for a premium tax rate to be loaded." />
+            <CardHeader
+              title="Premium and tax by state and entity"
+              description="A record without tax is waiting for a premium tax rate to be loaded."
+            />
             {r.byEntity.length === 0 ? (
               <p className="p-5 text-sm text-muted">No premium in this period.</p>
             ) : (
@@ -106,7 +121,9 @@ export default async function StatutoryPage({ searchParams }: { searchParams: Pr
                   <span className="tabular-nums">{s.premium}</span>
                 </li>
               ))}
-              {rec.byStatus.length === 0 ? <li className="px-5 py-3 text-sm text-muted">No records.</li> : null}
+              {rec.byStatus.length === 0 ? (
+                <li className="px-5 py-3 text-sm text-muted">No records.</li>
+              ) : null}
             </ul>
           </Card>
         </div>

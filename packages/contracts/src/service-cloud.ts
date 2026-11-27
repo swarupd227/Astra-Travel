@@ -10,7 +10,10 @@ import { PolicySchema } from './policies';
  */
 export const CustomerViewRequestSchema = z.union([
   z.strictObject({ policyNumber: z.string().trim().min(6).max(40) }),
-  z.strictObject({ lastName: z.string().trim().min(1).max(100), dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }),
+  z.strictObject({
+    lastName: z.string().trim().min(1).max(100),
+    dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  }),
   z.strictObject({ cardholderRef: z.string().trim().min(1).max(100) }),
 ]);
 export type CustomerViewRequest = z.infer<typeof CustomerViewRequestSchema>;
@@ -24,7 +27,9 @@ export const CustomerViewSchema = z.object({
       programmeName: z.string(),
       accountId: z.uuid(),
       cardholderRef: z.string(),
-      eligibility: z.array(z.object({ productCode: z.string(), from: z.string(), to: z.string().nullable() })),
+      eligibility: z.array(
+        z.object({ productCode: z.string(), from: z.string(), to: z.string().nullable() }),
+      ),
       documents: z.array(IssuedDocumentSchema),
     }),
   ),
@@ -38,4 +43,7 @@ export const ResendDocumentsRequestSchema = z.object({
   documentIds: z.array(z.uuid()).min(1).max(50).optional(),
   reason: z.string().trim().min(3).max(500),
 });
-export const ResendDocumentsResultSchema = z.object({ queued: z.array(z.object({ documentId: z.uuid(), title: z.string() })), alreadyQueued: z.number().int() });
+export const ResendDocumentsResultSchema = z.object({
+  queued: z.array(z.object({ documentId: z.uuid(), title: z.string() })),
+  alreadyQueued: z.number().int(),
+});

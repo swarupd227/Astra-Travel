@@ -3,7 +3,11 @@ import type { ManualDocument } from '@astra/contracts';
 import { locatePage, numbersOn, splitPages, verifyManualTables } from './manual-check';
 
 /** A synthetic manual: invented pages and factors, in the shape of a filed manual's printed tables. */
-const TEXT = ['Cover page RETR-X-1', 'Table 2.1.5 Trip cost per $100\nFrom $1 1.0000\nFrom $501 .9000\nRETR-X-2', 'Table 2.1.4 Age 45 waived 0.7200 not waived 0.6000 factors 1,250.5\nRETR-X-10'].join('\f');
+const TEXT = [
+  'Cover page RETR-X-1',
+  'Table 2.1.5 Trip cost per $100\nFrom $1 1.0000\nFrom $501 .9000\nRETR-X-2',
+  'Table 2.1.4 Age 45 waived 0.7200 not waived 0.6000 factors 1,250.5\nRETR-X-10',
+].join('\f');
 const pages = splitPages(TEXT, [0, TEXT.indexOf('\f') + 1, TEXT.lastIndexOf('\f') + 1]);
 
 const doc = (tables: ManualDocument['tables']): ManualDocument =>

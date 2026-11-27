@@ -11,8 +11,25 @@ import { LocalTime } from '@/components/ui/time';
 
 export const metadata = { title: 'Quotes' };
 
-type Item = { id: string; accountId: string; status: string; revision: number; createdAt: string; expiresAt: string; state: string; outcome: string; bindable: boolean; planCode: string; total: string | null };
-const OUTCOME = { eligible: 'success', ineligible: 'danger', referred: 'warning', held: 'warning' } as const;
+type Item = {
+  id: string;
+  accountId: string;
+  status: string;
+  revision: number;
+  createdAt: string;
+  expiresAt: string;
+  state: string;
+  outcome: string;
+  bindable: boolean;
+  planCode: string;
+  total: string | null;
+};
+const OUTCOME = {
+  eligible: 'success',
+  ineligible: 'danger',
+  referred: 'warning',
+  held: 'warning',
+} as const;
 
 export default async function QuotesPage() {
   const me = (await getMe())!;
@@ -36,7 +53,11 @@ export default async function QuotesPage() {
       />
       <Card>
         {items.length === 0 ? (
-          <EmptyState icon={<Calculator className="size-5" />} title="No quotes yet" description="Quotes made through the API or here appear in this list." />
+          <EmptyState
+            icon={<Calculator className="size-5" />}
+            title="No quotes yet"
+            description="Quotes made through the API or here appear in this list."
+          />
         ) : (
           <Table caption="Quotes">
             <THead>
@@ -53,16 +74,23 @@ export default async function QuotesPage() {
               {items.map((q) => (
                 <TR key={q.id}>
                   <TD>
-                    <Link href={`/quotes/${q.id}`} className="font-mono text-xs font-medium text-fg hover:text-primary hover:underline">
+                    <Link
+                      href={`/quotes/${q.id}`}
+                      className="font-mono text-xs font-medium text-fg hover:text-primary hover:underline"
+                    >
                       {q.id.slice(0, 8)}
                     </Link>
-                    {q.revision > 1 ? <span className="ml-2 text-xs text-muted">revision {q.revision}</span> : null}
+                    {q.revision > 1 ? (
+                      <span className="ml-2 text-xs text-muted">revision {q.revision}</span>
+                    ) : null}
                   </TD>
                   <TD>
                     {q.planCode} · {q.state}
                   </TD>
                   <TD>
-                    <Badge tone={OUTCOME[q.outcome as keyof typeof OUTCOME]}>{sentenceCase(q.outcome)}</Badge>
+                    <Badge tone={OUTCOME[q.outcome as keyof typeof OUTCOME]}>
+                      {sentenceCase(q.outcome)}
+                    </Badge>
                   </TD>
                   <TD>{sentenceCase(q.status)}</TD>
                   <TD className="text-right font-mono text-xs">{q.total ?? '—'}</TD>

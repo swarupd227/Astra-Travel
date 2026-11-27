@@ -4,7 +4,14 @@ import { z } from 'zod';
 
 // ---------------------------------------------------------------- Task queue
 
-export const TASK_SOURCES = ['referral', 'sanctions_hold', 'agent_proposal', 'agent_review', 'delivery_failure', 'event_delivery'] as const;
+export const TASK_SOURCES = [
+  'referral',
+  'sanctions_hold',
+  'agent_proposal',
+  'agent_review',
+  'delivery_failure',
+  'event_delivery',
+] as const;
 export const TaskSourceSchema = z.enum(TASK_SOURCES);
 export type TaskSource = z.infer<typeof TaskSourceSchema>;
 
@@ -48,7 +55,11 @@ export type Task = z.infer<typeof TaskSchema>;
 export const TaskListSchema = z.object({
   items: z.array(TaskSchema),
   total: z.number().int(),
-  counts: z.object({ overdue: z.number().int(), atRisk: z.number().int(), unassigned: z.number().int() }),
+  counts: z.object({
+    overdue: z.number().int(),
+    atRisk: z.number().int(),
+    unassigned: z.number().int(),
+  }),
 });
 export type TaskList = z.infer<typeof TaskListSchema>;
 
@@ -66,7 +77,10 @@ export const SlaPolicySchema = z.object({
   updatedAt: z.iso.datetime(),
 });
 export type SlaPolicy = z.infer<typeof SlaPolicySchema>;
-export const SlaPolicyInputSchema = z.object({ priority: TaskPrioritySchema, targetHours: z.number().int().min(1).max(720) });
+export const SlaPolicyInputSchema = z.object({
+  priority: TaskPrioritySchema,
+  targetHours: z.number().int().min(1).max(720),
+});
 
 /** The state of a timer from the minutes left and the whole target. */
 export function timerState(minutesLeft: number, targetHours: number): TaskTimer {
@@ -91,7 +105,11 @@ export const SearchHitSchema = z.object({
   matchedOn: z.array(z.enum(['number', 'traveller', 'account', 'trip'])),
 });
 export type SearchHit = z.infer<typeof SearchHitSchema>;
-export const SearchResultSchema = z.object({ query: z.string(), items: z.array(SearchHitSchema), tookMs: z.number().int() });
+export const SearchResultSchema = z.object({
+  query: z.string(),
+  items: z.array(SearchHitSchema),
+  tookMs: z.number().int(),
+});
 export type SearchResult = z.infer<typeof SearchResultSchema>;
 
 // ---------------------------------------------------------------- AG-04 referral summaries and decisions about agent output
@@ -116,7 +134,10 @@ export const ReferralSummarySchema = z.object({
   summary: z.string(),
   rulesCited: z.array(z.string()),
   suggested: ReferralSuggestionSchema,
-  verification: z.object({ rulesChecked: z.array(z.object({ code: z.string(), fired: z.boolean() })), allCitedRulesFired: z.boolean() }),
+  verification: z.object({
+    rulesChecked: z.array(z.object({ code: z.string(), fired: z.boolean() })),
+    allCitedRulesFired: z.boolean(),
+  }),
   createdBy: z.string(),
   createdAt: z.iso.datetime(),
   decision: z
@@ -138,8 +159,18 @@ export const OutputDecisionInputSchema = z
     reason: z.string().trim().min(3).max(1000).optional(),
   })
   .superRefine((v, ctx) => {
-    if (v.decision === 'edited' && !v.editedSummary) ctx.addIssue({ code: 'custom', path: ['editedSummary'], message: 'Give the corrected summary' });
-    if (v.decision !== 'accepted' && !v.reason) ctx.addIssue({ code: 'custom', path: ['reason'], message: 'Say why, so evaluation can learn from it' });
+    if (v.decision === 'edited' && !v.editedSummary)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['editedSummary'],
+        message: 'Give the corrected summary',
+      });
+    if (v.decision !== 'accepted' && !v.reason)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['reason'],
+        message: 'Say why, so evaluation can learn from it',
+      });
   });
 export type OutputDecisionInput = z.infer<typeof OutputDecisionInputSchema>;
 
@@ -154,7 +185,16 @@ export const AgentRunReviewSchema = z.object({
   input: z.unknown(),
   output: z.unknown().nullable(),
   /** Everything the agent read or did, in order: tool calls with their results, guardrail and warrant decisions. */
-  evidence: z.array(z.object({ seq: z.number().int(), kind: z.string(), name: z.string().nullable(), decision: z.string().nullable(), detail: z.unknown(), at: z.iso.datetime() })),
+  evidence: z.array(
+    z.object({
+      seq: z.number().int(),
+      kind: z.string(),
+      name: z.string().nullable(),
+      decision: z.string().nullable(),
+      detail: z.unknown(),
+      at: z.iso.datetime(),
+    }),
+  ),
   reasoning: z.string().nullable(),
   warrant: z
     .object({
@@ -167,6 +207,15 @@ export const AgentRunReviewSchema = z.object({
     })
     .nullable(),
   usage: z.object({ turns: z.number().int(), toolCalls: z.number().int(), costUsd: z.number() }),
-  decisions: z.array(z.object({ subjectType: z.string(), subjectId: z.uuid(), decision: z.string(), reason: z.string().nullable(), decidedBy: z.string(), decidedAt: z.iso.datetime() })),
+  decisions: z.array(
+    z.object({
+      subjectType: z.string(),
+      subjectId: z.uuid(),
+      decision: z.string(),
+      reason: z.string().nullable(),
+      decidedBy: z.string(),
+      decidedAt: z.iso.datetime(),
+    }),
+  ),
 });
 export type AgentRunReview = z.infer<typeof AgentRunReviewSchema>;

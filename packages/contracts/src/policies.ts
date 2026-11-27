@@ -22,7 +22,10 @@ export const QuoteTravellerSchema = z
     /** The trip cost this traveller insures. */
     costPerTraveller: money,
   })
-  .refine((t) => t.age !== undefined || t.dateOfBirth !== undefined, { message: 'Give an age or a date of birth', path: ['age'] });
+  .refine((t) => t.age !== undefined || t.dateOfBirth !== undefined, {
+    message: 'Give an age or a date of birth',
+    path: ['age'],
+  });
 
 export const QuoteTripSchema = z
   .object({
@@ -31,13 +34,36 @@ export const QuoteTripSchema = z
     finalPaymentDate: date.optional(),
     departureDate: date,
     returnDate: date,
-    destinations: z.array(z.object({ country: z.string().regex(/^[A-Z]{2}$/).optional(), region: z.string().max(100).optional(), days: z.number().int().min(1).max(400).optional() })).max(30).default([]),
+    destinations: z
+      .array(
+        z.object({
+          country: z
+            .string()
+            .regex(/^[A-Z]{2}$/)
+            .optional(),
+          region: z.string().max(100).optional(),
+          days: z.number().int().min(1).max(400).optional(),
+        }),
+      )
+      .max(30)
+      .default([]),
     supplier: z.string().trim().max(200).optional(),
     /** The supplier's cancellation penalty schedule: from this many days before departure, this share is lost. */
-    penaltySchedule: z.array(z.object({ daysBeforeDeparture: z.number().int().min(0).max(1000), percent: z.number().min(0).max(100) })).max(20).optional(),
+    penaltySchedule: z
+      .array(
+        z.object({
+          daysBeforeDeparture: z.number().int().min(0).max(1000),
+          percent: z.number().min(0).max(100),
+        }),
+      )
+      .max(20)
+      .optional(),
     penaltyDays: z.number().int().min(0).max(1000).optional(),
   })
-  .refine((t) => t.returnDate >= t.departureDate, { message: 'The return date is before the departure date', path: ['returnDate'] });
+  .refine((t) => t.returnDate >= t.departureDate, {
+    message: 'The return date is before the departure date',
+    path: ['returnDate'],
+  });
 
 export const CreateQuoteRequestSchema = z.object({
   accountId: z.uuid(),
@@ -80,11 +106,32 @@ export const QuotePremiumSchema = z.object({
   total: z.string(),
   perBenefit: z.array(z.object({ benefit: z.string(), total: z.string() })),
   perTraveller: z.array(z.object({ travellerId: z.string(), total: z.string() })),
-  basis: z.object({ basis: z.string(), amount: z.string(), unit: z.string(), method: z.string(), approved: z.boolean(), fixedFeePerPolicy: z.string().nullable() }).nullable(),
-  lines: z.array(z.object({ benefit: z.string(), travellerId: z.string(), amount: z.string(), worksheetId: z.uuid() })),
+  basis: z
+    .object({
+      basis: z.string(),
+      amount: z.string(),
+      unit: z.string(),
+      method: z.string(),
+      approved: z.boolean(),
+      fixedFeePerPolicy: z.string().nullable(),
+    })
+    .nullable(),
+  lines: z.array(
+    z.object({
+      benefit: z.string(),
+      travellerId: z.string(),
+      amount: z.string(),
+      worksheetId: z.uuid(),
+    }),
+  ),
 });
 
-export const DisclosureSchema = z.object({ version: z.string(), state: z.string(), title: z.string(), text: z.string() });
+export const DisclosureSchema = z.object({
+  version: z.string(),
+  state: z.string(),
+  title: z.string(),
+  text: z.string(),
+});
 export type Disclosure = z.infer<typeof DisclosureSchema>;
 
 export const QuoteSchema = z.object({
@@ -94,12 +141,31 @@ export const QuoteSchema = z.object({
   /** Counts re-rating by selection changes; the quote ID stays the same. */
   revision: z.number().int(),
   state: z.string(),
-  plan: z.object({ planId: z.uuid(), code: z.string(), name: z.string(), versionId: z.uuid(), version: z.number().int(), term: z.enum(['single_trip', 'annual']) }),
+  plan: z.object({
+    planId: z.uuid(),
+    code: z.string(),
+    name: z.string(),
+    versionId: z.uuid(),
+    version: z.number().int(),
+    term: z.enum(['single_trip', 'annual']),
+  }),
   ruleSet: z.object({ id: z.uuid(), version: z.number().int() }),
-  manuals: z.record(z.string(), z.object({ id: z.uuid(), code: z.string(), version: z.number().int() })),
+  manuals: z.record(
+    z.string(),
+    z.object({ id: z.uuid(), code: z.string(), version: z.number().int() }),
+  ),
   createdAt: z.iso.datetime({ offset: true }),
   expiresAt: z.iso.datetime({ offset: true }),
-  travellers: z.array(z.object({ id: z.string(), firstName: z.string(), lastName: z.string(), dateOfBirth: date.nullable(), age: z.number().int().nullable(), costPerTraveller: z.string() })),
+  travellers: z.array(
+    z.object({
+      id: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
+      dateOfBirth: date.nullable(),
+      age: z.number().int().nullable(),
+      costPerTraveller: z.string(),
+    }),
+  ),
   trip: z.record(z.string(), z.unknown()),
   selection: z.array(z.string()),
   benefits: z.array(QuoteBenefitSchema),
@@ -122,7 +188,10 @@ export type Quote = z.infer<typeof QuoteSchema>;
 export const BindRequestSchema = z.object({
   /** The traveller's confirmation that they are able to travel, as the eligibility notice states. */
   ableToTravel: z.literal(true),
-  acknowledgement: z.object({ disclosureVersion: z.string().min(1).max(100), acknowledgedBy: z.string().trim().min(2).max(200) }),
+  acknowledgement: z.object({
+    disclosureVersion: z.string().min(1).max(100),
+    acknowledgedBy: z.string().trim().min(2).max(200),
+  }),
   /** The payment system's confirmation of the premium. */
   payment: z.object({ reference: z.string().trim().min(3).max(100), amount: money }),
   purchaser: z.object({ name: z.string().trim().min(2).max(200), email: z.email().optional() }),
@@ -133,7 +202,10 @@ export type BindRequest = z.infer<typeof BindRequestSchema>;
 
 export const POLICY_STATUSES = ['active', 'cancelled', 'expired'] as const;
 /** The only status changes allowed (E05-F01-S01). */
-export const POLICY_TRANSITIONS: Record<(typeof POLICY_STATUSES)[number], readonly (typeof POLICY_STATUSES)[number][]> = {
+export const POLICY_TRANSITIONS: Record<
+  (typeof POLICY_STATUSES)[number],
+  readonly (typeof POLICY_STATUSES)[number][]
+> = {
   active: ['cancelled', 'expired'],
   cancelled: [],
   expired: [],
@@ -155,21 +227,55 @@ export const PolicyBenefitSchema = z.object({
 export const PolicySnapshotSchema = z.object({
   number: z.string(),
   quoteId: z.uuid(),
-  plan: z.object({ planId: z.uuid(), code: z.string(), name: z.string(), versionId: z.uuid(), version: z.number().int(), state: z.string(), term: z.enum(['single_trip', 'annual']) }),
+  plan: z.object({
+    planId: z.uuid(),
+    code: z.string(),
+    name: z.string(),
+    versionId: z.uuid(),
+    version: z.number().int(),
+    state: z.string(),
+    term: z.enum(['single_trip', 'annual']),
+  }),
   ruleSet: z.object({ id: z.uuid(), version: z.number().int() }),
-  manuals: z.record(z.string(), z.object({ id: z.uuid(), code: z.string(), version: z.number().int() })),
-  disclosure: z.object({ version: z.string(), title: z.string(), acknowledgedBy: z.string(), acknowledgedAt: z.iso.datetime({ offset: true }) }),
+  manuals: z.record(
+    z.string(),
+    z.object({ id: z.uuid(), code: z.string(), version: z.number().int() }),
+  ),
+  disclosure: z.object({
+    version: z.string(),
+    title: z.string(),
+    acknowledgedBy: z.string(),
+    acknowledgedAt: z.iso.datetime({ offset: true }),
+  }),
   payment: z.object({ reference: z.string(), amount: z.string() }),
   purchaser: z.object({ name: z.string(), email: z.string().nullable() }),
-  travellers: z.array(z.object({ id: z.string(), firstName: z.string(), lastName: z.string(), dateOfBirth: date.nullable(), age: z.number().int().nullable(), costPerTraveller: z.string() })),
+  travellers: z.array(
+    z.object({
+      id: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
+      dateOfBirth: date.nullable(),
+      age: z.number().int().nullable(),
+      costPerTraveller: z.string(),
+    }),
+  ),
   trip: z.record(z.string(), z.unknown()),
   benefits: z.array(PolicyBenefitSchema),
-  premium: z.object({ kind: z.enum(['premium', 'loss_cost', 'mixed']), total: z.string(), perBenefit: z.array(z.object({ benefit: z.string(), total: z.string() })), perTraveller: z.array(z.object({ travellerId: z.string(), total: z.string() })), basis: z.unknown().nullable() }),
+  premium: z.object({
+    kind: z.enum(['premium', 'loss_cost', 'mixed']),
+    total: z.string(),
+    perBenefit: z.array(z.object({ benefit: z.string(), total: z.string() })),
+    perTraveller: z.array(z.object({ travellerId: z.string(), total: z.string() })),
+    basis: z.unknown().nullable(),
+  }),
   purchasedOn: date,
   reviewPeriodEndsAt: localDateTime.nullable(),
   /** The policy term: for an annual policy, from its effective date to 11:59 p.m. on the 364th day after it. */
   term: z.object({ start: localDateTime, end: localDateTime }),
-  waiver: z.object({ applies: z.boolean(), conditions: z.array(z.object({ code: z.string(), passed: z.boolean(), detail: z.string() })) }),
+  waiver: z.object({
+    applies: z.boolean(),
+    conditions: z.array(z.object({ code: z.string(), passed: z.boolean(), detail: z.string() })),
+  }),
   cfar: z.object({ offered: z.boolean(), noticePeriod: z.number().nullable() }),
 });
 export type PolicySnapshot = z.infer<typeof PolicySnapshotSchema>;
@@ -225,7 +331,17 @@ export const PolicyVerificationSchema = z.object({
   status: z.enum(POLICY_STATUSES).nullable(),
   on: localDateTime,
   inForce: z.boolean(),
-  benefits: z.array(z.object({ code: z.string(), name: z.string(), underwriter: z.enum(ARRANGEMENTS).nullable(), limits: z.object({ maximum: z.number().nullable(), basis: z.string().nullable() }), coverageStart: localDateTime, coverageEnd: localDateTime, inForceOnDate: z.boolean() })),
+  benefits: z.array(
+    z.object({
+      code: z.string(),
+      name: z.string(),
+      underwriter: z.enum(ARRANGEMENTS).nullable(),
+      limits: z.object({ maximum: z.number().nullable(), basis: z.string().nullable() }),
+      coverageStart: localDateTime,
+      coverageEnd: localDateTime,
+      inForceOnDate: z.boolean(),
+    }),
+  ),
   travellers: z.array(z.string()),
   plan: z.string().nullable(),
   reasons: z.array(z.string()),

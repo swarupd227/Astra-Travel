@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { FeedMappingDocument } from '@astra/contracts';
-import { convertDate, convertLines, maskCardNumbers, missingColumns, previewMapping, splitLine } from './mapping';
+import {
+  convertDate,
+  convertLines,
+  maskCardNumbers,
+  missingColumns,
+  previewMapping,
+  splitLine,
+} from './mapping';
 
 const mapping: FeedMappingDocument = {
   delimiter: ';',
@@ -12,7 +19,12 @@ const mapping: FeedMappingDocument = {
     eligibleTo: { column: 'Ends', format: 'DD/MM/YYYY' },
   },
 };
-const header = { programmeCode: 'SYN-PROG', sequence: 1, kind: 'CHANGE' as const, asOfDate: '2026-11-01' };
+const header = {
+  programmeCode: 'SYN-PROG',
+  sequence: 1,
+  kind: 'CHANGE' as const,
+  asOfDate: '2026-11-01',
+};
 // Synthetic issuer file.
 const sample = [
   'Customer Token;Card;Change;Opened;Ends',
@@ -53,6 +65,9 @@ describe('feed mapping', () => {
   it('previews what converts and why the rest is rejected, by the issuer file’s own line numbers', async () => {
     const p = await previewMapping(sample, mapping, header);
     expect(p).toMatchObject({ records: 4, converted: 2, rejected: 2, missingColumns: [] });
-    expect(p.problems.map((x) => [x.line, x.code])).toEqual([[4, 'eligible_from'], [5, 'card_number']]);
+    expect(p.problems.map((x) => [x.line, x.code])).toEqual([
+      [4, 'eligible_from'],
+      [5, 'card_number'],
+    ]);
   });
 });

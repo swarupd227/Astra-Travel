@@ -20,12 +20,18 @@ type Failures = { documents: IssuedDocument[]; deliveries: z.infer<typeof Failed
 
 export default async function DocumentsPage() {
   const me = (await getMe())!;
-  if (!me.permissions.includes('documents:read')) return <AccessDenied permission="documents:read" />;
-  const [res, failures] = await Promise.all([load(() => api<{ items: Summary[] }>('/v1/document-templates')), load(() => api<Failures>('/v1/document-failures'))]);
+  if (!me.permissions.includes('documents:read'))
+    return <AccessDenied permission="documents:read" />;
+  const [res, failures] = await Promise.all([
+    load(() => api<{ items: Summary[] }>('/v1/document-templates')),
+    load(() => api<Failures>('/v1/document-failures')),
+  ]);
   if (res.error) return <ErrorPanel error={res.error} />;
   const items = res.data.items;
   const names = await peopleNames(items.flatMap((i) => [i.createdBy, i.releasedBy]));
-  const failed = failures.data ? failures.data.documents.length + failures.data.deliveries.length : 0;
+  const failed = failures.data
+    ? failures.data.documents.length + failures.data.deliveries.length
+    : 0;
   return (
     <>
       <PageHeader
@@ -34,13 +40,18 @@ export default async function DocumentsPage() {
         description="A template is a plan version’s schedule or policy assembled from the filed form and the plan’s values. Policies are issued with the released template; assemble one from the plan version’s page."
         actions={
           <ButtonLink href="/documents/failures" variant="secondary">
-            <TriangleAlert aria-hidden className="size-4" /> Failed documents and deliveries{failed ? ` (${failed})` : ''}
+            <TriangleAlert aria-hidden className="size-4" /> Failed documents and deliveries
+            {failed ? ` (${failed})` : ''}
           </ButtonLink>
         }
       />
       <Card>
         {items.length === 0 ? (
-          <EmptyState icon={<FileText className="size-5" />} title="No templates yet" description="Open a published or approved plan version and assemble its schedule." />
+          <EmptyState
+            icon={<FileText className="size-5" />}
+            title="No templates yet"
+            description="Open a published or approved plan version and assemble its schedule."
+          />
         ) : (
           <Table caption="Document templates">
             <THead>
@@ -58,7 +69,10 @@ export default async function DocumentsPage() {
               {items.map((t) => (
                 <TR key={t.id}>
                   <TD>
-                    <Link href={`/plans/versions/${t.planVersionId}`} className="font-medium text-fg hover:text-primary hover:underline">
+                    <Link
+                      href={`/plans/versions/${t.planVersionId}`}
+                      className="font-medium text-fg hover:text-primary hover:underline"
+                    >
                       {t.planCode}
                     </Link>
                     <span className="block text-xs text-muted">version {t.planVersion}</span>
@@ -70,14 +84,21 @@ export default async function DocumentsPage() {
                     </span>
                   </TD>
                   <TD>
-                    <Link href={`/documents/templates/${t.id}`} className="font-medium text-fg hover:text-primary hover:underline">
+                    <Link
+                      href={`/documents/templates/${t.id}`}
+                      className="font-medium text-fg hover:text-primary hover:underline"
+                    >
                       Version {t.version}
                     </Link>
                   </TD>
                   <TD>
                     <Badge tone={TEMPLATE_TONES[t.status]}>{sentenceCase(t.status)}</Badge>
                   </TD>
-                  <TD>{t.holds.open + t.holds.accepted ? `${t.holds.open} open, ${t.holds.accepted} accepted` : 'None'}</TD>
+                  <TD>
+                    {t.holds.open + t.holds.accepted
+                      ? `${t.holds.open} open, ${t.holds.accepted} accepted`
+                      : 'None'}
+                  </TD>
                   <TD>{nameOf(names, t.createdBy)}</TD>
                   <TD className="whitespace-nowrap text-muted">
                     <LocalTime iso={t.createdAt} />

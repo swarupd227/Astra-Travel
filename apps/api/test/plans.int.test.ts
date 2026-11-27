@@ -59,8 +59,10 @@ async function approvedCatalogue(): Promise<{ edition: string; catalogue: string
   });
   expect(res.statusCode, res.body).toBe(201);
   const edition = res.json().id as string;
-  const map = (await send('POST', `/v1/form-editions/${edition}/maps`, product)).json().id as string;
-  const spans = (await send('GET', `/v1/form-editions/${edition}/brackets`, product)).json().items as {
+  const map = (await send('POST', `/v1/form-editions/${edition}/maps`, product)).json()
+    .id as string;
+  const spans = (await send('GET', `/v1/form-editions/${edition}/brackets`, product)).json()
+    .items as {
     start: number;
     end: number;
     text: string;
@@ -85,8 +87,15 @@ async function approvedCatalogue(): Promise<{ edition: string; catalogue: string
     });
     expect(r.statusCode, r.body).toBe(200);
   }
-  expect((await send('POST', `/v1/variable-maps/${map}/approve`, compliance, { note: 'Checked against the test schedule.' })).statusCode).toBe(200);
-  const cat = (await send('POST', `/v1/form-editions/${edition}/catalogues`, product, {})).json().id as string;
+  expect(
+    (
+      await send('POST', `/v1/variable-maps/${map}/approve`, compliance, {
+        note: 'Checked against the test schedule.',
+      })
+    ).statusCode,
+  ).toBe(200);
+  const cat = (await send('POST', `/v1/form-editions/${edition}/catalogues`, product, {})).json()
+    .id as string;
   const sv = (key: string) => ({ source: 'schedule', key });
   expect(
     (
@@ -110,16 +119,22 @@ async function approvedCatalogue(): Promise<{ edition: string; catalogue: string
       })
     ).statusCode,
   ).toBe(200);
-  const ok = await send('POST', `/v1/benefit-catalogues/${cat}/approve`, compliance, { note: 'Matches the test schedule.' });
+  const ok = await send('POST', `/v1/benefit-catalogues/${cat}/approve`, compliance, {
+    note: 'Matches the test schedule.',
+  });
   expect(ok.statusCode, ok.body).toBe(200);
   return { edition, catalogue: cat };
 }
 
 const BASE_DOC = {
-  benefits: [{ code: 'trip_cancellation', packaging: 'standalone_optional', ratingBenefit: 'TCAN' }],
+  benefits: [
+    { code: 'trip_cancellation', packaging: 'standalone_optional', ratingBenefit: 'TCAN' },
+  ],
   coveredReasons: [{ code: 'sickness', levels: ['self'] }],
   values: { 'schedule:tc_max': 5000, 'schedule:tc_basis': 'PER PERSON' },
-  settings: [{ setting: 'review_period', variable: { source: 'schedule', key: 'review' }, value: 10 }],
+  settings: [
+    { setting: 'review_period', variable: { source: 'schedule', key: 'review' }, value: 10 },
+  ],
   bounds: { 'schedule:tc_max': { min: 1000, max: 8000 } },
 };
 
@@ -137,7 +152,13 @@ async function approvedBasePlan(catalogue: string): Promise<string> {
   const saved = await send('PUT', `/v1/plan-versions/${draft}`, product, { document: BASE_DOC });
   expect(saved.statusCode, saved.body).toBe(200);
   expect(saved.json().problems).toEqual([]);
-  expect((await send('POST', `/v1/plan-versions/${draft}/approve`, compliance, { note: 'Base plan checked.' })).statusCode).toBe(200);
+  expect(
+    (
+      await send('POST', `/v1/plan-versions/${draft}/approve`, compliance, {
+        note: 'Base plan checked.',
+      })
+    ).statusCode,
+  ).toBe(200);
   return base.json().plan.id as string;
 }
 
@@ -145,12 +166,23 @@ async function approvedBasePlan(catalogue: string): Promise<string> {
 const DOC = { ...SPEC_QUOTED_DE_TCAN, perilPackage: null };
 const EXPECTED = new Decimal('1.475')
   .mul(42)
-  .mul(['0.72', '1.288', '0.768', '1', '1.6286', '1.3333', '1.28'].reduce((a, f) => a.mul(f), new Decimal(1)))
+  .mul(
+    ['0.72', '1.288', '0.768', '1', '1.6286', '1.3333', '1.28'].reduce(
+      (a, f) => a.mul(f),
+      new Decimal(1),
+    ),
+  )
   .toFixed(2, Decimal.ROUND_HALF_UP);
 
 async function fileInDelaware(item: Record<string, unknown>) {
-  const f = (await send('POST', '/v1/filings', compliance, { states: ['DE'], insurer: 'VSC', ...item })).json().items[0];
-  await send('POST', `/v1/filings/${f.id}/status`, compliance, { status: 'submitted', on: '2025-10-01', reason: 'Filed.' });
+  const f = (
+    await send('POST', '/v1/filings', compliance, { states: ['DE'], insurer: 'VSC', ...item })
+  ).json().items[0];
+  await send('POST', `/v1/filings/${f.id}/status`, compliance, {
+    status: 'submitted',
+    on: '2025-10-01',
+    reason: 'Filed.',
+  });
   const ok = await send('POST', `/v1/filings/${f.id}/status`, compliance, {
     status: 'approved',
     on: '2025-12-01',
@@ -166,7 +198,12 @@ async function delawareInReferenceData() {
     source: 'Test fixture (synthetic)',
     entries: [{ code: 'DE', name: 'Delaware', kind: 'state' }],
   });
-  await send('POST', `/v1/reference-data/us_states/versions/${states.json().id}/decision`, compliance, { decision: 'approve', reason: 'Test fixture.' });
+  await send(
+    'POST',
+    `/v1/reference-data/us_states/versions/${states.json().id}/decision`,
+    compliance,
+    { decision: 'approve', reason: 'Test fixture.' },
+  );
 }
 
 async function publishedManual() {
@@ -179,13 +216,23 @@ async function publishedManual() {
     document: DOC,
   });
   const id = m.json().id as string;
-  await send('POST', `/v1/rate-manuals/${id}/approve`, analyst2, { note: 'Tables checked against the pages.' });
+  await send('POST', `/v1/rate-manuals/${id}/approve`, analyst2, {
+    note: 'Tables checked against the pages.',
+  });
   const csv = [
     'name,expected_amount,age,pre_existing_waived,cost_per_traveller,purchase_date,departure_date,return_date,destination_region,business_segment,package_type,penalty_days',
     `Spec illustrative lookup,${EXPECTED},45,true,4200,2026-11-21,2026-12-11,2026-12-20,Europe,OTA - Cruise,optional,60`,
   ].join('\n');
   expect(
-    (await send('POST', `/v1/rate-manuals/${id}/parity-cases?source=Synthetic%20workbook&rateDate=2026-11-01`, analyst, csv, { 'content-type': 'text/csv' })).statusCode,
+    (
+      await send(
+        'POST',
+        `/v1/rate-manuals/${id}/parity-cases?source=Synthetic%20workbook&rateDate=2026-11-01`,
+        analyst,
+        csv,
+        { 'content-type': 'text/csv' },
+      )
+    ).statusCode,
   ).toBe(201);
   await send('POST', `/v1/rate-manuals/${id}/parity-runs`, analyst);
   await fileInDelaware({ itemType: 'rate_manual', itemReference: 'RETR-SP-VU-DE-0426' });
@@ -221,28 +268,47 @@ describe('plan builder (E01-F03) and publishing (E01-F04, E10-F01-S02)', () => {
       document: { ...BASE_DOC, values: { ...BASE_DOC.values, 'schedule:tc_max': 20_000 } },
     });
     expect(outside.statusCode).toBe(400);
-    expect(outside.json().detail).toBe('Trip Cancellation maximum must be between 500 and 10000 (filed range).');
+    expect(outside.json().detail).toBe(
+      'Trip Cancellation maximum must be between 500 and 10000 (filed range).',
+    );
     const review = await send('PUT', `/v1/plan-versions/${draft}`, product, {
       document: { ...BASE_DOC, settings: [{ ...BASE_DOC.settings[0], value: 16 }] },
     });
-    expect(review.json().detail).toBe('Review period must be between 10 days and 15 days (filed range).');
+    expect(review.json().detail).toBe(
+      'Review period must be between 10 days and 15 days (filed range).',
+    );
 
     // Incomplete drafts are saved with their problems listed, but cannot be approved.
     const partial = await send('PUT', `/v1/plan-versions/${draft}`, product, {
       document: { ...BASE_DOC, values: { 'schedule:tc_max': 5000 } },
     });
     expect(partial.statusCode, partial.body).toBe(200);
-    expect(partial.json().problems).toEqual([{ path: 'values.schedule:tc_basis', message: 'Trip Cancellation basis needs a value.' }]);
-    expect((await send('POST', `/v1/plan-versions/${draft}/approve`, compliance, { note: 'Not finished.' })).statusCode).toBe(400);
+    expect(partial.json().problems).toEqual([
+      { path: 'values.schedule:tc_basis', message: 'Trip Cancellation basis needs a value.' },
+    ]);
+    expect(
+      (
+        await send('POST', `/v1/plan-versions/${draft}/approve`, compliance, {
+          note: 'Not finished.',
+        })
+      ).statusCode,
+    ).toBe(400);
 
     await send('PUT', `/v1/plan-versions/${draft}`, builder2, { document: BASE_DOC });
     for (const who of [product, builder2]) {
-      expect((await send('POST', `/v1/plan-versions/${draft}/approve`, who, { note: 'My own work.' })).statusCode).toBe(403);
+      expect(
+        (await send('POST', `/v1/plan-versions/${draft}/approve`, who, { note: 'My own work.' }))
+          .statusCode,
+      ).toBe(403);
     }
-    const ok = await send('POST', `/v1/plan-versions/${draft}/approve`, compliance, { note: 'Checked against the schedule.' });
+    const ok = await send('POST', `/v1/plan-versions/${draft}/approve`, compliance, {
+      note: 'Checked against the schedule.',
+    });
     expect(ok.statusCode, ok.body).toBe(200);
     expect(ok.json()).toMatchObject({ status: 'approved', approvedBy: 'compliance-1' });
-    expect((await send('PUT', `/v1/plan-versions/${draft}`, product, { document: BASE_DOC })).statusCode).toBe(409);
+    expect(
+      (await send('PUT', `/v1/plan-versions/${draft}`, product, { document: BASE_DOC })).statusCode,
+    ).toBe(409);
 
     // Base plans are templates: never published.
     const ready = (await send('GET', `/v1/plan-versions/${draft}/readiness`, product)).json();
@@ -266,16 +332,31 @@ describe('plan builder (E01-F03) and publishing (E01-F04, E10-F01-S02)', () => {
     expect(de.json().draft.document.values).toEqual(BASE_DOC.values);
     const planId = de.json().plan.id as string;
     const v1 = de.json().draft.id as string;
-    expect((await send('POST', `/v1/plan-versions/${v1}/approve`, compliance, { note: 'State plan checked.' })).statusCode).toBe(200);
+    expect(
+      (
+        await send('POST', `/v1/plan-versions/${v1}/approve`, compliance, {
+          note: 'State plan checked.',
+        })
+      ).statusCode,
+    ).toBe(200);
 
     let ready = (await send('GET', `/v1/plan-versions/${v1}/readiness`, product)).json();
     expect(ready.ready).toBe(false);
-    expect(check(ready, 'forms_filed')).toMatchObject({ passed: false, detail: 'test_sch (2026-04): No filing is recorded for DE.' });
-    expect(check(ready, 'manuals').detail).toBe('No published TCAN manual in effect in DE on 2026-01-01.');
+    expect(check(ready, 'forms_filed')).toMatchObject({
+      passed: false,
+      detail: 'test_sch (2026-04): No filing is recorded for DE.',
+    });
+    expect(check(ready, 'manuals').detail).toBe(
+      'No published TCAN manual in effect in DE on 2026-01-01.',
+    );
     expect(check(ready, 'tests').detail).toBe('Add at least one rating test case for this plan.');
     const refused = await send('POST', `/v1/plan-versions/${v1}/publish`, compliance);
     expect(refused.statusCode).toBe(412);
-    expect(refused.json().errors.map((e: { field: string }) => e.field)).toEqual(['forms_filed', 'manuals', 'tests']);
+    expect(refused.json().errors.map((e: { field: string }) => e.field)).toEqual([
+      'forms_filed',
+      'manuals',
+      'tests',
+    ]);
 
     await delawareInReferenceData();
     await fileInDelaware({ itemType: 'form_edition', itemId: edition });
@@ -297,8 +378,12 @@ describe('plan builder (E01-F03) and publishing (E01-F04, E10-F01-S02)', () => {
       expected: { perBenefit: { TCAN: EXPECTED }, policyTotal: EXPECTED },
     });
     ready = (await send('GET', `/v1/plan-versions/${v1}/readiness`, product)).json();
-    expect(check(ready, 'tests').detail).toBe('The test cases changed since the last run; run them again.');
-    expect((await send('POST', `/v1/plan-versions/${v1}/test-runs`, product)).json()).toMatchObject({ total: 1, passed: 1 });
+    expect(check(ready, 'tests').detail).toBe(
+      'The test cases changed since the last run; run them again.',
+    );
+    expect((await send('POST', `/v1/plan-versions/${v1}/test-runs`, product)).json()).toMatchObject(
+      { total: 1, passed: 1 },
+    );
 
     ready = (await send('GET', `/v1/plan-versions/${v1}/readiness`, product)).json();
     expect(ready.ready, JSON.stringify(ready.checks)).toBe(true);
@@ -308,32 +393,52 @@ describe('plan builder (E01-F03) and publishing (E01-F04, E10-F01-S02)', () => {
     expect(pub.json()).toMatchObject({ status: 'published', publishedBy: 'compliance-1' });
     const client = await t.pool.connect();
     try {
-      const links = (await client.query(`SELECT links FROM plans.plan_versions WHERE id = $1`, [v1])).rows[0].links;
+      const links = (
+        await client.query(`SELECT links FROM plans.plan_versions WHERE id = $1`, [v1])
+      ).rows[0].links;
       expect(links).toEqual({ schedule: 'test_sch ed. 2026-04', TCAN: 'RETR-SP-VU-DE-0426 v1' });
       // The outbox is row-level secured; the platform sees every account's events.
       await client.query('BEGIN');
       await client.query(`SELECT set_config('app.account_ids', '*', true)`);
-      expect((await client.query(`SELECT 1 FROM platform.outbox WHERE type = 'PlanVersionPublished'`)).rowCount).toBe(1);
+      expect(
+        (await client.query(`SELECT 1 FROM platform.outbox WHERE type = 'PlanVersionPublished'`))
+          .rowCount,
+      ).toBe(1);
       await client.query('COMMIT');
       // Published versions never change.
-      await expect(client.query(`UPDATE plans.plan_versions SET document = '{}' WHERE id = $1`, [v1])).rejects.toThrow(/content cannot change/);
+      await expect(
+        client.query(`UPDATE plans.plan_versions SET document = '{}' WHERE id = $1`, [v1]),
+      ).rejects.toThrow(/content cannot change/);
     } finally {
       client.release();
     }
 
     // A new draft copies the published version; the comparison lists what changed.
-    const v2 = await send('POST', `/v1/plans/${planId}/drafts`, product, { effectiveFrom: '2027-01-01' });
+    const v2 = await send('POST', `/v1/plans/${planId}/drafts`, product, {
+      effectiveFrom: '2027-01-01',
+    });
     expect(v2.statusCode, v2.body).toBe(201);
     expect(v2.json()).toMatchObject({ version: 2, status: 'draft' });
     await send('PUT', `/v1/plan-versions/${v2.json().id}`, product, {
       document: { ...v2.json().document, values: { ...BASE_DOC.values, 'schedule:tc_max': 6000 } },
     });
-    const diff = (await send('GET', `/v1/plan-versions/${v2.json().id}/compare?with=${v1}`, product)).json();
+    const diff = (
+      await send('GET', `/v1/plan-versions/${v2.json().id}/compare?with=${v1}`, product)
+    ).json();
     expect(diff.changes).toEqual([
       { area: 'value', item: 'schedule:tc_max', change: 'changed', before: '5000', after: '6000' },
-      { area: 'dates', item: 'effective from', change: 'changed', before: '2026-01-01', after: '2027-01-01' },
+      {
+        area: 'dates',
+        item: 'effective from',
+        change: 'changed',
+        before: '2026-01-01',
+        after: '2027-01-01',
+      },
     ]);
-    expect((await send('POST', `/v1/plans/${planId}/drafts`, product, { effectiveFrom: '2027-01-01' })).statusCode).toBe(409);
+    expect(
+      (await send('POST', `/v1/plans/${planId}/drafts`, product, { effectiveFrom: '2027-01-01' }))
+        .statusCode,
+    ).toBe(409);
 
     // Account plans change only what the base plan leaves open, within its bounds (E01-F03-S04).
     const accountId = await insertAccount(t.pool, 'ACME');
@@ -355,9 +460,14 @@ describe('plan builder (E01-F03) and publishing (E01-F04, E10-F01-S02)', () => {
     const beyond = await send('PUT', `/v1/plan-versions/${av.id}`, product, {
       document: { ...av.document, values: { ...av.document.values, 'schedule:tc_max': 9000 } },
     });
-    expect(beyond.json().detail).toBe('Trip Cancellation maximum must be between 1000 and 8000 for account plans.');
+    expect(beyond.json().detail).toBe(
+      'Trip Cancellation maximum must be between 1000 and 8000 for account plans.',
+    );
     const fixed = await send('PUT', `/v1/plan-versions/${av.id}`, product, {
-      document: { ...av.document, values: { ...av.document.values, 'schedule:tc_basis': 'PER TRIP' } },
+      document: {
+        ...av.document,
+        values: { ...av.document.values, 'schedule:tc_basis': 'PER TRIP' },
+      },
     });
     expect(fixed.json().detail).toBe('Trip Cancellation basis is fixed by the base plan.');
   });
@@ -396,8 +506,16 @@ describe('plan builder (E01-F03) and publishing (E01-F04, E10-F01-S02)', () => {
     // Rating analysts read plans but do not build them.
     expect((await send('GET', '/v1/plans', analyst)).statusCode).toBe(200);
     expect(
-      (await send('POST', '/v1/plans', analyst, { kind: 'base', code: 'X-1', name: 'X1', term: 'annual', catalogueId: catalogue, effectiveFrom: '2026-01-01' }))
-        .statusCode,
+      (
+        await send('POST', '/v1/plans', analyst, {
+          kind: 'base',
+          code: 'X-1',
+          name: 'X1',
+          term: 'annual',
+          catalogueId: catalogue,
+          effectiveFrom: '2026-01-01',
+        })
+      ).statusCode,
     ).toBe(403);
   });
 });

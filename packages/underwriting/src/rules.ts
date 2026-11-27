@@ -19,7 +19,10 @@ const NUMERIC: ReadonlySet<RuleField> = new Set([
 
 export const isNumericField = (f: RuleField) => NUMERIC.has(f);
 
-const same = (a: FieldValue, b: number | string) => (typeof a === 'number' ? a === Number(b) : String(a ?? '').toLowerCase() === String(b).toLowerCase());
+const same = (a: FieldValue, b: number | string) =>
+  typeof a === 'number'
+    ? a === Number(b)
+    : String(a ?? '').toLowerCase() === String(b).toLowerCase();
 
 /** Evaluates a condition; a field with no value never satisfies a comparison (the rule does not fire). */
 export function evaluateCondition(c: Condition, ctx: FieldContext): boolean {
@@ -27,7 +30,9 @@ export function evaluateCondition(c: Condition, ctx: FieldContext): boolean {
   if ('any' in c) return c.any.some((x) => evaluateCondition(x, ctx));
   if ('not' in c) return !evaluateCondition(c.not, ctx);
   const raw = ctx[c.field];
-  const values = (Array.isArray(raw) ? raw : [raw ?? null]).filter((v): v is number | string => v !== null && v !== undefined);
+  const values = (Array.isArray(raw) ? raw : [raw ?? null]).filter(
+    (v): v is number | string => v !== null && v !== undefined,
+  );
   if (values.length === 0) return false;
   const wanted = Array.isArray(c.value) ? c.value : [c.value];
   switch (c.op) {
@@ -66,12 +71,22 @@ export function checkRuleSet(doc: RuleSetDocument): { path: string; message: str
       seen.add(c);
     }
   };
-  dup(doc.limits.map((l) => l.code), 'limits');
-  dup(doc.referralRules.map((r) => r.code), 'referralRules');
+  dup(
+    doc.limits.map((l) => l.code),
+    'limits',
+  );
+  dup(
+    doc.referralRules.map((r) => r.code),
+    'referralRules',
+  );
   for (const kind of ['age', 'trip_days', 'trip_cost'] as const) {
     const lo = doc.limits.find((l) => l.kind === `min_${kind}`);
     const hi = doc.limits.find((l) => l.kind === `max_${kind}`);
-    if (lo && hi && lo.value > hi.value) problems.push({ path: `limits.${hi.code}`, message: `${LIMIT_LABELS[lo.kind]} is above ${LIMIT_LABELS[hi.kind].toLowerCase()}.` });
+    if (lo && hi && lo.value > hi.value)
+      problems.push({
+        path: `limits.${hi.code}`,
+        message: `${LIMIT_LABELS[lo.kind]} is above ${LIMIT_LABELS[hi.kind].toLowerCase()}.`,
+      });
   }
   const walk = (c: Condition, path: string) => {
     if ('all' in c) c.all.forEach((x) => walk(x, path));
@@ -81,10 +96,16 @@ export function checkRuleSet(doc: RuleSetDocument): { path: string; message: str
       const numeric = isNumericField(c.field);
       const values = Array.isArray(c.value) ? c.value : [c.value];
       if (numeric && values.some((v) => typeof v !== 'number' && Number.isNaN(Number(v)))) {
-        problems.push({ path, message: `${RULE_FIELD_LABELS[c.field]} is compared with a number.` });
+        problems.push({
+          path,
+          message: `${RULE_FIELD_LABELS[c.field]} is compared with a number.`,
+        });
       }
       if (['gt', 'gte', 'lt', 'lte'].includes(c.op) && !numeric) {
-        problems.push({ path, message: `${RULE_FIELD_LABELS[c.field]} cannot be compared with “${RULE_OP_LABELS[c.op]}”.` });
+        problems.push({
+          path,
+          message: `${RULE_FIELD_LABELS[c.field]} cannot be compared with “${RULE_OP_LABELS[c.op]}”.`,
+        });
       }
       if (['gt', 'gte', 'lt', 'lte'].includes(c.op) && Array.isArray(c.value)) {
         problems.push({ path, message: `“${RULE_OP_LABELS[c.op]}” takes one value.` });

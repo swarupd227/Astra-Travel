@@ -131,22 +131,54 @@ const agentLoops = await startAgentLoops(pool, config, logger);
 const cardFeeds = cardFeedLoop(pool, config, logger);
 // A new feed is announced through the outbox, so the same notification wakes feed processing.
 listener.on('notification', () => cardFeeds.wake());
-const documentDelivery = documentDeliveryLoop(pool, new LocalFileStore(config.FILE_STORE_DIR), config, logger);
+const documentDelivery = documentDeliveryLoop(
+  pool,
+  new LocalFileStore(config.FILE_STORE_DIR),
+  config,
+  logger,
+);
 listener.on('notification', () => documentDelivery.wake());
-const billingSend = billingSendLoop(pool, new LocalFileStore(config.FILE_STORE_DIR), config, logger);
+const billingSend = billingSendLoop(
+  pool,
+  new LocalFileStore(config.FILE_STORE_DIR),
+  config,
+  logger,
+);
 const licenceAlerts = licenceAlertLoop(pool, config, logger);
 const loadStore = new LocalFileStore(config.FILE_STORE_DIR);
 const dataLoad = new Loop(
   'data-load',
   config.DATA_LOAD_INTERVAL_MS,
   async () => {
-    const r = await runDataLoad(pool, systemContext('data-load'), loadStore, { trigger: 'schedule' });
-    if (r) logger.info({ load: r.load.number, items: r.load.items, rejected: r.load.rejected, maxLagSeconds: r.load.maxLagSeconds }, 'Changes loaded for the data platform');
+    const r = await runDataLoad(pool, systemContext('data-load'), loadStore, {
+      trigger: 'schedule',
+    });
+    if (r)
+      logger.info(
+        {
+          load: r.load.number,
+          items: r.load.items,
+          rejected: r.load.rejected,
+          maxLagSeconds: r.load.maxLagSeconds,
+        },
+        'Changes loaded for the data platform',
+      );
     return r?.more ?? false;
   },
   logger,
 );
-const loops = [relay, dispatch, sealer, housekeeping, cardFeeds, documentDelivery, billingSend, licenceAlerts, dataLoad, ...agentLoops];
+const loops = [
+  relay,
+  dispatch,
+  sealer,
+  housekeeping,
+  cardFeeds,
+  documentDelivery,
+  billingSend,
+  licenceAlerts,
+  dataLoad,
+  ...agentLoops,
+];
 for (const loop of loops) loop.start();
 
 const health = createServer((req, res) => {

@@ -17,13 +17,17 @@ const id = (form: FormData): string => {
   if (!/^[0-9a-f-]{36}$/i.test(v)) redirect('/work');
   return v;
 };
-const back = (qs: Record<string, string>) => redirect(`/work?${new URLSearchParams(qs).toString()}`);
+const back = (qs: Record<string, string>) =>
+  redirect(`/work?${new URLSearchParams(qs).toString()}`);
 
 async function assign(form: FormData, owner: string | null, ownerName?: string | null) {
   const sourceType = source(form);
   const sourceId = id(form);
   try {
-    await api(`/v1/tasks/${sourceType}/${sourceId}/assignment`, { method: 'PUT', body: { owner, ...(ownerName ? { ownerName } : {}) } });
+    await api(`/v1/tasks/${sourceType}/${sourceId}/assignment`, {
+      method: 'PUT',
+      body: { owner, ...(ownerName ? { ownerName } : {}) },
+    });
   } catch (err) {
     if (err instanceof ApiProblem) return back({ error: err.problem.detail ?? err.problem.title });
     throw err;
@@ -51,7 +55,13 @@ export async function assignTask(form: FormData) {
 export async function saveSla(form: FormData) {
   const sourceType = source(form);
   try {
-    await api(`/v1/task-sla/${sourceType}`, { method: 'PUT', body: { priority: String(form.get('priority') ?? ''), targetHours: Number(form.get('targetHours')) } });
+    await api(`/v1/task-sla/${sourceType}`, {
+      method: 'PUT',
+      body: {
+        priority: String(form.get('priority') ?? ''),
+        targetHours: Number(form.get('targetHours')),
+      },
+    });
   } catch (err) {
     if (err instanceof ApiProblem) return back({ error: err.problem.detail ?? err.problem.title });
     throw err;

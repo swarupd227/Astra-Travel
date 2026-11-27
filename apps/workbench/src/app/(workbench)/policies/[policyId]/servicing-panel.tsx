@@ -15,7 +15,8 @@ interface Props {
   optionalBenefits: { code: string; name: string }[];
 }
 
-const money = (v: string) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (v: string) =>
+  `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** Preview a change, cancellation or correction, then confirm it against the price shown (E06). */
 export function ServicingPanel({ policyId, travellers, optionalBenefits }: Props) {
@@ -49,7 +50,13 @@ export function ServicingPanel({ policyId, travellers, optionalBenefits }: Props
         <input type="hidden" name="policyId" value={policyId} />
         <Field label="What do you want to do?">
           {(f) => (
-            <Select id={f.id} name="type" value={type} onChange={(e) => setType(e.target.value as ServicingType)} aria-describedby={f.describedBy}>
+            <Select
+              id={f.id}
+              name="type"
+              value={type}
+              onChange={(e) => setType(e.target.value as ServicingType)}
+              aria-describedby={f.describedBy}
+            >
               {SERVICING_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {SERVICING_LABELS[t]}
@@ -61,24 +68,78 @@ export function ServicingPanel({ policyId, travellers, optionalBenefits }: Props
         {type === 'cancel' ? noLoss : null}
         {type === 'change_dates' ? (
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="New departure date">{(f) => <Input id={f.id} name="departureDate" type="date" required aria-describedby={f.describedBy} />}</Field>
-            <Field label="New return date">{(f) => <Input id={f.id} name="returnDate" type="date" required aria-describedby={f.describedBy} />}</Field>
+            <Field label="New departure date">
+              {(f) => (
+                <Input
+                  id={f.id}
+                  name="departureDate"
+                  type="date"
+                  required
+                  aria-describedby={f.describedBy}
+                />
+              )}
+            </Field>
+            <Field label="New return date">
+              {(f) => (
+                <Input
+                  id={f.id}
+                  name="returnDate"
+                  type="date"
+                  required
+                  aria-describedby={f.describedBy}
+                />
+              )}
+            </Field>
           </div>
         ) : null}
         {type === 'change_cost' ? (
           <div className="grid gap-4 sm:grid-cols-2">
             {traveller}
             <Field label="Insured trip cost" hint="For this traveller, in dollars.">
-              {(f) => <Input id={f.id} name="costPerTraveller" inputMode="decimal" required aria-describedby={f.describedBy} />}
+              {(f) => (
+                <Input
+                  id={f.id}
+                  name="costPerTraveller"
+                  inputMode="decimal"
+                  required
+                  aria-describedby={f.describedBy}
+                />
+              )}
             </Field>
           </div>
         ) : null}
         {type === 'add_traveller' ? (
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="First name">{(f) => <Input id={f.id} name="firstName" required aria-describedby={f.describedBy} />}</Field>
-            <Field label="Last name">{(f) => <Input id={f.id} name="lastName" required aria-describedby={f.describedBy} />}</Field>
-            <Field label="Date of birth">{(f) => <Input id={f.id} name="dateOfBirth" type="date" required aria-describedby={f.describedBy} />}</Field>
-            <Field label="Insured trip cost">{(f) => <Input id={f.id} name="costPerTraveller" inputMode="decimal" required aria-describedby={f.describedBy} />}</Field>
+            <Field label="First name">
+              {(f) => (
+                <Input id={f.id} name="firstName" required aria-describedby={f.describedBy} />
+              )}
+            </Field>
+            <Field label="Last name">
+              {(f) => <Input id={f.id} name="lastName" required aria-describedby={f.describedBy} />}
+            </Field>
+            <Field label="Date of birth">
+              {(f) => (
+                <Input
+                  id={f.id}
+                  name="dateOfBirth"
+                  type="date"
+                  required
+                  aria-describedby={f.describedBy}
+                />
+              )}
+            </Field>
+            <Field label="Insured trip cost">
+              {(f) => (
+                <Input
+                  id={f.id}
+                  name="costPerTraveller"
+                  inputMode="decimal"
+                  required
+                  aria-describedby={f.describedBy}
+                />
+              )}
+            </Field>
           </div>
         ) : null}
         {type === 'remove_traveller' ? (
@@ -89,8 +150,14 @@ export function ServicingPanel({ policyId, travellers, optionalBenefits }: Props
         ) : null}
         {type === 'change_destinations' ? (
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Country" hint="Two-letter code, for example FR.">{(f) => <Input id={f.id} name="country" maxLength={2} aria-describedby={f.describedBy} />}</Field>
-            <Field label="Region">{(f) => <Input id={f.id} name="region" aria-describedby={f.describedBy} />}</Field>
+            <Field label="Country" hint="Two-letter code, for example FR.">
+              {(f) => (
+                <Input id={f.id} name="country" maxLength={2} aria-describedby={f.describedBy} />
+              )}
+            </Field>
+            <Field label="Region">
+              {(f) => <Input id={f.id} name="region" aria-describedby={f.describedBy} />}
+            </Field>
           </div>
         ) : null}
         {type === 'add_benefits' ? (
@@ -107,21 +174,44 @@ export function ServicingPanel({ policyId, travellers, optionalBenefits }: Props
               )}
             </Field>
           ) : (
-            <p className="text-sm text-muted">Every optional benefit of this plan is already on the policy.</p>
+            <p className="text-sm text-muted">
+              Every optional benefit of this plan is already on the policy.
+            </p>
           )
         ) : null}
         {type === 'correct' ? (
           <div className="grid gap-4 sm:grid-cols-2">
             {traveller}
             <span />
-            <Field label="Corrected first name" hint="Leave blank to keep.">{(f) => <Input id={f.id} name="firstName" aria-describedby={f.describedBy} />}</Field>
-            <Field label="Corrected last name">{(f) => <Input id={f.id} name="lastName" aria-describedby={f.describedBy} />}</Field>
-            <Field label="Corrected date of birth">{(f) => <Input id={f.id} name="dateOfBirth" type="date" aria-describedby={f.describedBy} />}</Field>
-            <Field label="Purchaser email">{(f) => <Input id={f.id} name="email" type="email" aria-describedby={f.describedBy} />}</Field>
+            <Field label="Corrected first name" hint="Leave blank to keep.">
+              {(f) => <Input id={f.id} name="firstName" aria-describedby={f.describedBy} />}
+            </Field>
+            <Field label="Corrected last name">
+              {(f) => <Input id={f.id} name="lastName" aria-describedby={f.describedBy} />}
+            </Field>
+            <Field label="Corrected date of birth">
+              {(f) => (
+                <Input id={f.id} name="dateOfBirth" type="date" aria-describedby={f.describedBy} />
+              )}
+            </Field>
+            <Field label="Purchaser email">
+              {(f) => (
+                <Input id={f.id} name="email" type="email" aria-describedby={f.describedBy} />
+              )}
+            </Field>
           </div>
         ) : null}
         <Field label="Reason" hint="Kept on the policy’s history and in the audit trail.">
-          {(f) => <Textarea id={f.id} name="reason" required minLength={3} maxLength={500} aria-describedby={f.describedBy} />}
+          {(f) => (
+            <Textarea
+              id={f.id}
+              name="reason"
+              required
+              minLength={3}
+              maxLength={500}
+              aria-describedby={f.describedBy}
+            />
+          )}
         </Field>
         {state.status === 'error' ? <FormMessage state={state} /> : null}
         <SubmitButton variant="secondary" pendingLabel="Working it out…">
@@ -132,8 +222,12 @@ export function ServicingPanel({ policyId, travellers, optionalBenefits }: Props
       {p ? (
         <div className="space-y-4 rounded-lg border border-border p-4" aria-live="polite">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-semibold text-fg">{p.allowed ? 'What would change' : 'This cannot be done'}</h3>
-            <Badge tone={p.reviewPeriod.inReview ? 'success' : 'neutral'}>{p.reviewPeriod.inReview ? 'Review period running' : 'Review period over'}</Badge>
+            <h3 className="text-sm font-semibold text-fg">
+              {p.allowed ? 'What would change' : 'This cannot be done'}
+            </h3>
+            <Badge tone={p.reviewPeriod.inReview ? 'success' : 'neutral'}>
+              {p.reviewPeriod.inReview ? 'Review period running' : 'Review period over'}
+            </Badge>
           </div>
           <p className="text-sm text-fg">{p.summary}</p>
           {!p.allowed ? (
@@ -185,9 +279,20 @@ export function ServicingPanel({ policyId, travellers, optionalBenefits }: Props
               <p className="text-sm text-muted">{p.money.explanation}</p>
               <form action={apply} className="space-y-3">
                 <input type="hidden" name="policyId" value={policyId} />
-                <input type="hidden" name="request" value={JSON.stringify(state.status === 'success' ? state.request : {})} />
+                <input
+                  type="hidden"
+                  name="request"
+                  value={JSON.stringify(state.status === 'success' ? state.request : {})}
+                />
                 <input type="hidden" name="confirmAmount" value={p.confirmAmount} />
-                <input type="hidden" name="idempotencyKey" value={`${key}-${p.confirmAmount}-${p.summary.length}`.replace(/[^A-Za-z0-9._:-]/g, '-')} />
+                <input
+                  type="hidden"
+                  name="idempotencyKey"
+                  value={`${key}-${p.confirmAmount}-${p.summary.length}`.replace(
+                    /[^A-Za-z0-9._:-]/g,
+                    '-',
+                  )}
+                />
                 <FormMessage state={applied} />
                 <SubmitButton pendingLabel="Making the change…">
                   <ClipboardCheck aria-hidden className="size-4" /> Confirm at this price

@@ -29,13 +29,28 @@ describe.skipIf(!enabled)('performance against the non-functional targets', () =
   /** Six travellers who are not already covered: a name and date of birth of their own each time. */
   const party = () => {
     run += 1;
-    return Array.from({ length: 6 }, (_, i) => ({ firstName: `Perf${run}x${i}`, lastName: `Load${run}`, dateOfBirth: `19${60 + (i % 35)}-0${1 + (run % 9)}-1${i}`, costPerTraveller: '4200' }));
+    return Array.from({ length: 6 }, (_, i) => ({
+      firstName: `Perf${run}x${i}`,
+      lastName: `Load${run}`,
+      dateOfBirth: `19${60 + (i % 35)}-0${1 + (run % 9)}-1${i}`,
+      costPerTraveller: '4200',
+    }));
   };
-  const quote = () => send(t, 'POST', '/v1/quotes', st.tokens.partner, st.quoteBody({ travellers: party(), selection: ['trip_interruption'] }));
+  const quote = () =>
+    send(
+      t,
+      'POST',
+      '/v1/quotes',
+      st.tokens.partner,
+      st.quoteBody({ travellers: party(), selection: ['trip_interruption'] }),
+    );
 
-  const percentile = (times: number[], p: number) => [...times].sort((a, b) => a - b)[Math.ceil(times.length * p) - 1]!;
+  const percentile = (times: number[], p: number) =>
+    [...times].sort((a, b) => a - b)[Math.ceil(times.length * p) - 1]!;
   const report = (name: string, times: number[], target: number) =>
-    console.warn(`PERF ${name}: n=${times.length} median=${percentile(times, 0.5).toFixed(0)}ms p95=${percentile(times, 0.95).toFixed(0)}ms max=${Math.max(...times).toFixed(0)}ms target(p95)=${target}ms`);
+    console.warn(
+      `PERF ${name}: n=${times.length} median=${percentile(times, 0.5).toFixed(0)}ms p95=${percentile(times, 0.95).toFixed(0)}ms max=${Math.max(...times).toFixed(0)}ms target(p95)=${target}ms`,
+    );
   const timed = async <T>(fn: () => Promise<T>): Promise<[number, T]> => {
     const started = performance.now();
     const out = await fn();
@@ -61,12 +76,34 @@ describe.skipIf(!enabled)('performance against the non-functional targets', () =
       const q = (await quote()).json();
       const started = performance.now();
       const [ms, res] = await timed(() =>
-        send(t, 'POST', `/v1/quotes/${q.id}/bind`, st.tokens.partner, { ableToTravel: true, acknowledgement: { disclosureVersion: st.disclosureVersion, acknowledgedBy: 'Pat Sample' }, payment: { reference: `PERF-${Date.now()}-${i}`, amount: q.premium.total }, purchaser: { name: 'Pat Sample', email: 'pat@example.com' } }, { 'idempotency-key': `perf-${Date.now()}-${i}` }),
+        send(
+          t,
+          'POST',
+          `/v1/quotes/${q.id}/bind`,
+          st.tokens.partner,
+          {
+            ableToTravel: true,
+            acknowledgement: {
+              disclosureVersion: st.disclosureVersion,
+              acknowledgedBy: 'Pat Sample',
+            },
+            payment: { reference: `PERF-${Date.now()}-${i}`, amount: q.premium.total },
+            purchaser: { name: 'Pat Sample', email: 'pat@example.com' },
+          },
+          { 'idempotency-key': `perf-${Date.now()}-${i}` },
+        ),
       );
       expect(res.statusCode, res.body).toBe(201);
       binds.push(ms);
-      const docs = await send(t, 'GET', `/v1/policies/${res.json().id}/documents`, st.tokens.partner);
-      expect(docs.json().items.filter((d: { status: string }) => d.status === 'issued').length).toBeGreaterThan(0);
+      const docs = await send(
+        t,
+        'GET',
+        `/v1/policies/${res.json().id}/documents`,
+        st.tokens.partner,
+      );
+      expect(
+        docs.json().items.filter((d: { status: string }) => d.status === 'issued').length,
+      ).toBeGreaterThan(0);
       ready.push(performance.now() - started);
     }
     report('bind and issue', binds, 1000);
@@ -79,7 +116,9 @@ describe.skipIf(!enabled)('performance against the non-functional targets', () =
     const times: number[] = [];
     for (const q of ['Load1', 'ATP-', 'europe', st.dates.departure]) {
       for (let i = 0; i < 5; i++) {
-        const [ms, res] = await timed(() => send(t, 'GET', `/v1/search?q=${encodeURIComponent(q)}`, st.tokens.uw1));
+        const [ms, res] = await timed(() =>
+          send(t, 'GET', `/v1/search?q=${encodeURIComponent(q)}`, st.tokens.uw1),
+        );
         expect(res.statusCode, res.body).toBe(200);
         times.push(ms);
       }
@@ -103,7 +142,9 @@ describe.skipIf(!enabled)('performance against the non-functional targets', () =
         }
       }),
     );
-    console.warn(`PERF concurrent quoting: ${workers} at once for ${seconds}s, ${times.length} quotes (${(times.length / seconds).toFixed(1)}/s), ${failures} failed`);
+    console.warn(
+      `PERF concurrent quoting: ${workers} at once for ${seconds}s, ${times.length} quotes (${(times.length / seconds).toFixed(1)}/s), ${failures} failed`,
+    );
     report('quote under concurrency', times, 500);
     // No target is set for the peak rate (to be sized in discovery); only that nothing fails.
     expect(failures).toBe(0);

@@ -1,7 +1,25 @@
 import { z } from 'zod';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { AgentSampleItemSchema, PolicyCancelled, PolicyChanged, ServicingApplyRequestSchema, ServicingPreviewSchema, ServicingRequestSchema, ServicingResultSchema, type PolicySnapshot } from '@astra/contracts';
-import { AppError, conflict, publishEvent, withIdempotency, withTx, writeAudit, type RequestContext, type Tx } from '@astra/platform';
+import {
+  AgentSampleItemSchema,
+  PolicyCancelled,
+  PolicyChanged,
+  ServicingApplyRequestSchema,
+  ServicingPreviewSchema,
+  ServicingRequestSchema,
+  ServicingResultSchema,
+  type PolicySnapshot,
+} from '@astra/contracts';
+import {
+  AppError,
+  conflict,
+  publishEvent,
+  withIdempotency,
+  withTx,
+  writeAudit,
+  type RequestContext,
+  type Tx,
+} from '@astra/platform';
 import { raiseReview } from '@astra/agents';
 import { forbidden } from '@astra/platform';
 import { issueNotice } from '../documents/issue';
@@ -23,26 +41,58 @@ const params = z.object({ policyId: z.uuid() });
 const AGENT_TYPES = ['cancel', 'change_dates', 'change_destinations', 'correct'];
 
 /** Keeps the tables that searches and the duplicate-cover check read in step with the record. */
-async function syncTables(tx: Tx, p: Planned, after: PolicySnapshot, accountId: string, policyId: string) {
-  await tx.query(`UPDATE policies.policies SET term_start = $2, term_end = $3, premium_total = $4 WHERE id = $1`, [policyId, after.term.start, after.term.end, after.premium.total]);
+async function syncTables(
+  tx: Tx,
+  p: Planned,
+  after: PolicySnapshot,
+  accountId: string,
+  policyId: string,
+) {
+  await tx.query(
+    `UPDATE policies.policies SET term_start = $2, term_end = $3, premium_total = $4 WHERE id = $1`,
+    [policyId, after.term.start, after.term.end, after.premium.total],
+  );
   if (!p.rewrite) return;
   await tx.query(`DELETE FROM policies.policy_travellers WHERE policy_id = $1`, [policyId]);
   for (const t of after.travellers) {
-    await tx.query(`INSERT INTO policies.policy_travellers (policy_id, account_id, traveller_id, first_name, last_name, date_of_birth) VALUES ($1, $2, $3, $4, $5, $6)`, [policyId, accountId, t.id, t.firstName, t.lastName, t.dateOfBirth]);
+    await tx.query(
+      `INSERT INTO policies.policy_travellers (policy_id, account_id, traveller_id, first_name, last_name, date_of_birth) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [policyId, accountId, t.id, t.firstName, t.lastName, t.dateOfBirth],
+    );
   }
   await tx.query(`DELETE FROM policies.policy_benefits WHERE policy_id = $1`, [policyId]);
   for (const x of after.benefits) {
     await tx.query(
       `INSERT INTO policies.policy_benefits (policy_id, account_id, code, name, benefit_group, underwriter, limits, premium, coverage_start, coverage_end) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [policyId, accountId, x.code, x.name, x.group, x.underwriter, JSON.stringify(x.limits), x.premium, x.coverageStart, x.coverageEnd],
+      [
+        policyId,
+        accountId,
+        x.code,
+        x.name,
+        x.group,
+        x.underwriter,
+        JSON.stringify(x.limits),
+        x.premium,
+        x.coverageStart,
+        x.coverageEnd,
+      ],
     );
   }
-  await tx.query(`UPDATE underwriting.cover_register SET status = 'cancelled' WHERE policy_ref = $1 AND status = 'active'`, [after.number]);
+  await tx.query(
+    `UPDATE underwriting.cover_register SET status = 'cancelled' WHERE policy_ref = $1 AND status = 'active'`,
+    [after.number],
+  );
   const trip = after.trip as { departureDate: string; returnDate: string };
   for (const t of after.travellers) {
     if (!t.dateOfBirth) continue;
-    const [start, end] = after.plan.term === 'annual' ? [after.term.start.slice(0, 10), after.term.end.slice(0, 10)] : [trip.departureDate, trip.returnDate];
-    await tx.query(`INSERT INTO underwriting.cover_register (first_name, last_name, date_of_birth, policy_ref, trip_start, trip_end, term) VALUES ($1, $2, $3, $4, $5, $6, $7)`, [t.firstName, t.lastName, t.dateOfBirth, after.number, start, end, after.plan.term]);
+    const [start, end] =
+      after.plan.term === 'annual'
+        ? [after.term.start.slice(0, 10), after.term.end.slice(0, 10)]
+        : [trip.departureDate, trip.returnDate];
+    await tx.query(
+      `INSERT INTO underwriting.cover_register (first_name, last_name, date_of_birth, policy_ref, trip_start, trip_end, term) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [t.firstName, t.lastName, t.dateOfBirth, after.number, start, end, after.plan.term],
+    );
   }
 }
 
@@ -66,9 +116,27 @@ export const servicingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
     async (request) => {
       const externalCase = externalCaseOf(request);
       return withTx(deps.pool, request.ctx, async (tx) => {
-        const planned = await planServicing(tx, request.ctx, request.params.policyId, request.body, clock(), false);
+        const planned = await planServicing(
+          tx,
+          request.ctx,
+          request.params.policyId,
+          request.body,
+          clock(),
+          false,
+        );
         // A quote of a change made for a Service Cloud case is recorded against that case; nothing else is saved.
-        if (externalCase) await writeAudit(tx, request.ctx, { action: 'policy.change_quoted', resourceType: 'policy', resourceId: planned.policy.id, accountId: planned.policy.accountId, data: { transaction: request.body.type, confirmAmount: planned.preview.confirmAmount, externalCase } });
+        if (externalCase)
+          await writeAudit(tx, request.ctx, {
+            action: 'policy.change_quoted',
+            resourceType: 'policy',
+            resourceId: planned.policy.id,
+            accountId: planned.policy.accountId,
+            data: {
+              transaction: request.body.type,
+              confirmAmount: planned.preview.confirmAmount,
+              externalCase,
+            },
+          });
         return planned.preview;
       });
     },
@@ -101,15 +169,42 @@ export const servicingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       if (principal.kind === 'agent') {
         const agentId = principal.subject.replace(/^agent:/, '');
         const gate = await withTx(deps.pool, ctx, async (tx): Promise<AppError | null> => {
-          const run = (await tx.query<{ id: string; input: { question?: string } }>(`SELECT id, input FROM agents.runs WHERE agent_id = $1 AND correlation_id = $2 ORDER BY created_at DESC LIMIT 1`, [agentId, ctx.correlationId])).rows[0];
+          const run = (
+            await tx.query<{ id: string; input: { question?: string } }>(
+              `SELECT id, input FROM agents.runs WHERE agent_id = $1 AND correlation_id = $2 ORDER BY created_at DESC LIMIT 1`,
+              [agentId, ctx.correlationId],
+            )
+          ).rows[0];
           if (!run) return forbidden('Servicing is done during an agent run.');
           const said = (run.input.question ?? '').toLowerCase().replace(/\s+/g, ' ');
-          const confirmation = (request.body.agentConfirmation ?? '').toLowerCase().replace(/\s+/g, ' ');
-          if (!confirmation || !said.includes(confirmation)) return forbidden('The requester has not confirmed this change and its price in their own words. Show them the preview and ask them to confirm.');
-          const outside = !AGENT_TYPES.includes(req.type) ? `${req.type.replace(/_/g, ' ')} is not something the servicing agent handles` : Math.abs(Number(confirmAmount)) > deps.config.AGENT_SERVICING_MAX_AMOUNT ? `an amount of ${confirmAmount} is above the agent's limit of ${deps.config.AGENT_SERVICING_MAX_AMOUNT}` : null;
+          const confirmation = (request.body.agentConfirmation ?? '')
+            .toLowerCase()
+            .replace(/\s+/g, ' ');
+          if (!confirmation || !said.includes(confirmation))
+            return forbidden(
+              'The requester has not confirmed this change and its price in their own words. Show them the preview and ask them to confirm.',
+            );
+          const outside = !AGENT_TYPES.includes(req.type)
+            ? `${req.type.replace(/_/g, ' ')} is not something the servicing agent handles`
+            : Math.abs(Number(confirmAmount)) > deps.config.AGENT_SERVICING_MAX_AMOUNT
+              ? `an amount of ${confirmAmount} is above the agent's limit of ${deps.config.AGENT_SERVICING_MAX_AMOUNT}`
+              : null;
           if (!outside) return null;
-          await raiseReview(tx, ctx, { agentId, runId: run.id, kind: 'servicing_request', summary: `Servicing request for policy ${request.params.policyId} for a person: ${outside}.`, detail: { policyId: request.params.policyId, request: req, confirmAmount, reason: outside } });
-          return forbidden(`This is outside what the servicing agent may do (${outside}). It has been queued for a person.`);
+          await raiseReview(tx, ctx, {
+            agentId,
+            runId: run.id,
+            kind: 'servicing_request',
+            summary: `Servicing request for policy ${request.params.policyId} for a person: ${outside}.`,
+            detail: {
+              policyId: request.params.policyId,
+              request: req,
+              confirmAmount,
+              reason: outside,
+            },
+          });
+          return forbidden(
+            `This is outside what the servicing agent may do (${outside}). It has been queued for a person.`,
+          );
         });
         if (gate) throw gate;
       }
@@ -117,64 +212,225 @@ export const servicingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       // Screening comes first and is committed on its own, so that a hold raised here is kept even when the change
       // is then refused (E14-F03-S02).
       await withTx(deps.pool, ctx, async (tx) => {
-        const p = (await tx.query<{ plan_version_id: string; status: string }>(`SELECT plan_version_id, status FROM policies.policies WHERE id = $1`, [request.params.policyId])).rows[0];
+        const p = (
+          await tx.query<{ plan_version_id: string; status: string }>(
+            `SELECT plan_version_id, status FROM policies.policies WHERE id = $1`,
+            [request.params.policyId],
+          )
+        ).rows[0];
         if (!p || p.status !== 'active') return;
         const record = project(await loadEvents(tx, request.params.policyId))!.record;
-        const base = { policyId: request.params.policyId, planVersionId: p.plan_version_id, ruleSetId: record.ruleSet.id, raise: true };
-        if (req.type !== 'cancel') await screenParties(tx, ctx, { ...base, stage: 'change', parties: partiesAfter(record, req) });
+        const base = {
+          policyId: request.params.policyId,
+          planVersionId: p.plan_version_id,
+          ruleSetId: record.ruleSet.id,
+          raise: true,
+        };
+        if (req.type !== 'cancel')
+          await screenParties(tx, ctx, {
+            ...base,
+            stage: 'change',
+            parties: partiesAfter(record, req),
+          });
         // Money going back is screened too; a match holds the refund, not the cancellation or change.
         // A cancellation confirms the refund as a positive amount; a change that gives money back, as a negative one.
-        if (req.type === 'cancel' ? Number(confirmAmount) > 0 : Number(confirmAmount) < 0) await screenParties(tx, ctx, { ...base, stage: 'refund', parties: currentParties(record) });
+        if (req.type === 'cancel' ? Number(confirmAmount) > 0 : Number(confirmAmount) < 0)
+          await screenParties(tx, ctx, {
+            ...base,
+            stage: 'refund',
+            parties: currentParties(record),
+          });
       });
 
       const result = await withTx(deps.pool, ctx, async (tx) => {
-        const owner = (await tx.query<{ account_id: string }>(`SELECT account_id FROM policies.policies WHERE id = $1`, [request.params.policyId])).rows[0];
+        const owner = (
+          await tx.query<{ account_id: string }>(
+            `SELECT account_id FROM policies.policies WHERE id = $1`,
+            [request.params.policyId],
+          )
+        ).rows[0];
         if (!owner) throw new AppError('not_found', 'The policy was not found.');
-        return withIdempotency(tx, ctx, { key, method: 'POST', path: `/v1/policies/${request.params.policyId}/servicing`, body: request.body, accountId: owner.account_id }, async () => {
-          const planned = await planServicing(tx, ctx, request.params.policyId, req, clock(), true);
-          if (!planned.preview.allowed) throw new AppError('precondition_failed', planned.preview.problems.join(' '), planned.preview.problems.map((m) => ({ code: 'not_allowed', field: 'request', message: m })));
-          if (planned.preview.confirmAmount !== confirmAmount) throw conflict(`The price has changed: it is now ${planned.preview.confirmAmount}, not ${confirmAmount}. Show the new price and confirm again.`);
-          const { policy, before, money } = planned;
-          let seq: number;
-          if (planned.cancel) {
-            seq = Number(
-              (
-                await tx.query<{ seq: string }>(
-                  `INSERT INTO policies.policy_events (policy_id, account_id, type, actor, actor_name, reason, data) VALUES ($1, $2, 'status_changed', $3, $4, $5, $6) RETURNING seq`,
-                  [policy.id, policy.accountId, principal.subject, principal.name, req.reason, JSON.stringify({ from: 'active', to: 'cancelled', transaction: 'cancel', noLoss: planned.cancel.noLoss, money, ...(externalCase ? { externalCase } : {}) })],
-                )
-              ).rows[0]!.seq,
+        return withIdempotency(
+          tx,
+          ctx,
+          {
+            key,
+            method: 'POST',
+            path: `/v1/policies/${request.params.policyId}/servicing`,
+            body: request.body,
+            accountId: owner.account_id,
+          },
+          async () => {
+            const planned = await planServicing(
+              tx,
+              ctx,
+              request.params.policyId,
+              req,
+              clock(),
+              true,
             );
-            await tx.query(`UPDATE policies.policies SET status = 'cancelled' WHERE id = $1`, [policy.id]);
-            await recordTransaction(tx, { kind: 'cancellation', policy, eventSeq: seq, before, after: before, money, worksheetIds: [] }, clock());
-            await tx.query(`UPDATE underwriting.cover_register SET status = 'cancelled' WHERE policy_ref = $1 AND status = 'active'`, [policy.number]);
-            await publishEvent(tx, ctx, PolicyCancelled, { policyId: policy.id, number: policy.number, refund: money.refund, basis: money.basis, reason: req.reason }, { accountId: policy.accountId });
-          } else {
-            seq = Number(
-              (
-                await tx.query<{ seq: string }>(
-                  `INSERT INTO policies.policy_events (policy_id, account_id, type, actor, actor_name, reason, data) VALUES ($1, $2, 'details_changed', $3, $4, $5, $6) RETURNING seq`,
-                  [policy.id, policy.accountId, principal.subject, principal.name, req.reason, JSON.stringify({ transaction: req.type, summary: planned.preview.summary, patch: planned.patch, money, ...(externalCase ? { externalCase } : {}) })],
-                )
-              ).rows[0]!.seq,
-            );
-            await syncTables(tx, planned, planned.after!, policy.accountId, policy.id);
-            const ids = await storeWorksheets(tx, principal.subject, { worksheets: planned.worksheets });
-            await recordTransaction(tx, { kind: 'change', policy, eventSeq: seq, before, after: planned.after!, money, worksheetIds: Object.values(ids) }, clock());
-            await publishEvent(tx, ctx, PolicyChanged, { policyId: policy.id, number: policy.number, transaction: req.type, premiumTotal: planned.after!.premium.total, charge: money.charge, refund: money.refund }, { accountId: policy.accountId });
-          }
-          await writeAudit(tx, ctx, {
-            action: planned.cancel ? 'policy.cancelled' : 'policy.changed',
-            resourceType: 'policy',
-            resourceId: policy.id,
-            accountId: policy.accountId,
-            reason: req.reason,
-            data: { number: policy.number, transaction: req.type, premiumBefore: before.premium.total, premiumAfter: planned.after?.premium.total ?? null, charge: money.charge, refund: money.refund, retained: money.retained, basis: money.basis, ...(externalCase ? { externalCase } : {}) },
-          });
-          // A correction of names or details is a change like any other; its notice shows exactly what changed.
-          const notice = await issueNotice(tx, deps.files, ctx, policy.id, seq);
-          return { status: 200, body: { type: req.type, policy: await policyView(tx, policy.id), money: { charge: money.charge, refund: money.refund, retained: money.retained, explanation: money.explanation }, noticeDocumentId: notice.id } };
-        });
+            if (!planned.preview.allowed)
+              throw new AppError(
+                'precondition_failed',
+                planned.preview.problems.join(' '),
+                planned.preview.problems.map((m) => ({
+                  code: 'not_allowed',
+                  field: 'request',
+                  message: m,
+                })),
+              );
+            if (planned.preview.confirmAmount !== confirmAmount)
+              throw conflict(
+                `The price has changed: it is now ${planned.preview.confirmAmount}, not ${confirmAmount}. Show the new price and confirm again.`,
+              );
+            const { policy, before, money } = planned;
+            let seq: number;
+            if (planned.cancel) {
+              seq = Number(
+                (
+                  await tx.query<{ seq: string }>(
+                    `INSERT INTO policies.policy_events (policy_id, account_id, type, actor, actor_name, reason, data) VALUES ($1, $2, 'status_changed', $3, $4, $5, $6) RETURNING seq`,
+                    [
+                      policy.id,
+                      policy.accountId,
+                      principal.subject,
+                      principal.name,
+                      req.reason,
+                      JSON.stringify({
+                        from: 'active',
+                        to: 'cancelled',
+                        transaction: 'cancel',
+                        noLoss: planned.cancel.noLoss,
+                        money,
+                        ...(externalCase ? { externalCase } : {}),
+                      }),
+                    ],
+                  )
+                ).rows[0]!.seq,
+              );
+              await tx.query(`UPDATE policies.policies SET status = 'cancelled' WHERE id = $1`, [
+                policy.id,
+              ]);
+              await recordTransaction(
+                tx,
+                {
+                  kind: 'cancellation',
+                  policy,
+                  eventSeq: seq,
+                  before,
+                  after: before,
+                  money,
+                  worksheetIds: [],
+                },
+                clock(),
+              );
+              await tx.query(
+                `UPDATE underwriting.cover_register SET status = 'cancelled' WHERE policy_ref = $1 AND status = 'active'`,
+                [policy.number],
+              );
+              await publishEvent(
+                tx,
+                ctx,
+                PolicyCancelled,
+                {
+                  policyId: policy.id,
+                  number: policy.number,
+                  refund: money.refund,
+                  basis: money.basis,
+                  reason: req.reason,
+                },
+                { accountId: policy.accountId },
+              );
+            } else {
+              seq = Number(
+                (
+                  await tx.query<{ seq: string }>(
+                    `INSERT INTO policies.policy_events (policy_id, account_id, type, actor, actor_name, reason, data) VALUES ($1, $2, 'details_changed', $3, $4, $5, $6) RETURNING seq`,
+                    [
+                      policy.id,
+                      policy.accountId,
+                      principal.subject,
+                      principal.name,
+                      req.reason,
+                      JSON.stringify({
+                        transaction: req.type,
+                        summary: planned.preview.summary,
+                        patch: planned.patch,
+                        money,
+                        ...(externalCase ? { externalCase } : {}),
+                      }),
+                    ],
+                  )
+                ).rows[0]!.seq,
+              );
+              await syncTables(tx, planned, planned.after!, policy.accountId, policy.id);
+              const ids = await storeWorksheets(tx, principal.subject, {
+                worksheets: planned.worksheets,
+              });
+              await recordTransaction(
+                tx,
+                {
+                  kind: 'change',
+                  policy,
+                  eventSeq: seq,
+                  before,
+                  after: planned.after!,
+                  money,
+                  worksheetIds: Object.values(ids),
+                },
+                clock(),
+              );
+              await publishEvent(
+                tx,
+                ctx,
+                PolicyChanged,
+                {
+                  policyId: policy.id,
+                  number: policy.number,
+                  transaction: req.type,
+                  premiumTotal: planned.after!.premium.total,
+                  charge: money.charge,
+                  refund: money.refund,
+                },
+                { accountId: policy.accountId },
+              );
+            }
+            await writeAudit(tx, ctx, {
+              action: planned.cancel ? 'policy.cancelled' : 'policy.changed',
+              resourceType: 'policy',
+              resourceId: policy.id,
+              accountId: policy.accountId,
+              reason: req.reason,
+              data: {
+                number: policy.number,
+                transaction: req.type,
+                premiumBefore: before.premium.total,
+                premiumAfter: planned.after?.premium.total ?? null,
+                charge: money.charge,
+                refund: money.refund,
+                retained: money.retained,
+                basis: money.basis,
+                ...(externalCase ? { externalCase } : {}),
+              },
+            });
+            // A correction of names or details is a change like any other; its notice shows exactly what changed.
+            const notice = await issueNotice(tx, deps.files, ctx, policy.id, seq);
+            return {
+              status: 200,
+              body: {
+                type: req.type,
+                policy: await policyView(tx, policy.id),
+                money: {
+                  charge: money.charge,
+                  refund: money.refund,
+                  retained: money.retained,
+                  explanation: money.explanation,
+                },
+                noticeDocumentId: notice.id,
+              },
+            };
+          },
+        );
       });
       if (result.replayed) reply.header('idempotent-replayed', 'true');
       return reply.code(200).send(result.body);
@@ -187,17 +443,44 @@ export const servicingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       config: { tenancy: 'platform', permission: 'servicing:review' },
       schema: {
         tags: ['Servicing'],
-        summary: 'A random sample of the changes the servicing agent made, for review (E06-F04-S01)',
-        querystring: z.object({ days: z.coerce.number().int().min(1).max(90).default(7), size: z.coerce.number().int().min(1).max(100).default(10) }),
-        response: { 200: z.object({ total: z.number().int(), items: z.array(AgentSampleItemSchema) }), ...commonErrors },
+        summary:
+          'A random sample of the changes the servicing agent made, for review (E06-F04-S01)',
+        querystring: z.object({
+          days: z.coerce.number().int().min(1).max(90).default(7),
+          size: z.coerce.number().int().min(1).max(100).default(10),
+        }),
+        response: {
+          200: z.object({ total: z.number().int(), items: z.array(AgentSampleItemSchema) }),
+          ...commonErrors,
+        },
       },
     },
     async (request) =>
       withTx(deps.pool, request.ctx, async (tx) => {
         const since = new Date(clock().getTime() - request.query.days * 86_400_000).toISOString();
         const where = `e.actor LIKE 'agent:%' AND e.type IN ('details_changed', 'status_changed') AND e.occurred_at >= $1`;
-        const total = Number((await tx.query<{ n: string }>(`SELECT count(*) AS n FROM policies.policy_events e WHERE ${where}`, [since])).rows[0]!.n);
-        const { rows } = await tx.query<{ policy_id: string; number: string; seq: string; occurred_at: Date; actor: string; reason: string | null; data: { transaction?: string; summary?: string; to?: string; money?: { refund?: string; charge?: string } } }>(
+        const total = Number(
+          (
+            await tx.query<{ n: string }>(
+              `SELECT count(*) AS n FROM policies.policy_events e WHERE ${where}`,
+              [since],
+            )
+          ).rows[0]!.n,
+        );
+        const { rows } = await tx.query<{
+          policy_id: string;
+          number: string;
+          seq: string;
+          occurred_at: Date;
+          actor: string;
+          reason: string | null;
+          data: {
+            transaction?: string;
+            summary?: string;
+            to?: string;
+            money?: { refund?: string; charge?: string };
+          };
+        }>(
           `SELECT e.policy_id, p.number, e.seq, e.occurred_at, e.actor, e.reason, e.data FROM policies.policy_events e JOIN policies.policies p ON p.id = e.policy_id WHERE ${where} ORDER BY random() LIMIT $2`,
           [since, request.query.size],
         );
@@ -212,7 +495,13 @@ export const servicingRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
             transaction: r.data.transaction ?? (r.data.to ? 'cancel' : 'change'),
             reason: r.reason,
             summary: r.data.summary ?? null,
-            amount: r.data.money ? ((r.data.money.refund ?? '0.00') !== '0.00' ? `refund ${r.data.money.refund}` : (r.data.money.charge ?? '0.00') !== '0.00' ? `charge ${r.data.money.charge}` : null) : null,
+            amount: r.data.money
+              ? (r.data.money.refund ?? '0.00') !== '0.00'
+                ? `refund ${r.data.money.refund}`
+                : (r.data.money.charge ?? '0.00') !== '0.00'
+                  ? `charge ${r.data.money.charge}`
+                  : null
+              : null,
           })),
         };
       }),

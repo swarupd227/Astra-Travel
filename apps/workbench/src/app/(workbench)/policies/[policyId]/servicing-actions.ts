@@ -18,15 +18,47 @@ function requestFrom(form: FormData): ServicingRequest {
     case 'cancel':
       return { type, reason, noLoss };
     case 'change_dates':
-      return { type, reason, departureDate: text(form, 'departureDate'), returnDate: text(form, 'returnDate') };
+      return {
+        type,
+        reason,
+        departureDate: text(form, 'departureDate'),
+        returnDate: text(form, 'returnDate'),
+      };
     case 'change_cost':
-      return { type, reason, costs: [{ travellerId: text(form, 'travellerId'), costPerTraveller: text(form, 'costPerTraveller') }] };
+      return {
+        type,
+        reason,
+        costs: [
+          {
+            travellerId: text(form, 'travellerId'),
+            costPerTraveller: text(form, 'costPerTraveller'),
+          },
+        ],
+      };
     case 'add_traveller':
-      return { type, reason, traveller: { firstName: text(form, 'firstName'), lastName: text(form, 'lastName'), ...(text(form, 'dateOfBirth') ? { dateOfBirth: text(form, 'dateOfBirth') } : {}), costPerTraveller: text(form, 'costPerTraveller') } };
+      return {
+        type,
+        reason,
+        traveller: {
+          firstName: text(form, 'firstName'),
+          lastName: text(form, 'lastName'),
+          ...(text(form, 'dateOfBirth') ? { dateOfBirth: text(form, 'dateOfBirth') } : {}),
+          costPerTraveller: text(form, 'costPerTraveller'),
+        },
+      };
     case 'remove_traveller':
       return { type, reason, travellerId: text(form, 'travellerId'), noLoss };
     case 'change_destinations':
-      return { type, reason, destinations: [{ ...(text(form, 'country') ? { country: text(form, 'country').toUpperCase() } : {}), ...(text(form, 'region') ? { region: text(form, 'region') } : {}) }] };
+      return {
+        type,
+        reason,
+        destinations: [
+          {
+            ...(text(form, 'country') ? { country: text(form, 'country').toUpperCase() } : {}),
+            ...(text(form, 'region') ? { region: text(form, 'region') } : {}),
+          },
+        ],
+      };
     case 'add_benefits':
       return { type, reason, benefits: [text(form, 'benefit')] };
     default: {
@@ -38,8 +70,20 @@ function requestFrom(form: FormData): ServicingRequest {
       return {
         type: 'correct',
         reason,
-        travellers: first || last || dob ? [{ travellerId: text(form, 'travellerId'), ...(first ? { firstName: first } : {}), ...(last ? { lastName: last } : {}), ...(dob ? { dateOfBirth: dob } : {}) }] : [],
-        ...(email || name ? { purchaser: { ...(name ? { name } : {}), ...(email ? { email } : {}) } } : {}),
+        travellers:
+          first || last || dob
+            ? [
+                {
+                  travellerId: text(form, 'travellerId'),
+                  ...(first ? { firstName: first } : {}),
+                  ...(last ? { lastName: last } : {}),
+                  ...(dob ? { dateOfBirth: dob } : {}),
+                },
+              ]
+            : [],
+        ...(email || name
+          ? { purchaser: { ...(name ? { name } : {}), ...(email ? { email } : {}) } }
+          : {}),
         ...(text(form, 'supplier') ? { supplier: text(form, 'supplier') } : {}),
       };
     }
@@ -50,8 +94,18 @@ function requestFrom(form: FormData): ServicingRequest {
 export async function previewServicing(_prev: PreviewState, form: FormData): Promise<PreviewState> {
   const request = requestFrom(form);
   try {
-    const preview = await api<ServicingPreview>(`/v1/policies/${encodeURIComponent(text(form, 'policyId'))}/servicing/preview`, { method: 'POST', body: request });
-    return { status: 'success', message: preview.allowed ? 'Check the change and the price, then confirm.' : 'This cannot be done.', preview, request };
+    const preview = await api<ServicingPreview>(
+      `/v1/policies/${encodeURIComponent(text(form, 'policyId'))}/servicing/preview`,
+      { method: 'POST', body: request },
+    );
+    return {
+      status: 'success',
+      message: preview.allowed
+        ? 'Check the change and the price, then confirm.'
+        : 'This cannot be done.',
+      preview,
+      request,
+    };
   } catch (err) {
     return fromError(err, form);
   }
@@ -64,7 +118,10 @@ export async function applyServicing(_prev: ActionState, form: FormData): Promis
   try {
     result = await api<ServicingResult>(`/v1/policies/${encodeURIComponent(policyId)}/servicing`, {
       method: 'POST',
-      body: { request: JSON.parse(text(form, 'request')), confirmAmount: text(form, 'confirmAmount') },
+      body: {
+        request: JSON.parse(text(form, 'request')),
+        confirmAmount: text(form, 'confirmAmount'),
+      },
       idempotencyKey: text(form, 'idempotencyKey') || randomUUID(),
     });
   } catch (err) {

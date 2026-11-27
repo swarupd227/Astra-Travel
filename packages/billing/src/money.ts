@@ -24,7 +24,9 @@ export function spread(total: number, weights: number[]): number[] {
   const raw = weights.map((w) => (abs * Math.abs(w)) / sum);
   const base = raw.map(Math.floor);
   let left = abs - base.reduce((a, b) => a + b, 0);
-  const order = raw.map((r, i) => ({ i, f: r - Math.floor(r) })).sort((a, b) => b.f - a.f || a.i - b.i);
+  const order = raw
+    .map((r, i) => ({ i, f: r - Math.floor(r) }))
+    .sort((a, b) => b.f - a.f || a.i - b.i);
   for (const { i } of order) {
     if (left <= 0) break;
     base[i]! += 1;

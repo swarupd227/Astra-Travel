@@ -6,7 +6,14 @@ import { api, ApiProblem, getMe } from '@/lib/api';
 import { sentenceCase } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
-import { Badge, Card, CardHeader, DescriptionList, Notice, PageHeader } from '@/components/ui/primitives';
+import {
+  Badge,
+  Card,
+  CardHeader,
+  DescriptionList,
+  Notice,
+  PageHeader,
+} from '@/components/ui/primitives';
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
 import { EvaluationView } from '../../underwriting/uw-forms';
@@ -15,10 +22,21 @@ import { IssueForm, SelectionForm } from '../quote-forms';
 
 export const metadata = { title: 'Quote' };
 
-const OUTCOME = { eligible: 'success', ineligible: 'danger', referred: 'warning', held: 'warning' } as const;
+const OUTCOME = {
+  eligible: 'success',
+  ineligible: 'danger',
+  referred: 'warning',
+  held: 'warning',
+} as const;
 const when = (s: string | null) => (s ? s.replace('T', ' ') : '—');
 
-export default async function QuotePage({ params, searchParams }: { params: Promise<{ quoteId: string }>; searchParams: Promise<{ created?: string }> }) {
+export default async function QuotePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ quoteId: string }>;
+  searchParams: Promise<{ created?: string }>;
+}) {
   const me = (await getMe())!;
   if (!me.permissions.includes('quotes:read')) return <AccessDenied permission="quotes:read" />;
   const { quoteId } = await params;
@@ -31,7 +49,10 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
   const canEdit = me.permissions.includes('quotes:create') && q.status === 'open';
   return (
     <>
-      <Link href="/quotes" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg">
+      <Link
+        href="/quotes"
+        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg"
+      >
         <ChevronLeft aria-hidden className="size-4" /> Quotes
       </Link>
       <PageHeader
@@ -41,7 +62,9 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
         actions={
           <>
             <Badge tone={OUTCOME[q.outcome]}>{sentenceCase(q.outcome)}</Badge>
-            <Badge tone={q.status === 'open' ? 'primary' : 'neutral'}>{sentenceCase(q.status)}</Badge>
+            <Badge tone={q.status === 'open' ? 'primary' : 'neutral'}>
+              {sentenceCase(q.status)}
+            </Badge>
           </>
         }
       />
@@ -52,13 +75,22 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
           </Notice>
         ) : null}
         {q.premium && q.premium.kind !== 'premium' ? (
-          <Notice tone="warning" title={q.premium.kind === 'loss_cost' ? 'Loss cost, not a premium' : 'Mixed loss costs and premiums'}>
-            No loss cost multiplier is filed for the rate manual, so these amounts are loss costs. They are shown for information and cannot be charged or bound.
+          <Notice
+            tone="warning"
+            title={
+              q.premium.kind === 'loss_cost'
+                ? 'Loss cost, not a premium'
+                : 'Mixed loss costs and premiums'
+            }
+          >
+            No loss cost multiplier is filed for the rate manual, so these amounts are loss costs.
+            They are shown for information and cannot be charged or bound.
           </Notice>
         ) : null}
         {q.bindable ? (
           <Notice tone="success" title="Ready to bind">
-            It can be bound through the API once the payment system confirms the premium and the traveller has acknowledged the disclosure below.
+            It can be bound through the API once the payment system confirms the premium and the
+            traveller has acknowledged the disclosure below.
           </Notice>
         ) : (
           <Notice tone="warning" title="Cannot be bound as it stands">
@@ -75,14 +107,20 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
         <div className="space-y-6 lg:col-span-2">
           {q.bindable && canEdit ? (
             <Card>
-              <CardHeader title="Issue the policy" description="For a traveller or account that cannot do it themselves, such as by phone. Uses the same rules and rating as the API." />
+              <CardHeader
+                title="Issue the policy"
+                description="For a traveller or account that cannot do it themselves, such as by phone. Uses the same rules and rating as the API."
+              />
               <div className="p-5">
                 <IssueForm quote={q} keyId={randomUUID()} />
               </div>
             </Card>
           ) : null}
           <Card>
-            <CardHeader title="Price" description="Per benefit, per traveller and in total, with the worksheet behind every line." />
+            <CardHeader
+              title="Price"
+              description="Per benefit, per traveller and in total, with the worksheet behind every line."
+            />
             {q.premium ? (
               <>
                 <Table caption="Premium by benefit and traveller">
@@ -98,17 +136,30 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
                     {q.premium.lines.map((l) => (
                       <TR key={l.worksheetId}>
                         <TD className="font-mono text-xs">{l.benefit}</TD>
-                        <TD>{q.travellers.find((t) => t.id === l.travellerId)?.firstName ?? l.travellerId}</TD>
+                        <TD>
+                          {q.travellers.find((t) => t.id === l.travellerId)?.firstName ??
+                            l.travellerId}
+                        </TD>
                         <TD className="text-right font-mono text-xs">{l.amount}</TD>
-                        <TD className="font-mono text-xs text-muted">{l.worksheetId.slice(0, 8)}</TD>
+                        <TD className="font-mono text-xs text-muted">
+                          {l.worksheetId.slice(0, 8)}
+                        </TD>
                       </TR>
                     ))}
                     <TR>
                       <TD colSpan={2} className="font-medium">
                         Total
                       </TD>
-                      <TD className="text-right font-mono text-xs font-semibold">{q.premium.total}</TD>
-                      <TD>{q.premium.basis ? <span className="text-xs text-muted">{q.premium.basis.amount} {q.premium.basis.unit}</span> : null}</TD>
+                      <TD className="text-right font-mono text-xs font-semibold">
+                        {q.premium.total}
+                      </TD>
+                      <TD>
+                        {q.premium.basis ? (
+                          <span className="text-xs text-muted">
+                            {q.premium.basis.amount} {q.premium.basis.unit}
+                          </span>
+                        ) : null}
+                      </TD>
                     </TR>
                   </tbody>
                 </Table>
@@ -119,7 +170,10 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
           </Card>
 
           <Card>
-            <CardHeader title="Benefits and cover dates" description="Packaged benefits are always included. Cover dates are those the plan’s timing gives if bound today." />
+            <CardHeader
+              title="Benefits and cover dates"
+              description="Packaged benefits are always included. Cover dates are those the plan’s timing gives if bound today."
+            />
             <Table caption="Benefits">
               <THead>
                 <tr>
@@ -134,7 +188,9 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
                   <TR key={b.code}>
                     <TD>
                       {b.name}
-                      {!b.selected ? <span className="ml-2 text-xs text-muted">not included</span> : null}
+                      {!b.selected ? (
+                        <span className="ml-2 text-xs text-muted">not included</span>
+                      ) : null}
                     </TD>
                     <TD>{sentenceCase(b.packaging)}</TD>
                     <TD className="whitespace-nowrap text-xs">{when(b.coverageStart)}</TD>
@@ -156,7 +212,10 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
         <div className="space-y-6">
           {canEdit ? (
             <Card>
-              <CardHeader title="Optional benefits" description="Tick the ones to include and re-rate." />
+              <CardHeader
+                title="Optional benefits"
+                description="Tick the ones to include and re-rate."
+              />
               <div className="p-5">
                 <SelectionForm quote={q} />
               </div>
@@ -169,7 +228,10 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
                 items={[
                   { term: 'Plan', value: `${q.plan.code} version ${q.plan.version}` },
                   { term: 'Rule set', value: `Version ${q.ruleSet.version}` },
-                  ...Object.entries(q.manuals).map(([b, m]) => ({ term: `${b} manual`, value: `${m.code} version ${m.version}` })),
+                  ...Object.entries(q.manuals).map(([b, m]) => ({
+                    term: `${b} manual`,
+                    value: `${m.code} version ${m.version}`,
+                  })),
                   { term: 'Made', value: <LocalTime iso={q.createdAt} /> },
                 ]}
               />

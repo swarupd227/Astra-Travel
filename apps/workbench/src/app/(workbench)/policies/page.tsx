@@ -14,7 +14,11 @@ export const metadata = { title: 'Policies' };
 type Summary = z.infer<typeof PolicySummarySchema>;
 const TONES = { active: 'success', cancelled: 'neutral', expired: 'neutral' } as const;
 
-export default async function PoliciesPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
+export default async function PoliciesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; status?: string }>;
+}) {
   const me = (await getMe())!;
   if (!me.permissions.includes('policies:read')) return <AccessDenied permission="policies:read" />;
   const { q, status } = await searchParams;
@@ -26,15 +30,32 @@ export default async function PoliciesPage({ searchParams }: { searchParams: Pro
   const items = res.data.items;
   return (
     <>
-      <PageHeader eyebrow="Policies" title="Policies" description="One record per policy: plan, travellers, trip, benefits, premiums, components and history. Search by policy number or traveller name." />
-      <form method="get" className="mb-6 flex flex-wrap items-end gap-3" role="search" aria-label="Search policies">
+      <PageHeader
+        eyebrow="Policies"
+        title="Policies"
+        description="One record per policy: plan, travellers, trip, benefits, premiums, components and history. Search by policy number or traveller name."
+      />
+      <form
+        method="get"
+        className="mb-6 flex flex-wrap items-end gap-3"
+        role="search"
+        aria-label="Search policies"
+      >
         <label className="space-y-1.5 text-sm font-medium text-fg">
           Policy number or traveller
-          <input name="q" defaultValue={q ?? ''} className="block h-10 w-72 rounded-lg border border-border-strong bg-surface px-3 text-sm" />
+          <input
+            name="q"
+            defaultValue={q ?? ''}
+            className="block h-10 w-72 rounded-lg border border-border-strong bg-surface px-3 text-sm"
+          />
         </label>
         <label className="space-y-1.5 text-sm font-medium text-fg">
           Status
-          <select name="status" defaultValue={status ?? ''} className="block h-10 rounded-lg border border-border-strong bg-surface px-3 text-sm">
+          <select
+            name="status"
+            defaultValue={status ?? ''}
+            className="block h-10 rounded-lg border border-border-strong bg-surface px-3 text-sm"
+          >
             <option value="">Any</option>
             <option value="active">Active</option>
             <option value="cancelled">Cancelled</option>
@@ -47,7 +68,13 @@ export default async function PoliciesPage({ searchParams }: { searchParams: Pro
       </form>
       <Card>
         {items.length === 0 ? (
-          <EmptyState icon={<FileText className="size-5" />} title="No policies found" description={q || status ? 'Try a different search.' : 'A policy is created when a quote is bound.'} />
+          <EmptyState
+            icon={<FileText className="size-5" />}
+            title="No policies found"
+            description={
+              q || status ? 'Try a different search.' : 'A policy is created when a quote is bound.'
+            }
+          />
         ) : (
           <Table caption="Policies">
             <THead>
@@ -64,7 +91,10 @@ export default async function PoliciesPage({ searchParams }: { searchParams: Pro
               {items.map((p) => (
                 <TR key={p.id}>
                   <TD>
-                    <Link href={`/policies/${p.id}`} className="font-mono text-xs font-medium text-fg hover:text-primary hover:underline">
+                    <Link
+                      href={`/policies/${p.id}`}
+                      className="font-mono text-xs font-medium text-fg hover:text-primary hover:underline"
+                    >
                       {p.number}
                     </Link>
                   </TD>

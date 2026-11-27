@@ -16,7 +16,15 @@ import {
   type ReferralSummary,
   type Task,
 } from '@astra/contracts';
-import { AppError, conflict, forbidden, hasPermission, notFound, withTx, writeAudit } from '@astra/platform';
+import {
+  AppError,
+  conflict,
+  forbidden,
+  hasPermission,
+  notFound,
+  withTx,
+  writeAudit,
+} from '@astra/platform';
 import type { AppDeps } from '../app';
 import { commonErrors, escapeLike } from './shared';
 
@@ -98,7 +106,13 @@ const toSummary = (r: SummaryRow): ReferralSummary => ({
   createdBy: r.created_by,
   createdAt: r.created_at.toISOString(),
   decision: r.d_decision
-    ? { decision: r.d_decision, edited: r.d_edited, reason: r.d_reason, decidedBy: r.d_by!, decidedAt: r.d_at!.toISOString() }
+    ? {
+        decision: r.d_decision,
+        edited: r.d_edited,
+        reason: r.d_reason,
+        decidedBy: r.d_by!,
+        decidedAt: r.d_at!.toISOString(),
+      }
     : null,
 });
 
@@ -114,7 +128,10 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
         summary: 'Find a policy by number, traveller, account or trip',
         description:
           'Matches part of a policy number, a traveller’s name, an account’s name or code, a trip’s destination (country code or region) or its departure or return date (YYYY-MM-DD). Only policies the caller may see are returned: row-level security applies the caller’s account scope.',
-        querystring: z.object({ q: z.string().trim().min(2).max(100), limit: z.coerce.number().int().min(1).max(50).default(20) }),
+        querystring: z.object({
+          q: z.string().trim().min(2).max(100),
+          limit: z.coerce.number().int().min(1).max(50).default(20),
+        }),
         response: { 200: SearchResultSchema, ...commonErrors },
       },
     },
@@ -124,8 +141,17 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       const like = `%${escapeLike(q.toLowerCase())}%`;
       const { rows } = await withTx(deps.pool, request.ctx, (tx) =>
         tx.query<{
-          id: string; number: string; status: 'active' | 'cancelled' | 'expired'; account_id: string; account_name: string; plan_code: string;
-          travellers: string[]; departure: string | null; ret: string | null; destinations: string[]; matched: string[];
+          id: string;
+          number: string;
+          status: 'active' | 'cancelled' | 'expired';
+          account_id: string;
+          account_name: string;
+          plan_code: string;
+          travellers: string[];
+          departure: string | null;
+          ret: string | null;
+          destinations: string[];
+          matched: string[];
         }>(
           // Each way of matching finds its candidates through its own index; the policies are then read once.
           `WITH hits AS (
@@ -189,7 +215,8 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       config: { tenancy: 'platform', permission: 'tasks:read' },
       schema: {
         tags: ['Workbench'],
-        summary: 'Everything waiting for a person: referrals, sanctions holds, agent proposals, agent reviews and failed deliveries',
+        summary:
+          'Everything waiting for a person: referrals, sanctions holds, agent proposals, agent reviews and failed deliveries',
         description:
           'One queue, most urgent first. Every task shows its priority, the time left against its timer, and who holds it. Work leaves the queue when it is finished in its own screen.',
         querystring: z.object({
@@ -213,7 +240,10 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       const params = [q.source ?? null, q.owner ?? null, me, q.timer ?? null];
       const [list, counts] = await withTx(deps.pool, request.ctx, async (tx) =>
         Promise.all([
-          tx.query<QueueRow>(`SELECT *, ${minutes} AS minutes_left FROM workbench.queue WHERE ${where} ORDER BY ${PRIORITY_RANK}, due_at, source_id LIMIT $5`, [...params, q.limit]),
+          tx.query<QueueRow>(
+            `SELECT *, ${minutes} AS minutes_left FROM workbench.queue WHERE ${where} ORDER BY ${PRIORITY_RANK}, due_at, source_id LIMIT $5`,
+            [...params, q.limit],
+          ),
           tx.query<{ total: string; overdue: string; at_risk: string; unassigned: string }>(
             `SELECT count(*) AS total, count(*) FILTER (WHERE ${minutes} < 0) AS overdue,
                     count(*) FILTER (WHERE ${minutes} >= 0 AND ${minutes} <= target_hours * 15) AS at_risk,
@@ -224,7 +254,15 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
         ]),
       );
       const c = counts.rows[0]!;
-      return { items: list.rows.map(toTask), total: Number(c.total), counts: { overdue: Number(c.overdue), atRisk: Number(c.at_risk), unassigned: Number(c.unassigned) } };
+      return {
+        items: list.rows.map(toTask),
+        total: Number(c.total),
+        counts: {
+          overdue: Number(c.overdue),
+          atRisk: Number(c.at_risk),
+          unassigned: Number(c.unassigned),
+        },
+      };
     },
   );
 
@@ -235,8 +273,21 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       schema: {
         tags: ['Workbench'],
         summary: 'People who can be given work',
-        description: 'People who have signed in to the workbench and may take work from the queue, with what they hold now.',
-        response: { 200: z.object({ items: z.array(z.object({ subject: z.string(), name: z.string().nullable(), roles: z.array(z.string()), open: z.number().int() })) }), ...commonErrors },
+        description:
+          'People who have signed in to the workbench and may take work from the queue, with what they hold now.',
+        response: {
+          200: z.object({
+            items: z.array(
+              z.object({
+                subject: z.string(),
+                name: z.string().nullable(),
+                roles: z.array(z.string()),
+                open: z.number().int(),
+              }),
+            ),
+          }),
+          ...commonErrors,
+        },
       },
     },
     async (request) => {
@@ -246,7 +297,14 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
              FROM workbench.staff s WHERE 'tasks:work' = ANY (s.permissions) ORDER BY lower(coalesce(s.name, s.subject))`,
         ),
       );
-      return { items: r.rows.map((x) => ({ subject: x.subject, name: x.name, roles: x.roles, open: Number(x.open) })) };
+      return {
+        items: r.rows.map((x) => ({
+          subject: x.subject,
+          name: x.name,
+          roles: x.roles,
+          open: Number(x.open),
+        })),
+      };
     },
   );
 
@@ -257,10 +315,19 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       schema: {
         tags: ['Workbench'],
         summary: 'Take a task, hand it back, or (with tasks:assign) give it to someone else',
-        description: 'A null owner hands the task back to the queue. Taking an unassigned task or handing back your own needs tasks:work; moving work to or from someone else needs tasks:assign.',
+        description:
+          'A null owner hands the task back to the queue. Taking an unassigned task or handing back your own needs tasks:work; moving work to or from someone else needs tasks:assign.',
         params: z.object({ sourceType: TaskSourceSchema, sourceId: z.uuid() }),
         body: AssignTaskSchema,
-        response: { 200: z.object({ sourceType: TaskSourceSchema, sourceId: z.uuid(), owner: z.string().nullable(), ownerName: z.string().nullable() }), ...commonErrors },
+        response: {
+          200: z.object({
+            sourceType: TaskSourceSchema,
+            sourceId: z.uuid(),
+            owner: z.string().nullable(),
+            ownerName: z.string().nullable(),
+          }),
+          ...commonErrors,
+        },
       },
     },
     async (request) => {
@@ -269,23 +336,53 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       if (p.kind !== 'user') throw forbidden('Work is assigned by people.');
       const supervisor = hasPermission(p, 'tasks:assign');
       return withTx(deps.pool, request.ctx, async (tx) => {
-        const task = (await tx.query<{ owner: string | null }>(`SELECT owner FROM workbench.queue WHERE source_type = $1 AND source_id = $2`, [sourceType, sourceId])).rows[0];
+        const task = (
+          await tx.query<{ owner: string | null }>(
+            `SELECT owner FROM workbench.queue WHERE source_type = $1 AND source_id = $2`,
+            [sourceType, sourceId],
+          )
+        ).rows[0];
         if (!task) throw notFound('The task');
         const { owner } = request.body;
         if (!supervisor) {
-          if (owner !== null && owner !== p.subject) throw forbidden('You can take work for yourself. A supervisor assigns it to someone else.');
-          if (task.owner && task.owner !== p.subject) throw conflict('Someone else holds this task. A supervisor can reassign it.');
+          if (owner !== null && owner !== p.subject)
+            throw forbidden(
+              'You can take work for yourself. A supervisor assigns it to someone else.',
+            );
+          if (task.owner && task.owner !== p.subject)
+            throw conflict('Someone else holds this task. A supervisor can reassign it.');
         }
         if (owner === null) {
-          await tx.query(`DELETE FROM workbench.assignments WHERE source_type = $1 AND source_id = $2`, [sourceType, sourceId]);
-          await writeAudit(tx, request.ctx, { action: 'task.released', resourceType: 'task', resourceId: sourceId, data: { sourceType, previousOwner: task.owner } });
+          await tx.query(
+            `DELETE FROM workbench.assignments WHERE source_type = $1 AND source_id = $2`,
+            [sourceType, sourceId],
+          );
+          await writeAudit(tx, request.ctx, {
+            action: 'task.released',
+            resourceType: 'task',
+            resourceId: sourceId,
+            data: { sourceType, previousOwner: task.owner },
+          });
           return { sourceType, sourceId, owner: null, ownerName: null };
         }
         let ownerName = owner === p.subject ? p.name : (request.body.ownerName ?? null);
         if (owner !== p.subject) {
-          const person = (await tx.query<{ name: string | null; permissions: string[] }>(`SELECT name, permissions FROM workbench.staff WHERE subject = $1`, [owner])).rows[0];
-          if (!person) throw new AppError('validation_failed', 'That person has not signed in to the workbench, so work cannot be given to them yet.');
-          if (!person.permissions.includes('tasks:work')) throw new AppError('validation_failed', 'That person is not allowed to take work from the queue.');
+          const person = (
+            await tx.query<{ name: string | null; permissions: string[] }>(
+              `SELECT name, permissions FROM workbench.staff WHERE subject = $1`,
+              [owner],
+            )
+          ).rows[0];
+          if (!person)
+            throw new AppError(
+              'validation_failed',
+              'That person has not signed in to the workbench, so work cannot be given to them yet.',
+            );
+          if (!person.permissions.includes('tasks:work'))
+            throw new AppError(
+              'validation_failed',
+              'That person is not allowed to take work from the queue.',
+            );
           ownerName = person.name;
         }
         await tx.query(
@@ -293,7 +390,12 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
            ON CONFLICT (source_type, source_id) DO UPDATE SET owner = EXCLUDED.owner, owner_name = EXCLUDED.owner_name, assigned_by = EXCLUDED.assigned_by, assigned_at = now()`,
           [sourceType, sourceId, owner, ownerName, p.subject],
         );
-        await writeAudit(tx, request.ctx, { action: task.owner ? 'task.reassigned' : 'task.assigned', resourceType: 'task', resourceId: sourceId, data: { sourceType, previousOwner: task.owner, owner } });
+        await writeAudit(tx, request.ctx, {
+          action: task.owner ? 'task.reassigned' : 'task.assigned',
+          resourceType: 'task',
+          resourceId: sourceId,
+          data: { sourceType, previousOwner: task.owner, owner },
+        });
         return { sourceType, sourceId, owner, ownerName };
       });
     },
@@ -303,17 +405,33 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
     '/v1/task-sla',
     {
       config: { tenancy: 'platform', permission: 'tasks:read' },
-      schema: { tags: ['Workbench'], summary: 'How long each kind of work may wait, and its priority', response: { 200: z.object({ items: z.array(SlaPolicySchema) }), ...commonErrors } },
+      schema: {
+        tags: ['Workbench'],
+        summary: 'How long each kind of work may wait, and its priority',
+        response: { 200: z.object({ items: z.array(SlaPolicySchema) }), ...commonErrors },
+      },
     },
     async (request) => {
       const { rows } = await withTx(deps.pool, request.ctx, (tx) =>
-        tx.query<{ source_type: Task['sourceType']; priority: Task['priority']; target_hours: number; updated_by: string; updated_at: Date }>(`SELECT * FROM workbench.sla_policies`),
+        tx.query<{
+          source_type: Task['sourceType'];
+          priority: Task['priority'];
+          target_hours: number;
+          updated_by: string;
+          updated_at: Date;
+        }>(`SELECT * FROM workbench.sla_policies`),
       );
       const order = new Map(TASK_SOURCES.map((s, i) => [s, i]));
       return {
         items: rows
           .sort((a, b) => order.get(a.source_type)! - order.get(b.source_type)!)
-          .map((r) => ({ sourceType: r.source_type, priority: r.priority, targetHours: r.target_hours, updatedBy: r.updated_by, updatedAt: r.updated_at.toISOString() })),
+          .map((r) => ({
+            sourceType: r.source_type,
+            priority: r.priority,
+            targetHours: r.target_hours,
+            updatedBy: r.updated_by,
+            updatedAt: r.updated_at.toISOString(),
+          })),
       };
     },
   );
@@ -333,14 +451,36 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
     async (request) =>
       withTx(deps.pool, request.ctx, async (tx) => {
         const r = (
-          await tx.query<{ source_type: Task['sourceType']; priority: Task['priority']; target_hours: number; updated_by: string; updated_at: Date }>(
+          await tx.query<{
+            source_type: Task['sourceType'];
+            priority: Task['priority'];
+            target_hours: number;
+            updated_by: string;
+            updated_at: Date;
+          }>(
             `UPDATE workbench.sla_policies SET priority = $2, target_hours = $3, updated_by = $4, updated_at = now() WHERE source_type = $1 RETURNING *`,
-            [request.params.sourceType, request.body.priority, request.body.targetHours, request.ctx.principal.subject],
+            [
+              request.params.sourceType,
+              request.body.priority,
+              request.body.targetHours,
+              request.ctx.principal.subject,
+            ],
           )
         ).rows[0];
         if (!r) throw notFound('The timer');
-        await writeAudit(tx, request.ctx, { action: 'task_sla.changed', resourceType: 'task_sla', resourceId: r.source_type, data: { priority: r.priority, targetHours: r.target_hours } });
-        return { sourceType: r.source_type, priority: r.priority, targetHours: r.target_hours, updatedBy: r.updated_by, updatedAt: r.updated_at.toISOString() };
+        await writeAudit(tx, request.ctx, {
+          action: 'task_sla.changed',
+          resourceType: 'task_sla',
+          resourceId: r.source_type,
+          data: { priority: r.priority, targetHours: r.target_hours },
+        });
+        return {
+          sourceType: r.source_type,
+          priority: r.priority,
+          targetHours: r.target_hours,
+          updatedBy: r.updated_by,
+          updatedAt: r.updated_at.toISOString(),
+        };
       }),
   );
 
@@ -362,29 +502,73 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
     },
     async (request, reply) => {
       const p = request.ctx.principal;
-      if (p.kind !== 'agent') throw forbidden('Summaries are submitted by agents acting for a person.');
+      if (p.kind !== 'agent')
+        throw forbidden('Summaries are submitted by agents acting for a person.');
       const agentId = p.subject.replace(/^agent:/, '');
       const out = await withTx(deps.pool, request.ctx, async (tx) => {
-        const run = (await tx.query<{ id: string }>(`SELECT id FROM agents.runs WHERE agent_id = $1 AND correlation_id = $2 ORDER BY created_at DESC LIMIT 1`, [agentId, request.ctx.correlationId])).rows[0];
+        const run = (
+          await tx.query<{ id: string }>(
+            `SELECT id FROM agents.runs WHERE agent_id = $1 AND correlation_id = $2 ORDER BY created_at DESC LIMIT 1`,
+            [agentId, request.ctx.correlationId],
+          )
+        ).rows[0];
         if (!run) throw forbidden('Summaries are submitted during an agent run.');
-        const ref = (await tx.query<{ id: string; kind: string; status: string; evaluation: { referrals?: { rule: string }[] } }>(`SELECT id, kind, status, evaluation FROM underwriting.referrals WHERE id = $1`, [request.params.referralId])).rows[0];
+        const ref = (
+          await tx.query<{
+            id: string;
+            kind: string;
+            status: string;
+            evaluation: { referrals?: { rule: string }[] };
+          }>(`SELECT id, kind, status, evaluation FROM underwriting.referrals WHERE id = $1`, [
+            request.params.referralId,
+          ])
+        ).rows[0];
         if (!ref) throw notFound('The referral');
-        if (ref.kind !== 'underwriting') throw forbidden('A sanctions hold is reviewed by a person; an agent does not summarise it.');
+        if (ref.kind !== 'underwriting')
+          throw forbidden(
+            'A sanctions hold is reviewed by a person; an agent does not summarise it.',
+          );
         if (ref.status !== 'open') throw conflict(`This referral is already ${ref.status}.`);
         const fired = new Set((ref.evaluation.referrals ?? []).map((x) => x.rule));
-        const rulesChecked = request.body.rulesCited.map((code) => ({ code, fired: fired.has(code) }));
+        const rulesChecked = request.body.rulesCited.map((code) => ({
+          code,
+          fired: fired.has(code),
+        }));
         const unknown = rulesChecked.filter((x) => !x.fired).map((x) => x.code);
         if (unknown.length) {
-          throw new AppError('validation_failed', `The summary cites ${unknown.join(', ')}, which did not fire on this referral. The rules that fired are ${[...fired].join(', ') || 'none'}.`, unknown.map((c) => ({ code: 'rule_not_fired', field: 'rulesCited', message: c })));
+          throw new AppError(
+            'validation_failed',
+            `The summary cites ${unknown.join(', ')}, which did not fire on this referral. The rules that fired are ${[...fired].join(', ') || 'none'}.`,
+            unknown.map((c) => ({ code: 'rule_not_fired', field: 'rulesCited', message: c })),
+          );
         }
         const row = (
           await tx.query<{ id: string }>(
             `INSERT INTO underwriting.referral_summaries (referral_id, run_id, summary, rules_cited, suggested, verification, created_by)
              VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-            [ref.id, run.id, request.body.summary, request.body.rulesCited, request.body.suggested, JSON.stringify({ rulesChecked, allCitedRulesFired: true }), p.subject],
+            [
+              ref.id,
+              run.id,
+              request.body.summary,
+              request.body.rulesCited,
+              request.body.suggested,
+              JSON.stringify({ rulesChecked, allCitedRulesFired: true }),
+              p.subject,
+            ],
           )
         ).rows[0]!;
-        await writeAudit(tx, request.ctx, { action: 'referral_summary.written', resourceType: 'referral', resourceId: ref.id, data: { summaryId: row.id, agentId, runId: run.id, suggested: request.body.suggested, rulesCited: request.body.rulesCited } });
+        await writeAudit(tx, request.ctx, {
+          action: 'referral_summary.written',
+          resourceType: 'referral',
+          resourceId: ref.id,
+          data: {
+            summaryId: row.id,
+            agentId,
+            runId: run.id,
+            suggested: request.body.suggested,
+            rulesCited: request.body.rulesCited,
+          },
+        });
         return (await tx.query<SummaryRow>(`${SUMMARY_SELECT} WHERE s.id = $1`, [row.id])).rows[0]!;
       });
       return reply.code(201).send(toSummary(out));
@@ -397,13 +581,19 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       config: { tenancy: 'platform', permission: 'underwriting:read' },
       schema: {
         tags: ['Workbench'],
-        summary: 'The agent’s summaries of a referral, newest first, with what an underwriter decided about each',
+        summary:
+          'The agent’s summaries of a referral, newest first, with what an underwriter decided about each',
         params: z.object({ referralId: z.uuid() }),
         response: { 200: z.object({ items: z.array(ReferralSummarySchema) }), ...commonErrors },
       },
     },
     async (request) => {
-      const { rows } = await withTx(deps.pool, request.ctx, (tx) => tx.query<SummaryRow>(`${SUMMARY_SELECT} WHERE s.referral_id = $1 ORDER BY s.created_at DESC`, [request.params.referralId]));
+      const { rows } = await withTx(deps.pool, request.ctx, (tx) =>
+        tx.query<SummaryRow>(
+          `${SUMMARY_SELECT} WHERE s.referral_id = $1 ORDER BY s.created_at DESC`,
+          [request.params.referralId],
+        ),
+      );
       return { items: rows.map(toSummary) };
     },
   );
@@ -417,7 +607,8 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       schema: {
         tags: ['Workbench'],
         summary: 'Accept, edit or reject the agent’s summary, recording why for evaluation',
-        description: 'Recorded once and never changed. This is a decision about the agent’s output, not about the referral: the referral is decided on its own screen.',
+        description:
+          'Recorded once and never changed. This is a decision about the agent’s output, not about the referral: the referral is decided on its own screen.',
         params: z.object({ summaryId: z.uuid() }),
         body: OutputDecisionInputSchema,
         response: { 200: ReferralSummarySchema, ...commonErrors },
@@ -428,15 +619,38 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       if (p.kind !== 'user') throw forbidden('Agent output is judged by a person.');
       const b = request.body;
       const row = await withTx(deps.pool, request.ctx, async (tx) => {
-        const s = (await tx.query<SummaryRow>(`${SUMMARY_SELECT} WHERE s.id = $1`, [request.params.summaryId])).rows[0];
+        const s = (
+          await tx.query<SummaryRow>(`${SUMMARY_SELECT} WHERE s.id = $1`, [
+            request.params.summaryId,
+          ])
+        ).rows[0];
         if (!s || !s.run_id || !s.agent_id) throw notFound('The summary');
         if (s.d_decision) throw conflict(`This summary was already ${s.d_decision}.`);
         await tx.query(
           `INSERT INTO agents.output_decisions (run_id, agent_id, subject_type, subject_id, decision, original, edited, reason, decided_by)
            VALUES ($1, $2, 'referral_summary', $3, $4, $5, $6, $7, $8)`,
-          [s.run_id, s.agent_id, s.id, b.decision, JSON.stringify({ summary: s.summary, rulesCited: s.rules_cited, suggested: s.suggested }), b.decision === 'edited' ? JSON.stringify({ summary: b.editedSummary }) : null, b.reason ?? null, p.subject],
+          [
+            s.run_id,
+            s.agent_id,
+            s.id,
+            b.decision,
+            JSON.stringify({
+              summary: s.summary,
+              rulesCited: s.rules_cited,
+              suggested: s.suggested,
+            }),
+            b.decision === 'edited' ? JSON.stringify({ summary: b.editedSummary }) : null,
+            b.reason ?? null,
+            p.subject,
+          ],
         );
-        await writeAudit(tx, request.ctx, { action: `referral_summary.${b.decision}`, resourceType: 'referral', resourceId: s.referral_id, reason: b.reason, data: { summaryId: s.id, agentId: s.agent_id, runId: s.run_id } });
+        await writeAudit(tx, request.ctx, {
+          action: `referral_summary.${b.decision}`,
+          resourceType: 'referral',
+          resourceId: s.referral_id,
+          reason: b.reason,
+          data: { summaryId: s.id, agentId: s.agent_id, runId: s.run_id },
+        });
         return (await tx.query<SummaryRow>(`${SUMMARY_SELECT} WHERE s.id = $1`, [s.id])).rows[0]!;
       });
       return toSummary(row);
@@ -449,8 +663,10 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       config: { tenancy: 'platform', permission: 'underwriting:read' },
       schema: {
         tags: ['Workbench'],
-        summary: 'What an agent was given, what it read, what it concluded and the limits it works within',
-        description: 'For judging an agent’s output: its inputs, every tool call and result in order, its answer, and the warrant it ran under. Needs agents:read, or access to the referral the run summarised.',
+        summary:
+          'What an agent was given, what it read, what it concluded and the limits it works within',
+        description:
+          'For judging an agent’s output: its inputs, every tool call and result in order, its answer, and the warrant it ran under. Needs agents:read, or access to the referral the run summarised.',
         params: z.object({ runId: z.uuid() }),
         response: { 200: AgentRunReviewSchema, ...commonErrors },
       },
@@ -460,19 +676,75 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
       return withTx(deps.pool, request.ctx, async (tx) => {
         const run = (
           await tx.query<{
-            id: string; agent_id: string; agent_version: number; warrant_version: number | null; status: string; requested_by: string; input: unknown; output: unknown;
-            turns: number; tool_calls: number; cost_usd: string; name: string;
-          }>(`SELECT r.id, r.agent_id, r.agent_version, r.warrant_version, r.status, r.requested_by, r.input, r.output, r.turns, r.tool_calls, r.cost_usd::text, a.name FROM agents.runs r JOIN agents.agents a ON a.id = r.agent_id WHERE r.id = $1`, [runId])
+            id: string;
+            agent_id: string;
+            agent_version: number;
+            warrant_version: number | null;
+            status: string;
+            requested_by: string;
+            input: unknown;
+            output: unknown;
+            turns: number;
+            tool_calls: number;
+            cost_usd: string;
+            name: string;
+          }>(
+            `SELECT r.id, r.agent_id, r.agent_version, r.warrant_version, r.status, r.requested_by, r.input, r.output, r.turns, r.tool_calls, r.cost_usd::text, a.name FROM agents.runs r JOIN agents.agents a ON a.id = r.agent_id WHERE r.id = $1`,
+            [runId],
+          )
         ).rows[0];
         if (!run) throw notFound('The agent run');
         const mine = run.requested_by === request.ctx.principal.subject;
-        const linked = (await tx.query(`SELECT 1 FROM underwriting.referral_summaries WHERE run_id = $1`, [runId])).rowCount! > 0;
-        if (!hasPermission(request.ctx.principal, 'agents:read') && !mine && !linked) throw notFound('The agent run');
-        const steps = (await tx.query<{ seq: number; at: Date; kind: string; name: string | null; decision: string | null; detail: unknown }>(`SELECT seq, at, kind, name, decision, detail FROM agents.run_steps WHERE run_id = $1 ORDER BY seq`, [runId])).rows;
+        const linked =
+          (
+            await tx.query(`SELECT 1 FROM underwriting.referral_summaries WHERE run_id = $1`, [
+              runId,
+            ])
+          ).rowCount! > 0;
+        if (!hasPermission(request.ctx.principal, 'agents:read') && !mine && !linked)
+          throw notFound('The agent run');
+        const steps = (
+          await tx.query<{
+            seq: number;
+            at: Date;
+            kind: string;
+            name: string | null;
+            decision: string | null;
+            detail: unknown;
+          }>(
+            `SELECT seq, at, kind, name, decision, detail FROM agents.run_steps WHERE run_id = $1 ORDER BY seq`,
+            [runId],
+          )
+        ).rows;
         const warrant = run.warrant_version
-          ? (await tx.query<{ document: { tools?: { name: string; maxCallsPerRun?: number }[]; dataAccess?: string[]; maxModelTurns?: number; maxCostPerRunUsd?: number; escalationRole?: string } }>(`SELECT document FROM agents.warrants WHERE agent_id = $1 AND version = $2`, [run.agent_id, run.warrant_version])).rows[0]?.document
+          ? (
+              await tx.query<{
+                document: {
+                  tools?: { name: string; maxCallsPerRun?: number }[];
+                  dataAccess?: string[];
+                  maxModelTurns?: number;
+                  maxCostPerRunUsd?: number;
+                  escalationRole?: string;
+                };
+              }>(`SELECT document FROM agents.warrants WHERE agent_id = $1 AND version = $2`, [
+                run.agent_id,
+                run.warrant_version,
+              ])
+            ).rows[0]?.document
           : undefined;
-        const decisions = (await tx.query<{ subject_type: string; subject_id: string; decision: string; reason: string | null; decided_by: string; decided_at: Date }>(`SELECT subject_type, subject_id, decision, reason, decided_by, decided_at FROM agents.output_decisions WHERE run_id = $1 ORDER BY decided_at`, [runId])).rows;
+        const decisions = (
+          await tx.query<{
+            subject_type: string;
+            subject_id: string;
+            decision: string;
+            reason: string | null;
+            decided_by: string;
+            decided_at: Date;
+          }>(
+            `SELECT subject_type, subject_id, decision, reason, decided_by, decided_at FROM agents.output_decisions WHERE run_id = $1 ORDER BY decided_at`,
+            [runId],
+          )
+        ).rows;
         const answer = (run.output as { answer?: string; text?: string } | null) ?? null;
         return {
           runId: run.id,
@@ -483,12 +755,27 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
           requestedBy: run.requested_by,
           input: run.input,
           output: run.output,
-          evidence: steps.map((s) => ({ seq: s.seq, kind: s.kind, name: s.name, decision: s.decision, detail: s.detail, at: s.at.toISOString() })),
-          reasoning: typeof answer?.answer === 'string' ? answer.answer : typeof answer?.text === 'string' ? answer.text : null,
+          evidence: steps.map((s) => ({
+            seq: s.seq,
+            kind: s.kind,
+            name: s.name,
+            decision: s.decision,
+            detail: s.detail,
+            at: s.at.toISOString(),
+          })),
+          reasoning:
+            typeof answer?.answer === 'string'
+              ? answer.answer
+              : typeof answer?.text === 'string'
+                ? answer.text
+                : null,
           warrant: warrant
             ? {
                 version: run.warrant_version!,
-                tools: (warrant.tools ?? []).map((t) => ({ name: t.name, maxCallsPerRun: t.maxCallsPerRun ?? null })),
+                tools: (warrant.tools ?? []).map((t) => ({
+                  name: t.name,
+                  maxCallsPerRun: t.maxCallsPerRun ?? null,
+                })),
                 dataAccess: warrant.dataAccess ?? [],
                 maxModelTurns: warrant.maxModelTurns ?? null,
                 maxCostPerRunUsd: warrant.maxCostPerRunUsd ?? null,
@@ -496,7 +783,14 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
               }
             : null,
           usage: { turns: run.turns, toolCalls: run.tool_calls, costUsd: Number(run.cost_usd) },
-          decisions: decisions.map((d) => ({ subjectType: d.subject_type, subjectId: d.subject_id, decision: d.decision, reason: d.reason, decidedBy: d.decided_by, decidedAt: d.decided_at.toISOString() })),
+          decisions: decisions.map((d) => ({
+            subjectType: d.subject_type,
+            subjectId: d.subject_id,
+            decision: d.decision,
+            reason: d.reason,
+            decidedBy: d.decided_by,
+            decidedAt: d.decided_at.toISOString(),
+          })),
         };
       });
     },
@@ -512,8 +806,25 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
         params: z.object({ agentId: z.string().min(1).max(40) }),
         response: {
           200: z.object({
-            counts: z.object({ accepted: z.number().int(), edited: z.number().int(), rejected: z.number().int() }),
-            items: z.array(z.object({ id: z.uuid(), runId: z.uuid(), subjectType: z.string(), subjectId: z.uuid(), decision: z.string(), reason: z.string().nullable(), original: z.unknown(), edited: z.unknown().nullable(), decidedBy: z.string(), decidedAt: z.iso.datetime() })),
+            counts: z.object({
+              accepted: z.number().int(),
+              edited: z.number().int(),
+              rejected: z.number().int(),
+            }),
+            items: z.array(
+              z.object({
+                id: z.uuid(),
+                runId: z.uuid(),
+                subjectType: z.string(),
+                subjectId: z.uuid(),
+                decision: z.string(),
+                reason: z.string().nullable(),
+                original: z.unknown(),
+                edited: z.unknown().nullable(),
+                decidedBy: z.string(),
+                decidedAt: z.iso.datetime(),
+              }),
+            ),
           }),
           ...commonErrors,
         },
@@ -521,14 +832,39 @@ export const workbenchRoutes: FastifyPluginAsyncZod<AppDeps> = async (app, deps)
     },
     async (request) => {
       const { rows } = await withTx(deps.pool, request.ctx, (tx) =>
-        tx.query<{ id: string; run_id: string; subject_type: string; subject_id: string; decision: 'accepted' | 'edited' | 'rejected'; reason: string | null; original: unknown; edited: unknown; decided_by: string; decided_at: Date }>(
+        tx.query<{
+          id: string;
+          run_id: string;
+          subject_type: string;
+          subject_id: string;
+          decision: 'accepted' | 'edited' | 'rejected';
+          reason: string | null;
+          original: unknown;
+          edited: unknown;
+          decided_by: string;
+          decided_at: Date;
+        }>(
           `SELECT id, run_id, subject_type, subject_id, decision, reason, original, edited, decided_by, decided_at FROM agents.output_decisions WHERE agent_id = $1 ORDER BY decided_at DESC LIMIT 500`,
           [request.params.agentId],
         ),
       );
       const counts = { accepted: 0, edited: 0, rejected: 0 };
       for (const r of rows) counts[r.decision] += 1;
-      return { counts, items: rows.map((r) => ({ id: r.id, runId: r.run_id, subjectType: r.subject_type, subjectId: r.subject_id, decision: r.decision, reason: r.reason, original: r.original, edited: r.edited, decidedBy: r.decided_by, decidedAt: r.decided_at.toISOString() })) };
+      return {
+        counts,
+        items: rows.map((r) => ({
+          id: r.id,
+          runId: r.run_id,
+          subjectType: r.subject_type,
+          subjectId: r.subject_id,
+          decision: r.decision,
+          reason: r.reason,
+          original: r.original,
+          edited: r.edited,
+          decidedBy: r.decided_by,
+          decidedAt: r.decided_at.toISOString(),
+        })),
+      };
     },
   );
 };

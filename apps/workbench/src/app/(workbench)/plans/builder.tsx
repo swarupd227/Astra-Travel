@@ -40,7 +40,8 @@ const inputClass = 'h-9';
 export function filedRange(v: BuilderVariable): string {
   const c = v.constraints;
   const unit = c.unit === 'usd' ? '' : c.unit ? ` ${String(c.unit)}` : '';
-  const money = (n: unknown) => (c.unit === 'usd' ? `$${Number(n).toLocaleString('en-US')}` : String(n));
+  const money = (n: unknown) =>
+    c.unit === 'usd' ? `$${Number(n).toLocaleString('en-US')}` : String(n);
   switch (v.type) {
     case 'numeric_range':
     case 'time_period':
@@ -99,7 +100,11 @@ function ValueInput({
             disabled={disabled}
             value={pv ? pv.percent : ''}
             onChange={(e) =>
-              onChange(e.target.value === '' ? null : { percent: Number(e.target.value), ...(pv?.basis ? { basis: pv.basis } : {}) })
+              onChange(
+                e.target.value === ''
+                  ? null
+                  : { percent: Number(e.target.value), ...(pv?.basis ? { basis: pv.basis } : {}) },
+              )
             }
           />
           {bases.length ? (
@@ -121,7 +126,13 @@ function ValueInput({
     }
     case 'limit_basis':
       return (
-        <Select aria-label={label} className={inputClass} disabled={disabled} value={typeof value === 'string' ? value : ''} onChange={(e) => onChange(e.target.value || null)}>
+        <Select
+          aria-label={label}
+          className={inputClass}
+          disabled={disabled}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(e) => onChange(e.target.value || null)}
+        >
           <option value="">Choose…</option>
           {options.map((o) => (
             <option key={o}>{o}</option>
@@ -132,7 +143,13 @@ function ValueInput({
       const chosen = Array.isArray(value) ? value : [];
       if (!c.multiple) {
         return (
-          <Select aria-label={label} className={inputClass} disabled={disabled} value={chosen[0] ?? ''} onChange={(e) => onChange(e.target.value ? [e.target.value] : null)}>
+          <Select
+            aria-label={label}
+            className={inputClass}
+            disabled={disabled}
+            value={chosen[0] ?? ''}
+            onChange={(e) => onChange(e.target.value ? [e.target.value] : null)}
+          >
             <option value="">Choose the filed wording…</option>
             {options.map((o) => (
               <option key={o}>{o}</option>
@@ -149,7 +166,9 @@ function ValueInput({
                 className="mt-1"
                 disabled={disabled}
                 checked={chosen.includes(o)}
-                onChange={(e) => onChange(e.target.checked ? [...chosen, o] : chosen.filter((x) => x !== o))}
+                onChange={(e) =>
+                  onChange(e.target.checked ? [...chosen, o] : chosen.filter((x) => x !== o))
+                }
               />
               {o}
             </label>
@@ -173,9 +192,17 @@ function ValueInput({
       );
     default:
       return c.source === 'dataset' ? (
-        <p className="text-sm text-muted">Filled from reference data when documents are produced.</p>
+        <p className="text-sm text-muted">
+          Filled from reference data when documents are produced.
+        </p>
       ) : (
-        <Input aria-label={label} className={inputClass} disabled={disabled} value={typeof value === 'string' ? value : ''} onChange={(e) => onChange(e.target.value || null)} />
+        <Input
+          aria-label={label}
+          className={inputClass}
+          disabled={disabled}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(e) => onChange(e.target.value || null)}
+        />
       );
   }
 }
@@ -221,9 +248,12 @@ export function PlanBuilder({
   const [state, action] = useActionState(saveVersion, idle);
   const [extra, setExtra] = useState('');
   const vars = useMemo(() => new Map(variables.map((v) => [v.ref, v])), [variables]);
-  const problems = state.status === 'success' && state.saved ? state.saved.problems : initialProblems;
+  const problems =
+    state.status === 'success' && state.saved ? state.saved.problems : initialProblems;
   const serverErrors: PlanProblem[] =
-    state.status === 'error' ? Object.entries(state.fieldErrors).map(([path, message]) => ({ path, message })) : [];
+    state.status === 'error'
+      ? Object.entries(state.fieldErrors).map(([path, message]) => ({ path, message }))
+      : [];
   const allProblems = [...serverErrors, ...problems];
 
   // Account plans keep the structure of the plan they come from and change only open values.
@@ -233,7 +263,8 @@ export function PlanBuilder({
   const settingRefs = new Set(doc.settings.map((s) => `${s.variable.source}:${s.variable.key}`));
 
   const update = (patch: Partial<PlanDocument>) => setDoc((d) => ({ ...d, ...patch }));
-  const setValue = (ref: string, value: PlanValue) => update({ values: { ...doc.values, [ref]: value } });
+  const setValue = (ref: string, value: PlanValue) =>
+    update({ values: { ...doc.values, [ref]: value } });
   const removeValue = (ref: string) => {
     const { [ref]: _drop, ...rest } = doc.values;
     update({ values: rest });
@@ -250,13 +281,16 @@ export function PlanBuilder({
 
       {kind === 'account' ? (
         <Notice tone="neutral" title="Account plan">
-          Benefits, covered reasons and settings come from the state plan. Only the values the base plan leaves open can change, within its
-          bounds.
+          Benefits, covered reasons and settings come from the state plan. Only the values the base
+          plan leaves open can change, within its bounds.
         </Notice>
       ) : null}
 
       <Card>
-        <CardHeader title="Benefits" description="Benefits from the approved catalogue, how each is sold, and the rate manual benefit that prices it." />
+        <CardHeader
+          title="Benefits"
+          description="Benefits from the approved catalogue, how each is sold, and the rate manual benefit that prices it."
+        />
         <div className="divide-y divide-border">
           {groups.map((g) => (
             <fieldset key={g} className="px-5 py-4">
@@ -269,7 +303,10 @@ export function PlanBuilder({
                   .map((b) => {
                     const pb = doc.benefits.find((x) => x.code === b.code);
                     return (
-                      <div key={b.code} className="grid items-center gap-3 sm:grid-cols-[1fr_12rem_9rem_12rem]">
+                      <div
+                        key={b.code}
+                        className="grid items-center gap-3 sm:grid-cols-[1fr_12rem_9rem_12rem]"
+                      >
                         <label className="flex items-center gap-2 text-sm font-medium text-fg">
                           <input
                             type="checkbox"
@@ -278,7 +315,15 @@ export function PlanBuilder({
                             onChange={(e) =>
                               update({
                                 benefits: e.target.checked
-                                  ? [...doc.benefits, { code: b.code, packaging: 'packaged', ratingBenefit: null, underwriter: null }]
+                                  ? [
+                                      ...doc.benefits,
+                                      {
+                                        code: b.code,
+                                        packaging: 'packaged',
+                                        ratingBenefit: null,
+                                        underwriter: null,
+                                      },
+                                    ]
                                   : doc.benefits.filter((x) => x.code !== b.code),
                               })
                             }
@@ -295,7 +340,12 @@ export function PlanBuilder({
                               onChange={(e) =>
                                 update({
                                   benefits: doc.benefits.map((x) =>
-                                    x.code === b.code ? { ...x, packaging: e.target.value as (typeof PACKAGING)[number] } : x,
+                                    x.code === b.code
+                                      ? {
+                                          ...x,
+                                          packaging: e.target.value as (typeof PACKAGING)[number],
+                                        }
+                                      : x,
                                   ),
                                 })
                               }
@@ -315,7 +365,12 @@ export function PlanBuilder({
                               onChange={(e) =>
                                 update({
                                   benefits: doc.benefits.map((x) =>
-                                    x.code === b.code ? { ...x, ratingBenefit: e.target.value.toUpperCase() || null } : x,
+                                    x.code === b.code
+                                      ? {
+                                          ...x,
+                                          ratingBenefit: e.target.value.toUpperCase() || null,
+                                        }
+                                      : x,
                                   ),
                                 })
                               }
@@ -328,7 +383,13 @@ export function PlanBuilder({
                               onChange={(e) =>
                                 update({
                                   benefits: doc.benefits.map((x) =>
-                                    x.code === b.code ? { ...x, underwriter: (e.target.value || null) as (typeof ARRANGEMENTS)[number] | null } : x,
+                                    x.code === b.code
+                                      ? {
+                                          ...x,
+                                          underwriter: (e.target.value || null) as
+                                            (typeof ARRANGEMENTS)[number] | null,
+                                        }
+                                      : x,
                                   ),
                                 })
                               }
@@ -353,7 +414,9 @@ export function PlanBuilder({
           ))}
           {catalogue.upgrades.length ? (
             <fieldset className="px-5 py-4">
-              <legend className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">Upgrades</legend>
+              <legend className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">
+                Upgrades
+              </legend>
               <div className="space-y-3">
                 {catalogue.upgrades.map((u) => {
                   const pu = doc.upgrades.find((x) => x.code === u.code);
@@ -383,7 +446,12 @@ export function PlanBuilder({
                           onChange={(e) =>
                             update({
                               upgrades: doc.upgrades.map((x) =>
-                                x.code === u.code ? { ...x, packaging: e.target.value as (typeof PACKAGING)[number] } : x,
+                                x.code === u.code
+                                  ? {
+                                      ...x,
+                                      packaging: e.target.value as (typeof PACKAGING)[number],
+                                    }
+                                  : x,
                               ),
                             })
                           }
@@ -410,10 +478,14 @@ export function PlanBuilder({
           description="Trip Cancellation and Interruption reasons and who they cover. Together they make the peril package used in rating."
         />
         <div className="divide-y divide-border">
-          {categories.length === 0 ? <p className="px-5 py-4 text-sm text-muted">The catalogue has no covered reasons.</p> : null}
+          {categories.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-muted">The catalogue has no covered reasons.</p>
+          ) : null}
           {categories.map((cat) => (
             <fieldset key={cat} className="px-5 py-4">
-              <legend className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">{cat}</legend>
+              <legend className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">
+                {cat}
+              </legend>
               <div className="space-y-3">
                 {catalogue.coveredReasons
                   .filter((r) => r.category === cat)
@@ -430,7 +502,10 @@ export function PlanBuilder({
                             onChange={(e) =>
                               update({
                                 coveredReasons: e.target.checked
-                                  ? [...doc.coveredReasons, { code: r.code, levels: [...r.coverageLevels] }]
+                                  ? [
+                                      ...doc.coveredReasons,
+                                      { code: r.code, levels: [...r.coverageLevels] },
+                                    ]
                                   : doc.coveredReasons.filter((x) => x.code !== r.code),
                               })
                             }
@@ -439,15 +514,26 @@ export function PlanBuilder({
                             {r.text}
                             {r.upgrade ? (
                               <span className="ml-2">
-                                <Badge tone="neutral">With {catalogue.upgrades.find((u) => u.code === r.upgrade)?.name ?? r.upgrade}</Badge>
+                                <Badge tone="neutral">
+                                  With{' '}
+                                  {catalogue.upgrades.find((u) => u.code === r.upgrade)?.name ??
+                                    r.upgrade}
+                                </Badge>
                               </span>
                             ) : null}
                           </span>
                         </label>
                         {pr ? (
-                          <div className="mt-1 ml-6 flex flex-wrap gap-3" role="group" aria-label={`${r.text}: who is covered`}>
+                          <div
+                            className="mt-1 ml-6 flex flex-wrap gap-3"
+                            role="group"
+                            aria-label={`${r.text}: who is covered`}
+                          >
                             {r.coverageLevels.map((l) => (
-                              <label key={l} className="flex items-center gap-1.5 text-xs text-muted">
+                              <label
+                                key={l}
+                                className="flex items-center gap-1.5 text-xs text-muted"
+                              >
                                 <input
                                   type="checkbox"
                                   disabled={structureLocked}
@@ -456,7 +542,12 @@ export function PlanBuilder({
                                     update({
                                       coveredReasons: doc.coveredReasons.map((x) =>
                                         x.code === r.code
-                                          ? { ...x, levels: e.target.checked ? [...x.levels, l] : x.levels.filter((y) => y !== l) }
+                                          ? {
+                                              ...x,
+                                              levels: e.target.checked
+                                                ? [...x.levels, l]
+                                                : x.levels.filter((y) => y !== l),
+                                            }
                                           : x,
                                       ),
                                     })
@@ -485,7 +576,11 @@ export function PlanBuilder({
           description="A value for every amount, basis and wording the included benefits use. Each must be within the range filed on the form."
         />
         <div className="divide-y divide-border">
-          {shownValues.length === 0 ? <p className="px-5 py-4 text-sm text-muted">Include a benefit to see the values it needs.</p> : null}
+          {shownValues.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-muted">
+              Include a benefit to see the values it needs.
+            </p>
+          ) : null}
           {shownValues
             .filter((ref) => !settingRefs.has(ref))
             .map((ref) => {
@@ -512,9 +607,17 @@ export function PlanBuilder({
                   </div>
                   <div className="space-y-2">
                     {v ? (
-                      <ValueInput v={v} label={label} value={doc.values[ref]} disabled={!editable || fixed} onChange={(x) => setValue(ref, x)} />
+                      <ValueInput
+                        v={v}
+                        label={label}
+                        value={doc.values[ref]}
+                        disabled={!editable || fixed}
+                        onChange={(x) => setValue(ref, x)}
+                      />
                     ) : null}
-                    {kind === 'base' && v && ['numeric_range', 'time_period', 'limit_basis'].includes(v.type) ? (
+                    {kind === 'base' &&
+                    v &&
+                    ['numeric_range', 'time_period', 'limit_basis'].includes(v.type) ? (
                       <BoundEditor
                         v={v}
                         bound={doc.bounds[ref]}
@@ -537,7 +640,12 @@ export function PlanBuilder({
         </div>
         {editable && kind !== 'account' ? (
           <div className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-3">
-            <Select aria-label="Add a value for another variable" className={`${inputClass} max-w-sm`} value={extra} onChange={(e) => setExtra(e.target.value)}>
+            <Select
+              aria-label="Add a value for another variable"
+              className={`${inputClass} max-w-sm`}
+              value={extra}
+              onChange={(e) => setExtra(e.target.value)}
+            >
               <option value="">Another variable…</option>
               {variables
                 .filter((v) => !shownValues.includes(v.ref))
@@ -562,16 +670,34 @@ export function PlanBuilder({
         ) : null}
       </Card>
 
-      <Settings doc={doc} variables={variables} vars={vars} editable={editable && kind !== 'account'} problems={allProblems} update={update} />
+      <Settings
+        doc={doc}
+        variables={variables}
+        vars={vars}
+        editable={editable && kind !== 'account'}
+        problems={allProblems}
+        update={update}
+      />
 
-      <TimingEditor doc={doc} catalogue={catalogue} editable={editable && kind !== 'account'} problems={allProblems} update={update} />
+      <TimingEditor
+        doc={doc}
+        catalogue={catalogue}
+        editable={editable && kind !== 'account'}
+        problems={allProblems}
+        update={update}
+      />
 
       <Card>
         <CardHeader title="Dates" />
         <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
           <label className="space-y-1.5 text-sm font-medium text-fg">
             Effective from
-            <Input type="date" value={from} disabled={!editable} onChange={(e) => setFrom(e.target.value)} />
+            <Input
+              type="date"
+              value={from}
+              disabled={!editable}
+              onChange={(e) => setFrom(e.target.value)}
+            />
           </label>
           <label className="space-y-1.5 text-sm font-medium text-fg">
             Product type (rating)
@@ -617,7 +743,13 @@ function BoundEditor({
           disabled={disabled}
           checked={!!bound}
           onChange={(e) =>
-            onChange(e.target.checked ? (v.type === 'limit_basis' ? { options } : { min: v.constraints.min as number, max: v.constraints.max as number }) : null)
+            onChange(
+              e.target.checked
+                ? v.type === 'limit_basis'
+                  ? { options }
+                  : { min: v.constraints.min as number, max: v.constraints.max as number }
+                : null,
+            )
           }
         />
         Account plans may change this
@@ -630,7 +762,12 @@ function BoundEditor({
             className="h-8 text-xs"
             disabled={disabled}
             value={bound.min ?? ''}
-            onChange={(e) => onChange({ ...bound, min: e.target.value === '' ? undefined : Number(e.target.value) })}
+            onChange={(e) =>
+              onChange({
+                ...bound,
+                min: e.target.value === '' ? undefined : Number(e.target.value),
+              })
+            }
           />
           <span className="text-xs text-muted">to</span>
           <Input
@@ -639,7 +776,12 @@ function BoundEditor({
             className="h-8 text-xs"
             disabled={disabled}
             value={bound.max ?? ''}
-            onChange={(e) => onChange({ ...bound, max: e.target.value === '' ? undefined : Number(e.target.value) })}
+            onChange={(e) =>
+              onChange({
+                ...bound,
+                max: e.target.value === '' ? undefined : Number(e.target.value),
+              })
+            }
           />
         </div>
       ) : null}
@@ -652,7 +794,12 @@ function BoundEditor({
                 disabled={disabled}
                 checked={bound.options?.includes(o) ?? false}
                 onChange={(e) =>
-                  onChange({ ...bound, options: e.target.checked ? [...(bound.options ?? []), o] : (bound.options ?? []).filter((x) => x !== o) })
+                  onChange({
+                    ...bound,
+                    options: e.target.checked
+                      ? [...(bound.options ?? []), o]
+                      : (bound.options ?? []).filter((x) => x !== o),
+                  })
                 }
               />
               {o}
@@ -690,16 +837,23 @@ function Settings({
         description="Review period, lookback, CFAR and Trip Interruption settings, when cover starts and ends, and extensions. Each is bound to a form variable, so its filed range applies; rules and documents read the same values."
       />
       <div className="divide-y divide-border">
-        {doc.settings.length === 0 ? <p className="px-5 py-4 text-sm text-muted">No conditions set yet.</p> : null}
+        {doc.settings.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-muted">No conditions set yet.</p>
+        ) : null}
         {doc.settings.map((s, i) => {
           const ref = `${s.variable.source}:${s.variable.key}`;
           const v = vars.get(ref);
           const label = PLAN_SETTING_LABELS[s.setting];
           return (
-            <div key={s.setting} className="grid gap-3 px-5 py-3 sm:grid-cols-[1fr_14rem_14rem_auto]">
+            <div
+              key={s.setting}
+              className="grid gap-3 px-5 py-3 sm:grid-cols-[1fr_14rem_14rem_auto]"
+            >
               <div>
                 <p className="text-sm font-medium text-fg">{label}</p>
-                <p className="text-xs text-muted">{v ? filedRange(v) : 'Choose the form variable it is filed as'}</p>
+                <p className="text-xs text-muted">
+                  {v ? filedRange(v) : 'Choose the form variable it is filed as'}
+                </p>
                 <ProblemText problems={problems} path={`settings.${s.setting}`} />
               </div>
               <Select
@@ -708,7 +862,10 @@ function Settings({
                 disabled={!editable}
                 value={ref}
                 onChange={(e) => {
-                  const [source, key] = e.target.value.split(':') as ['schedule' | 'policy', string];
+                  const [source, key] = e.target.value.split(':') as [
+                    'schedule' | 'policy',
+                    string,
+                  ];
                   setRow(i, { variable: { source, key }, value: null });
                 }}
               >
@@ -719,9 +876,24 @@ function Settings({
                   </option>
                 ))}
               </Select>
-              {v ? <ValueInput v={v} label={label} value={s.value} disabled={!editable} onChange={(value) => setRow(i, { value })} /> : <span />}
+              {v ? (
+                <ValueInput
+                  v={v}
+                  label={label}
+                  value={s.value}
+                  disabled={!editable}
+                  onChange={(value) => setRow(i, { value })}
+                />
+              ) : (
+                <span />
+              )}
               {editable ? (
-                <Button variant="ghost" size="sm" aria-label={`Remove ${label}`} onClick={() => update({ settings: doc.settings.filter((_, j) => j !== i) })}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Remove ${label}`}
+                  onClick={() => update({ settings: doc.settings.filter((_, j) => j !== i) })}
+                >
                   <Trash2 aria-hidden className="size-3.5" />
                 </Button>
               ) : null}
@@ -731,7 +903,12 @@ function Settings({
       </div>
       {editable && unused.length ? (
         <div className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-3">
-          <Select aria-label="Add a condition" className={`${inputClass} max-w-sm`} value={adding} onChange={(e) => setAdding(e.target.value)}>
+          <Select
+            aria-label="Add a condition"
+            className={`${inputClass} max-w-sm`}
+            value={adding}
+            onChange={(e) => setAdding(e.target.value)}
+          >
             <option value="">Add a condition…</option>
             {unused.map((s) => (
               <option key={s} value={s}>
@@ -748,7 +925,11 @@ function Settings({
               update({
                 settings: [
                   ...doc.settings,
-                  { setting: adding as (typeof PLAN_SETTINGS)[number], variable: { source: 'schedule', key: 'not_chosen' }, value: null },
+                  {
+                    setting: adding as (typeof PLAN_SETTINGS)[number],
+                    variable: { source: 'schedule', key: 'not_chosen' },
+                    value: null,
+                  },
                 ],
               });
               setAdding('');
@@ -780,33 +961,60 @@ function TimingEditor({
   update: (patch: Partial<PlanDocument>) => void;
 }) {
   const [extra, setExtra] = useState('');
-  const included = doc.benefits.map((b) => catalogue.benefits.find((x) => x.code === b.code)).filter((b): b is NonNullable<typeof b> => !!b);
+  const included = doc.benefits
+    .map((b) => catalogue.benefits.find((x) => x.code === b.code))
+    .filter((b): b is NonNullable<typeof b> => !!b);
   const groupKeys: string[] = [...new Set(included.map((b) => b.group as string))];
   const overrideKeys = Object.keys(doc.timing).filter((k) => !groupKeys.includes(k));
   const keys = [...groupKeys, ...overrideKeys];
-  const label = (k: string) => (BENEFIT_GROUP_LABELS[k as keyof typeof BENEFIT_GROUP_LABELS] ? `${BENEFIT_GROUP_LABELS[k as keyof typeof BENEFIT_GROUP_LABELS]} benefits` : (catalogue.benefits.find((b) => b.code === k)?.name ?? k));
+  const label = (k: string) =>
+    BENEFIT_GROUP_LABELS[k as keyof typeof BENEFIT_GROUP_LABELS]
+      ? `${BENEFIT_GROUP_LABELS[k as keyof typeof BENEFIT_GROUP_LABELS]} benefits`
+      : (catalogue.benefits.find((b) => b.code === k)?.name ?? k);
   const set = (k: string, t: PlanDocument['timing'][string] | null) => {
     const { [k]: _drop, ...rest } = doc.timing;
     update({ timing: t ? { ...rest, [k]: t } : rest });
   };
-  const initial = { start: { kind: 'day_after_premium_received' as const }, end: { kind: 'return_date' as const } };
+  const initial = {
+    start: { kind: 'day_after_premium_received' as const },
+    end: { kind: 'return_date' as const },
+  };
   return (
     <Card>
-      <CardHeader title="Cover dates" description="When cover starts and ends for each group of benefits, as the filed forms state it. A benefit can have its own timing, as CFAR does. A quote cannot be made for a benefit with no timing." />
+      <CardHeader
+        title="Cover dates"
+        description="When cover starts and ends for each group of benefits, as the filed forms state it. A benefit can have its own timing, as CFAR does. A quote cannot be made for a benefit with no timing."
+      />
       <div className="divide-y divide-border">
-        {keys.length === 0 ? <p className="px-5 py-4 text-sm text-muted">Include benefits to set their cover dates.</p> : null}
+        {keys.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-muted">Include benefits to set their cover dates.</p>
+        ) : null}
         {keys.map((k) => {
           const t = doc.timing[k];
           const isOverride = !groupKeys.includes(k);
           return (
-            <div key={k} className="grid items-center gap-3 px-5 py-3 sm:grid-cols-[12rem_1fr_1fr_auto]">
+            <div
+              key={k}
+              className="grid items-center gap-3 px-5 py-3 sm:grid-cols-[12rem_1fr_1fr_auto]"
+            >
               <div>
                 <p className="text-sm font-medium text-fg">{label(k)}</p>
                 <ProblemText problems={problems} path={`timing.${k}`} />
               </div>
               {t ? (
                 <>
-                  <Select aria-label={`${label(k)}: cover starts`} className={inputClass} disabled={!editable} value={t.start.kind} onChange={(e) => set(k, { ...t, start: { kind: e.target.value as (typeof START_KINDS)[number] } })}>
+                  <Select
+                    aria-label={`${label(k)}: cover starts`}
+                    className={inputClass}
+                    disabled={!editable}
+                    value={t.start.kind}
+                    onChange={(e) =>
+                      set(k, {
+                        ...t,
+                        start: { kind: e.target.value as (typeof START_KINDS)[number] },
+                      })
+                    }
+                  >
                     {START_KINDS.map((s) => (
                       <option key={s} value={s}>
                         Starts: {TIMING_START_LABELS[s]}
@@ -819,7 +1027,15 @@ function TimingEditor({
                       className={inputClass}
                       disabled={!editable}
                       value={t.end.kind}
-                      onChange={(e) => set(k, { ...t, end: e.target.value === 'hours_before_departure' ? { kind: 'hours_before_departure', hours: 48 } : { kind: e.target.value as 'return_date' | 'departure' } })}
+                      onChange={(e) =>
+                        set(k, {
+                          ...t,
+                          end:
+                            e.target.value === 'hours_before_departure'
+                              ? { kind: 'hours_before_departure', hours: 48 }
+                              : { kind: e.target.value as 'return_date' | 'departure' },
+                        })
+                      }
                     >
                       {END_KINDS.map((s) => (
                         <option key={s} value={s}>
@@ -835,12 +1051,22 @@ function TimingEditor({
                         disabled={!editable}
                         min={1}
                         value={t.end.hours}
-                        onChange={(e) => set(k, { ...t, end: { kind: 'hours_before_departure', hours: Number(e.target.value) } })}
+                        onChange={(e) =>
+                          set(k, {
+                            ...t,
+                            end: { kind: 'hours_before_departure', hours: Number(e.target.value) },
+                          })
+                        }
                       />
                     ) : null}
                   </div>
                   {editable ? (
-                    <Button variant="ghost" size="sm" aria-label={`Clear the cover dates of ${label(k)}`} onClick={() => set(k, null)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Clear the cover dates of ${label(k)}`}
+                      onClick={() => set(k, null)}
+                    >
                       <Trash2 aria-hidden className="size-3.5" />
                     </Button>
                   ) : (
@@ -849,7 +1075,9 @@ function TimingEditor({
                 </>
               ) : (
                 <>
-                  <p className="text-sm text-muted sm:col-span-2">{isOverride ? '' : 'No cover dates set.'}</p>
+                  <p className="text-sm text-muted sm:col-span-2">
+                    {isOverride ? '' : 'No cover dates set.'}
+                  </p>
                   {editable ? (
                     <Button variant="secondary" size="sm" onClick={() => set(k, initial)}>
                       Set cover dates
@@ -865,7 +1093,12 @@ function TimingEditor({
       </div>
       {editable && included.length ? (
         <div className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-3">
-          <Select aria-label="Set cover dates for one benefit" className={`${inputClass} max-w-sm`} value={extra} onChange={(e) => setExtra(e.target.value)}>
+          <Select
+            aria-label="Set cover dates for one benefit"
+            className={`${inputClass} max-w-sm`}
+            value={extra}
+            onChange={(e) => setExtra(e.target.value)}
+          >
             <option value="">A benefit with its own timing…</option>
             {included
               .filter((b) => !(b.code in doc.timing))

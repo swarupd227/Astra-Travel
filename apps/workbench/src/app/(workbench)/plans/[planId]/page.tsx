@@ -23,26 +23,44 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
   const { planId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(planId)) notFound();
   const [res, cases] = await Promise.all([
-    load(() => api<{ plan: Plan; versions: Omit<PlanVersion, 'document' | 'problems'>[] }>(`/v1/plans/${planId}`)),
+    load(() =>
+      api<{ plan: Plan; versions: Omit<PlanVersion, 'document' | 'problems'>[] }>(
+        `/v1/plans/${planId}`,
+      ),
+    ),
     load(() => api<{ items: PlanTestCase[] }>(`/v1/plans/${planId}/test-cases`)),
   ]);
   if (res.error instanceof ApiProblem && res.error.problem.code === 'not_found') notFound();
   if (res.error) return <ErrorPanel error={res.error} />;
   const { plan, versions } = res.data;
-  const parent = plan.parentPlanId ? await load(() => api<{ plan: Plan }>(`/v1/plans/${plan.parentPlanId}`)) : null;
-  const names = await peopleNames([plan.createdBy, ...versions.flatMap((v) => [v.approvedBy, v.publishedBy])]);
+  const parent = plan.parentPlanId
+    ? await load(() => api<{ plan: Plan }>(`/v1/plans/${plan.parentPlanId}`))
+    : null;
+  const names = await peopleNames([
+    plan.createdBy,
+    ...versions.flatMap((v) => [v.approvedBy, v.publishedBy]),
+  ]);
   const canManage = me.permissions.includes('plans:manage');
 
   return (
     <>
-      <Link href="/plans" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg">
+      <Link
+        href="/plans"
+        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg"
+      >
         <ChevronLeft aria-hidden className="size-4" /> Plans
       </Link>
       <PageHeader
         eyebrow={`${KIND_LABELS[plan.kind]}${plan.state ? ` · ${plan.state}` : ''}`}
         title={plan.name}
         description={`${plan.code} · ${plan.term === 'annual' ? 'Annual' : 'Single trip'}`}
-        actions={plan.current ? <Badge tone={VERSION_TONES[plan.current.status as keyof typeof VERSION_TONES]}>v{plan.current.version} {plan.current.status}</Badge> : null}
+        actions={
+          plan.current ? (
+            <Badge tone={VERSION_TONES[plan.current.status as keyof typeof VERSION_TONES]}>
+              v{plan.current.version} {plan.current.status}
+            </Badge>
+          ) : null
+        }
       />
 
       <div className="mb-6 grid gap-6 lg:grid-cols-3">
@@ -54,7 +72,10 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
                 {
                   term: 'Made from',
                   value: parent?.data ? (
-                    <Link className="text-primary hover:underline" href={`/plans/${parent.data.plan.id}`}>
+                    <Link
+                      className="text-primary hover:underline"
+                      href={`/plans/${parent.data.plan.id}`}
+                    >
                       {parent.data.plan.code}
                     </Link>
                   ) : (
@@ -68,7 +89,10 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
           </div>
         </Card>
         <Card className="lg:col-span-2">
-          <CardHeader title="Versions" description="One draft at a time. Approved and published versions never change; a new draft copies the current version." />
+          <CardHeader
+            title="Versions"
+            description="One draft at a time. Approved and published versions never change; a new draft copies the current version."
+          />
           <Table caption="Versions">
             <THead>
               <tr>
@@ -83,7 +107,10 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
               {versions.map((v) => (
                 <TR key={v.id}>
                   <TD>
-                    <Link href={`/plans/versions/${v.id}`} className="font-medium text-fg hover:text-primary hover:underline">
+                    <Link
+                      href={`/plans/versions/${v.id}`}
+                      className="font-medium text-fg hover:text-primary hover:underline"
+                    >
                       Version {v.version}
                     </Link>
                   </TD>
@@ -148,7 +175,9 @@ export default async function PlanPage({ params }: { params: Promise<{ planId: s
               </tbody>
             </Table>
           ) : (
-            <p className="border-t border-border px-5 py-4 text-sm text-muted">No test cases yet.</p>
+            <p className="border-t border-border px-5 py-4 text-sm text-muted">
+              No test cases yet.
+            </p>
           )}
         </Card>
       ) : null}

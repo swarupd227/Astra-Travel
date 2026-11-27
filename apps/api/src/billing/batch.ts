@@ -1,7 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { PassThrough } from 'node:stream';
 import type { ControlTotals } from '@astra/contracts';
-import { fromCents, headerLine, trailerLine, totalsOf, type TotalsAccumulator } from '@astra/billing';
+import {
+  fromCents,
+  headerLine,
+  trailerLine,
+  totalsOf,
+  type TotalsAccumulator,
+} from '@astra/billing';
 import type { FileStore, Tx } from '@astra/platform';
 
 /**
@@ -77,7 +83,12 @@ const toLine = (r: Row) =>
   });
 
 /** Claims up to `limit` ready records for a new batch and writes its file. Returns null when nothing is ready. */
-export async function buildBatch(tx: Tx, files: FileStore, createdBy: string, limit: number): Promise<BuiltBatch | null> {
+export async function buildBatch(
+  tx: Tx,
+  files: FileStore,
+  createdBy: string,
+  limit: number,
+): Promise<BuiltBatch | null> {
   const id = randomUUID();
   const claimed = await tx.query<{ id: string }>(
     `WITH picked AS (
@@ -87,21 +98,41 @@ export async function buildBatch(tx: Tx, files: FileStore, createdBy: string, li
   );
   if (claimed.rowCount === 0) return null;
   const agg = (
-    await tx.query<{ count: string; premium: string; charges: string; refunds: string; commission: string; tax: string }>(
+    await tx.query<{
+      count: string;
+      premium: string;
+      charges: string;
+      refunds: string;
+      commission: string;
+      tax: string;
+    }>(
       `SELECT count(*)::text AS count, coalesce(sum(premium_cents), 0)::text AS premium, coalesce(sum(charge_cents), 0)::text AS charges, coalesce(sum(refund_cents), 0)::text AS refunds,
               coalesce(sum(commission_cents), 0)::text AS commission, coalesce(sum(tax_cents), 0)::text AS tax
          FROM billing.premium_records WHERE id = ANY ($1::uuid[])`,
       [claimed.rows.map((r) => r.id)],
     )
   ).rows[0]!;
-  const acc: TotalsAccumulator = { count: Number(agg.count), premium: Number(agg.premium), charges: Number(agg.charges), refunds: Number(agg.refunds), commission: Number(agg.commission), tax: Number(agg.tax) };
+  const acc: TotalsAccumulator = {
+    count: Number(agg.count),
+    premium: Number(agg.premium),
+    charges: Number(agg.charges),
+    refunds: Number(agg.refunds),
+    commission: Number(agg.commission),
+    tax: Number(agg.tax),
+  };
   const totals = totalsOf(acc);
   const key = `billing/${id}.ndjson`;
   const batch = (
-    await tx.query<{ number: string }>(`INSERT INTO billing.batches (id, status, totals, file_key, sha256, size_bytes, created_by) VALUES ($1, 'ready', $2, $3, '', 0, $4) RETURNING number`, [id, JSON.stringify(totals), key, createdBy])
+    await tx.query<{ number: string }>(
+      `INSERT INTO billing.batches (id, status, totals, file_key, sha256, size_bytes, created_by) VALUES ($1, 'ready', $2, $3, '', 0, $4) RETURNING number`,
+      [id, JSON.stringify(totals), key, createdBy],
+    )
   ).rows[0]!;
   const number = Number(batch.number);
-  await tx.query(`UPDATE billing.premium_records SET status = 'batched', batch_id = $2 WHERE id = ANY ($1::uuid[])`, [claimed.rows.map((r) => r.id), id]);
+  await tx.query(
+    `UPDATE billing.premium_records SET status = 'batched', batch_id = $2 WHERE id = ANY ($1::uuid[])`,
+    [claimed.rows.map((r) => r.id), id],
+  );
 
   // Stream the file: header, one line per record in number order, trailer.
   const out = new PassThrough();
@@ -134,6 +165,10 @@ export async function buildBatch(tx: Tx, files: FileStore, createdBy: string, li
     throw err;
   }
   const stored = await written;
-  await tx.query(`UPDATE billing.batches SET sha256 = $2, size_bytes = $3 WHERE id = $1`, [id, stored.sha256, stored.sizeBytes]);
+  await tx.query(`UPDATE billing.batches SET sha256 = $2, size_bytes = $3 WHERE id = $1`, [
+    id,
+    stored.sha256,
+    stored.sizeBytes,
+  ]);
   return { id, number, totals, sha256: stored.sha256, sizeBytes: stored.sizeBytes };
 }

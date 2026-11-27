@@ -2,27 +2,99 @@
 
 import { useActionState } from 'react';
 import { Check, KeyRound, Rocket, Upload, X } from 'lucide-react';
-import { BILLING_BASES, INTEGRATION_LABELS, INTEGRATION_METHODS, LICENCE_KIND_LABELS, LICENCE_KINDS, RATING_INPUT_LABELS, RATING_INPUTS, type AccountProfile } from '@astra/contracts';
+import {
+  BILLING_BASES,
+  INTEGRATION_LABELS,
+  INTEGRATION_METHODS,
+  LICENCE_KIND_LABELS,
+  LICENCE_KINDS,
+  RATING_INPUT_LABELS,
+  RATING_INPUTS,
+  type AccountProfile,
+} from '@astra/contracts';
 import { Field, FormMessage, Input, Select, SubmitButton, Textarea } from '@/components/ui/form';
 import { Notice } from '@/components/ui/primitives';
 import { idle } from '@/lib/actions';
-import { addLicence, createSandbox, decideSegment, goLive, issueCredentials, requestSegment, revokeCredentials, revokeLicence, saveCollected, saveProfile, uploadContract, type CredentialState } from './actions';
+import {
+  addLicence,
+  createSandbox,
+  decideSegment,
+  goLive,
+  issueCredentials,
+  requestSegment,
+  revokeCredentials,
+  revokeLicence,
+  saveCollected,
+  saveProfile,
+  uploadContract,
+  type CredentialState,
+} from './actions';
 
-const Hidden = ({ accountId }: { accountId: string }) => <input type="hidden" name="accountId" value={accountId} />;
+const Hidden = ({ accountId }: { accountId: string }) => (
+  <input type="hidden" name="accountId" value={accountId} />
+);
 
-export function ProfileForm({ accountId, profile }: { accountId: string; profile: AccountProfile }) {
+export function ProfileForm({
+  accountId,
+  profile,
+}: {
+  accountId: string;
+  profile: AccountProfile;
+}) {
   const [state, action] = useActionState(saveProfile, idle);
   return (
     <form action={action} className="space-y-4">
       <Hidden accountId={accountId} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Contract reference">{(f) => <Input id={f.id} name="contractReference" defaultValue={profile.contractReference ?? ''} aria-describedby={f.describedBy} />}</Field>
-        <Field label="Contract signed on">{(f) => <Input id={f.id} name="contractSignedOn" type="date" defaultValue={profile.contractSignedOn ?? ''} aria-describedby={f.describedBy} />}</Field>
-        <Field label="States the account sells in" hint="Two-letter codes, separated by commas.">{(f) => <Input id={f.id} name="states" defaultValue={profile.states.join(', ')} aria-describedby={f.describedBy} />}</Field>
-        <Field label="Plans" hint="Plan codes, separated by commas.">{(f) => <Input id={f.id} name="plans" defaultValue={profile.plans.join(', ')} aria-describedby={f.describedBy} />}</Field>
+        <Field label="Contract reference">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="contractReference"
+              defaultValue={profile.contractReference ?? ''}
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
+        <Field label="Contract signed on">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="contractSignedOn"
+              type="date"
+              defaultValue={profile.contractSignedOn ?? ''}
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
+        <Field label="States the account sells in" hint="Two-letter codes, separated by commas.">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="states"
+              defaultValue={profile.states.join(', ')}
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
+        <Field label="Plans" hint="Plan codes, separated by commas.">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="plans"
+              defaultValue={profile.plans.join(', ')}
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
         <Field label="Integration method">
           {(f) => (
-            <Select id={f.id} name="integrationMethod" defaultValue={profile.integrationMethod ?? ''} aria-describedby={f.describedBy}>
+            <Select
+              id={f.id}
+              name="integrationMethod"
+              defaultValue={profile.integrationMethod ?? ''}
+              aria-describedby={f.describedBy}
+            >
               <option value="">Not chosen</option>
               {INTEGRATION_METHODS.map((m) => (
                 <option key={m} value={m}>
@@ -34,7 +106,12 @@ export function ProfileForm({ accountId, profile }: { accountId: string; profile
         </Field>
         <Field label="Billing basis">
           {(f) => (
-            <Select id={f.id} name="basis" defaultValue={profile.rateBasis?.basis ?? ''} aria-describedby={f.describedBy}>
+            <Select
+              id={f.id}
+              name="basis"
+              defaultValue={profile.rateBasis?.basis ?? ''}
+              aria-describedby={f.describedBy}
+            >
               <option value="">Not agreed</option>
               {BILLING_BASES.map((b) => (
                 <option key={b} value={b}>
@@ -44,10 +121,49 @@ export function ProfileForm({ accountId, profile }: { accountId: string; profile
             </Select>
           )}
         </Field>
-        <Field label="Limit for a per-$100-of-limit basis">{(f) => <Input id={f.id} name="limit" inputMode="decimal" defaultValue={profile.rateBasis?.limit ?? ''} aria-describedby={f.describedBy} />}</Field>
-        <Field label="Fixed fee per policy">{(f) => <Input id={f.id} name="fixedFeePerPolicy" inputMode="decimal" defaultValue={profile.rateBasis?.fixedFeePerPolicy ?? ''} aria-describedby={f.describedBy} />}</Field>
-        <Field label="Settlement terms" hint="In the contract’s words.">{(f) => <Input id={f.id} name="settlement" defaultValue={profile.settlement?.description ?? ''} aria-describedby={f.describedBy} />}</Field>
-        <Field label="Days to pay">{(f) => <Input id={f.id} name="paymentDays" inputMode="numeric" defaultValue={profile.settlement?.paymentDays ?? ''} aria-describedby={f.describedBy} />}</Field>
+        <Field label="Limit for a per-$100-of-limit basis">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="limit"
+              inputMode="decimal"
+              defaultValue={profile.rateBasis?.limit ?? ''}
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
+        <Field label="Fixed fee per policy">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="fixedFeePerPolicy"
+              inputMode="decimal"
+              defaultValue={profile.rateBasis?.fixedFeePerPolicy ?? ''}
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
+        <Field label="Settlement terms" hint="In the contract’s words.">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="settlement"
+              defaultValue={profile.settlement?.description ?? ''}
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
+        <Field label="Days to pay">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="paymentDays"
+              inputMode="numeric"
+              defaultValue={profile.settlement?.paymentDays ?? ''}
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
       </div>
       <FormMessage state={state} />
       <SubmitButton pendingLabel="Saving…">Save the profile</SubmitButton>
@@ -55,7 +171,13 @@ export function ProfileForm({ accountId, profile }: { accountId: string; profile
   );
 }
 
-export function SegmentForm({ accountId, segments }: { accountId: string; segments: { code: string; name: string }[] }) {
+export function SegmentForm({
+  accountId,
+  segments,
+}: {
+  accountId: string;
+  segments: { code: string; name: string }[];
+}) {
   const [state, action] = useActionState(requestSegment, idle);
   return (
     <form action={action} className="space-y-4">
@@ -72,26 +194,66 @@ export function SegmentForm({ accountId, segments }: { accountId: string; segmen
             </Select>
           )}
         </Field>
-        <Field label="Applies from">{(f) => <Input id={f.id} name="effectiveFrom" type="date" required aria-describedby={f.describedBy} />}</Field>
+        <Field label="Applies from">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="effectiveFrom"
+              type="date"
+              required
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
       </div>
-      <Field label="Reason">{(f) => <Textarea id={f.id} name="reason" required minLength={3} maxLength={500} aria-describedby={f.describedBy} />}</Field>
+      <Field label="Reason">
+        {(f) => (
+          <Textarea
+            id={f.id}
+            name="reason"
+            required
+            minLength={3}
+            maxLength={500}
+            aria-describedby={f.describedBy}
+          />
+        )}
+      </Field>
       <FormMessage state={state} />
       <SubmitButton pendingLabel="Requesting…">Request this segment</SubmitButton>
     </form>
   );
 }
 
-export function DecideSegmentForm({ accountId, changeId }: { accountId: string; changeId: string }) {
+export function DecideSegmentForm({
+  accountId,
+  changeId,
+}: {
+  accountId: string;
+  changeId: string;
+}) {
   const [state, action] = useActionState(decideSegment, idle);
   return (
     <form action={action} className="flex flex-wrap items-center gap-2">
       <Hidden accountId={accountId} />
       <input type="hidden" name="changeId" value={changeId} />
-      <input name="note" aria-label="Note for the decision" placeholder="Note" className="h-9 rounded-lg border border-border-strong bg-surface px-3 text-sm" />
-      <button name="decision" value="approve" className="inline-flex h-9 items-center gap-1 rounded-lg bg-primary px-3 text-sm font-medium text-primary-fg">
+      <input
+        name="note"
+        aria-label="Note for the decision"
+        placeholder="Note"
+        className="h-9 rounded-lg border border-border-strong bg-surface px-3 text-sm"
+      />
+      <button
+        name="decision"
+        value="approve"
+        className="inline-flex h-9 items-center gap-1 rounded-lg bg-primary px-3 text-sm font-medium text-primary-fg"
+      >
         <Check aria-hidden className="size-4" /> Approve
       </button>
-      <button name="decision" value="decline" className="inline-flex h-9 items-center gap-1 rounded-lg border border-border-strong bg-surface px-3 text-sm font-medium text-fg">
+      <button
+        name="decision"
+        value="decline"
+        className="inline-flex h-9 items-center gap-1 rounded-lg border border-border-strong bg-surface px-3 text-sm font-medium text-fg"
+      >
         <X aria-hidden className="size-4" /> Decline
       </button>
       <FormMessage state={state} />
@@ -99,23 +261,41 @@ export function DecideSegmentForm({ accountId, changeId }: { accountId: string; 
   );
 }
 
-export function CollectedForm({ accountId, notCollected }: { accountId: string; notCollected: string[] }) {
+export function CollectedForm({
+  accountId,
+  notCollected,
+}: {
+  accountId: string;
+  notCollected: string[];
+}) {
   const [state, action] = useActionState(saveCollected, idle);
   return (
     <form action={action} className="space-y-4">
       <Hidden accountId={accountId} />
       <fieldset>
-        <legend className="mb-2 text-sm font-medium text-fg">Variables the account does NOT collect</legend>
+        <legend className="mb-2 text-sm font-medium text-fg">
+          Variables the account does NOT collect
+        </legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {RATING_INPUTS.map((r) => (
             <label key={r} className="flex items-center gap-2 text-sm text-fg">
-              <input type="checkbox" name="notCollected" value={r} defaultChecked={notCollected.includes(r)} className="size-4" />
+              <input
+                type="checkbox"
+                name="notCollected"
+                value={r}
+                defaultChecked={notCollected.includes(r)}
+                className="size-4"
+              />
               {RATING_INPUT_LABELS[r]}
             </label>
           ))}
         </div>
       </fieldset>
-      <Field label="Reason">{(f) => <Input id={f.id} name="reason" required minLength={3} aria-describedby={f.describedBy} />}</Field>
+      <Field label="Reason">
+        {(f) => (
+          <Input id={f.id} name="reason" required minLength={3} aria-describedby={f.describedBy} />
+        )}
+      </Field>
       <FormMessage state={state} />
       <SubmitButton pendingLabel="Saving…">Record this</SubmitButton>
     </form>
@@ -139,11 +319,39 @@ export function LicenceForm({ accountId }: { accountId: string }) {
             </Select>
           )}
         </Field>
-        <Field label="State">{(f) => <Input id={f.id} name="state" maxLength={2} required aria-describedby={f.describedBy} />}</Field>
-        <Field label="Number">{(f) => <Input id={f.id} name="number" required aria-describedby={f.describedBy} />}</Field>
-        <Field label="Holder">{(f) => <Input id={f.id} name="holder" required aria-describedby={f.describedBy} />}</Field>
-        <Field label="Valid from">{(f) => <Input id={f.id} name="validFrom" type="date" required aria-describedby={f.describedBy} />}</Field>
-        <Field label="Expires on">{(f) => <Input id={f.id} name="expiresOn" type="date" required aria-describedby={f.describedBy} />}</Field>
+        <Field label="State">
+          {(f) => (
+            <Input id={f.id} name="state" maxLength={2} required aria-describedby={f.describedBy} />
+          )}
+        </Field>
+        <Field label="Number">
+          {(f) => <Input id={f.id} name="number" required aria-describedby={f.describedBy} />}
+        </Field>
+        <Field label="Holder">
+          {(f) => <Input id={f.id} name="holder" required aria-describedby={f.describedBy} />}
+        </Field>
+        <Field label="Valid from">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="validFrom"
+              type="date"
+              required
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
+        <Field label="Expires on">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="expiresOn"
+              type="date"
+              required
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
       </div>
       <FormMessage state={state} />
       <SubmitButton pendingLabel="Recording…">Record this licence</SubmitButton>
@@ -151,13 +359,26 @@ export function LicenceForm({ accountId }: { accountId: string }) {
   );
 }
 
-export function RevokeLicenceForm({ licenceId, accountId }: { licenceId: string; accountId?: string }) {
+export function RevokeLicenceForm({
+  licenceId,
+  accountId,
+}: {
+  licenceId: string;
+  accountId?: string;
+}) {
   const [state, action] = useActionState(revokeLicence, idle);
   return (
     <form action={action} className="flex items-center gap-2">
       {accountId ? <Hidden accountId={accountId} /> : null}
       <input type="hidden" name="licenceId" value={licenceId} />
-      <input name="reason" aria-label="Reason for revoking" placeholder="Reason" required minLength={3} className="h-8 rounded-lg border border-border-strong bg-surface px-2 text-sm" />
+      <input
+        name="reason"
+        aria-label="Reason for revoking"
+        placeholder="Reason"
+        required
+        minLength={3}
+        className="h-8 rounded-lg border border-border-strong bg-surface px-2 text-sm"
+      />
       <SubmitButton variant="secondary" size="sm" pendingLabel="Revoking…">
         Revoke
       </SubmitButton>
@@ -180,7 +401,18 @@ export function UploadForm({ accountId }: { accountId: string }) {
             </Select>
           )}
         </Field>
-        <Field label="File" hint="PDF with a text layer, or plain text.">{(f) => <Input id={f.id} name="file" type="file" accept="application/pdf,text/plain" required aria-describedby={f.describedBy} />}</Field>
+        <Field label="File" hint="PDF with a text layer, or plain text.">
+          {(f) => (
+            <Input
+              id={f.id}
+              name="file"
+              type="file"
+              accept="application/pdf,text/plain"
+              required
+              aria-describedby={f.describedBy}
+            />
+          )}
+        </Field>
       </div>
       <FormMessage state={state} />
       <SubmitButton variant="secondary" pendingLabel="Uploading…">
@@ -190,7 +422,15 @@ export function UploadForm({ accountId }: { accountId: string }) {
   );
 }
 
-export function SandboxControls({ accountId, hasSandbox, credentials }: { accountId: string; hasSandbox: boolean; credentials: { clientId: string; revokedAt: string | null }[] }) {
+export function SandboxControls({
+  accountId,
+  hasSandbox,
+  credentials,
+}: {
+  accountId: string;
+  hasSandbox: boolean;
+  credentials: { clientId: string; revokedAt: string | null }[];
+}) {
   const [created, create] = useActionState(createSandbox, idle);
   const [issued, issue] = useActionState<CredentialState, FormData>(issueCredentials, idle);
   const [revoked, revoke] = useActionState(revokeCredentials, idle);
@@ -224,7 +464,10 @@ export function SandboxControls({ accountId, hasSandbox, credentials }: { accoun
           {credentials.length ? (
             <ul className="divide-y divide-border text-sm">
               {credentials.map((c) => (
-                <li key={c.clientId} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <li
+                  key={c.clientId}
+                  className="flex flex-wrap items-center justify-between gap-2 py-2"
+                >
                   <span className="font-mono text-xs">{c.clientId}</span>
                   {c.revokedAt ? (
                     <span className="text-muted">Revoked</span>
@@ -253,12 +496,18 @@ export function GoLiveForm({ accountId, ready }: { accountId: string; ready: boo
   return (
     <form action={action} className="space-y-3">
       <Hidden accountId={accountId} />
-      <Field label="Note" hint="Kept with the decision to go live.">{(f) => <Input id={f.id} name="note" required minLength={3} aria-describedby={f.describedBy} />}</Field>
+      <Field label="Note" hint="Kept with the decision to go live.">
+        {(f) => (
+          <Input id={f.id} name="note" required minLength={3} aria-describedby={f.describedBy} />
+        )}
+      </Field>
       <FormMessage state={state} />
       <SubmitButton pendingLabel="Going live…" disabled={!ready}>
         <Rocket aria-hidden className="size-4" /> Take the account live
       </SubmitButton>
-      {!ready ? <p className="text-sm text-muted">Every item of the checklist must be complete first.</p> : null}
+      {!ready ? (
+        <p className="text-sm text-muted">Every item of the checklist must be complete first.</p>
+      ) : null}
     </form>
   );
 }

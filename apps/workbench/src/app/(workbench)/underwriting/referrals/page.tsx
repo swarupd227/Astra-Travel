@@ -15,7 +15,8 @@ const TONES = { open: 'warning', approved: 'success', declined: 'neutral' } as c
 
 export default async function ReferralsPage() {
   const me = (await getMe())!;
-  if (!me.permissions.includes('underwriting:read')) return <AccessDenied permission="underwriting:read" />;
+  if (!me.permissions.includes('underwriting:read'))
+    return <AccessDenied permission="underwriting:read" />;
   const res = await load(() => api<{ items: Omit<Referral, 'evaluation'>[] }>('/v1/referrals'));
   if (res.error) return <ErrorPanel error={res.error} />;
   const items = res.data.items;
@@ -28,7 +29,11 @@ export default async function ReferralsPage() {
       />
       <Card>
         {items.length === 0 ? (
-          <EmptyState icon={<Inbox className="size-5" />} title="No referrals" description="Cases appear here when a rule set refers them or screening holds them." />
+          <EmptyState
+            icon={<Inbox className="size-5" />}
+            title="No referrals"
+            description="Cases appear here when a rule set refers them or screening holds them."
+          />
         ) : (
           <Table caption="Referrals">
             <THead>
@@ -45,13 +50,18 @@ export default async function ReferralsPage() {
               {items.map((r) => (
                 <TR key={r.id}>
                   <TD>
-                    <Link href={`/underwriting/referrals/${r.id}`} className="font-mono text-xs font-medium text-fg hover:text-primary hover:underline">
+                    <Link
+                      href={`/underwriting/referrals/${r.id}`}
+                      className="font-mono text-xs font-medium text-fg hover:text-primary hover:underline"
+                    >
                       {r.caseRef}
                     </Link>
                   </TD>
                   <TD>{r.kind === 'sanctions' ? 'Sanctions hold' : 'Underwriting'}</TD>
                   <TD>{sentenceCase(r.stage)}</TD>
-                  <TD>{r.recommendation === 'recommend_decline' ? 'Recommends decline' : 'Refer'}</TD>
+                  <TD>
+                    {r.recommendation === 'recommend_decline' ? 'Recommends decline' : 'Refer'}
+                  </TD>
                   <TD>
                     <Badge tone={TONES[r.status]}>{sentenceCase(r.status)}</Badge>
                   </TD>

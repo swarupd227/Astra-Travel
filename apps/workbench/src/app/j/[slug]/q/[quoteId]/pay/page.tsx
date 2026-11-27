@@ -6,7 +6,11 @@ import { PayForm } from '../../../journey-forms';
 
 export const metadata = { title: 'Buy your cover', robots: { index: false, follow: false } };
 
-export default async function JourneyPay({ params }: { params: Promise<{ slug: string; quoteId: string }> }) {
+export default async function JourneyPay({
+  params,
+}: {
+  params: Promise<{ slug: string; quoteId: string }>;
+}) {
   const { slug, quoteId } = await params;
   const cfg = await journeyConfig(slug);
   if (!cfg || !/^[0-9a-f-]{36}$/i.test(quoteId)) notFound();
@@ -33,7 +37,8 @@ export default async function JourneyPay({ params }: { params: Promise<{ slug: s
     <>
       <h1 className="mb-1 text-3xl font-bold">Buy your cover</h1>
       <p className="mb-6 text-[#4a4a4a]">
-        {q.plan.name}: total {`$${Number(q.premium.total).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+        {q.plan.name}: total{' '}
+        {`$${Number(q.premium.total).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
       </p>
       <section aria-labelledby="notice" className="mb-6 rounded-lg border border-[#6b7280] p-4">
         <h2 id="notice" className="mb-2 text-lg font-semibold">

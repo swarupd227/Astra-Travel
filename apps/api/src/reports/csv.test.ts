@@ -3,7 +3,15 @@ import { csvCell, toCsv } from './csv';
 
 describe('report CSV', () => {
   it('quotes commas, quotes and line breaks', () => {
-    expect(toCsv(['a', 'b'], [['x,y', 'say "hi"'], ['line\nbreak', 3]])).toBe('a,b\r\n"x,y","say ""hi"""\r\n"line\nbreak",3\r\n');
+    expect(
+      toCsv(
+        ['a', 'b'],
+        [
+          ['x,y', 'say "hi"'],
+          ['line\nbreak', 3],
+        ],
+      ),
+    ).toBe('a,b\r\n"x,y","say ""hi"""\r\n"line\nbreak",3\r\n');
   });
 
   it('stops a spreadsheet running a cell as a formula, without touching amounts', () => {

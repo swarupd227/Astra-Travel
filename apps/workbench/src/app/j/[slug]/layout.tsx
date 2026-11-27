@@ -5,14 +5,26 @@ import { journeyAvailable, journeyConfig } from '@/lib/journey';
 export const dynamic = 'force-dynamic';
 
 /** The hosted purchase journey: the partner's branding and the plan's required notices, with no workbench around it. */
-export default async function JourneyLayout({ children, params }: { children: React.ReactNode; params: Promise<{ slug: string }> }) {
+export default async function JourneyLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   const cfg = await journeyConfig(slug);
   if (!cfg || !journeyAvailable()) notFound();
-  const style = { '--brand': cfg.branding.primaryColor, '--on-brand': cfg.branding.textOnPrimary } as CSSProperties;
+  const style = {
+    '--brand': cfg.branding.primaryColor,
+    '--on-brand': cfg.branding.textOnPrimary,
+  } as CSSProperties;
   return (
     <div style={style} className="min-h-dvh bg-white text-[#1a1a1a]">
-      <a href="#journey-main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:rounded focus:bg-white focus:px-3 focus:py-2">
+      <a
+        href="#journey-main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:rounded focus:bg-white focus:px-3 focus:py-2"
+      >
         Skip to the form
       </a>
       <header className="border-b border-[#c9ced6]">
@@ -29,7 +41,9 @@ export default async function JourneyLayout({ children, params }: { children: Re
       </main>
       <footer className="mx-auto max-w-3xl px-4 pb-10 text-sm text-[#4a4a4a]">
         <p>
-          Travel insurance offered by {cfg.accountName}. Cover is subject to the policy wording, which you can read before you buy. This page is run for {cfg.accountName} on the Astra Travel platform.
+          Travel insurance offered by {cfg.accountName}. Cover is subject to the policy wording,
+          which you can read before you buy. This page is run for {cfg.accountName} on the Astra
+          Travel platform.
         </p>
       </footer>
     </div>

@@ -86,8 +86,15 @@ export class AgentApiClient {
     );
     const parsed: unknown = await res.json().catch(() => null);
     if (!res.ok) {
-      const p = parsed as { detail?: string; title?: string; code?: string; errors?: { field?: string; message?: string }[] } | null;
-      const lines = (p?.errors ?? []).slice(0, 30).map((e) => `- ${e.field ?? ''}: ${e.message ?? ''}`);
+      const p = parsed as {
+        detail?: string;
+        title?: string;
+        code?: string;
+        errors?: { field?: string; message?: string }[];
+      } | null;
+      const lines = (p?.errors ?? [])
+        .slice(0, 30)
+        .map((e) => `- ${e.field ?? ''}: ${e.message ?? ''}`);
       throw new ToolCallError(
         [p?.detail ?? p?.title ?? `HTTP ${res.status}`, ...lines].join('\n'),
         res.status,

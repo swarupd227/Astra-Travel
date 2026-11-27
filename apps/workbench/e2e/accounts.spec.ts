@@ -19,8 +19,12 @@ async function signIn(page: Page, username: string, path = '/') {
 }
 
 async function expectAccessible(page: Page) {
-  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
-  expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .analyze();
+  expect(
+    results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
+  ).toEqual([]);
 }
 
 test('an account is set up: profile, sandbox and a licence', async ({ page, isMobile }) => {
@@ -28,12 +32,16 @@ test('an account is set up: profile, sandbox and a licence', async ({ page, isMo
   test.setTimeout(600_000);
 
   await signIn(page, 'account.manager', '/accounts');
-  await expect(page.getByRole('heading', { name: 'Accounts', level: 1 })).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByRole('heading', { name: 'Accounts', level: 1 })).toBeVisible({
+    timeout: 90_000,
+  });
   const rows = page.getByRole('row').filter({ has: page.getByRole('link') });
   test.skip((await rows.count()) === 0, 'Register an account first');
   await rows.first().getByRole('link').first().click();
   await page.getByRole('link', { name: 'Onboarding and configuration' }).click();
-  await expect(page.getByRole('heading', { name: 'Onboarding and configuration', level: 1 })).toBeVisible({ timeout: 60_000 });
+  await expect(
+    page.getByRole('heading', { name: 'Onboarding and configuration', level: 1 }),
+  ).toBeVisible({ timeout: 60_000 });
   const setupUrl = page.url();
   await expect(page.getByRole('heading', { name: 'Checklist' })).toBeVisible();
   await expectAccessible(page);
@@ -53,7 +61,9 @@ test('an account is set up: profile, sandbox and a licence', async ({ page, isMo
     await create.click();
   }
   // Once the sandbox exists the form that made it gives way to the credentials control.
-  await expect(page.getByRole('button', { name: 'Issue sandbox credentials' })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole('button', { name: 'Issue sandbox credentials' })).toBeVisible({
+    timeout: 60_000,
+  });
   await page.getByRole('button', { name: 'Issue sandbox credentials' }).click();
   await expect(page.getByText(/identity provider/i).first()).toBeVisible({ timeout: 60_000 });
   await expect(page.getByRole('heading', { name: 'Using the sandbox' })).toBeVisible();
@@ -61,7 +71,9 @@ test('an account is set up: profile, sandbox and a licence', async ({ page, isMo
 
   // Compliance records a licence for the state, and the licences screen lists it.
   await signIn(page, 'compliance.officer', new URL(setupUrl).pathname);
-  await expect(page.getByRole('heading', { name: 'Onboarding and configuration', level: 1 })).toBeVisible({ timeout: 90_000 });
+  await expect(
+    page.getByRole('heading', { name: 'Onboarding and configuration', level: 1 }),
+  ).toBeVisible({ timeout: 90_000 });
   const number = `TR-E2E-${Date.now().toString().slice(-6)}`;
   await page.getByLabel('State', { exact: true }).fill('DE');
   await page.getByLabel('Number').fill(number);
@@ -72,7 +84,9 @@ test('an account is set up: profile, sandbox and a licence', async ({ page, isMo
   await expect(page.getByText('Recorded.').first()).toBeVisible({ timeout: 60_000 });
   await expect(page.getByRole('cell', { name: number })).toBeVisible({ timeout: 60_000 });
   await page.goto('/compliance/licences?within=3650');
-  await expect(page.getByRole('heading', { name: 'Licences and registrations', level: 1 })).toBeVisible({ timeout: 60_000 });
+  await expect(
+    page.getByRole('heading', { name: 'Licences and registrations', level: 1 }),
+  ).toBeVisible({ timeout: 60_000 });
   await expect(page.getByRole('cell', { name: number })).toBeVisible({ timeout: 60_000 });
   await expectAccessible(page);
 });

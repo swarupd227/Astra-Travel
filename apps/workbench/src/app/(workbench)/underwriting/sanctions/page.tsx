@@ -11,11 +11,17 @@ import { LocalTime } from '@/components/ui/time';
 import { LoadSanctionsDialog, SanctionsDecisionForm } from '../uw-forms';
 
 export const metadata = { title: 'Sanctions lists' };
-const TONES = { draft: 'primary', approved: 'success', rejected: 'danger', superseded: 'neutral' } as const;
+const TONES = {
+  draft: 'primary',
+  approved: 'success',
+  rejected: 'danger',
+  superseded: 'neutral',
+} as const;
 
 export default async function SanctionsPage() {
   const me = (await getMe())!;
-  if (!me.permissions.includes('underwriting:read')) return <AccessDenied permission="underwriting:read" />;
+  if (!me.permissions.includes('underwriting:read'))
+    return <AccessDenied permission="underwriting:read" />;
   const res = await load(() => api<{ items: SanctionsList[] }>('/v1/sanctions-lists'));
   if (res.error) return <ErrorPanel error={res.error} />;
   const items = res.data.items;
@@ -32,17 +38,23 @@ export default async function SanctionsPage() {
       <div className="mb-6">
         {inUse ? (
           <Notice tone="success" title="Screening is using an approved list">
-            {inUse.source}: {inUse.entries.toLocaleString()} individuals and {inUse.aliases.toLocaleString()} aliases.
+            {inUse.source}: {inUse.entries.toLocaleString()} individuals and{' '}
+            {inUse.aliases.toLocaleString()} aliases.
           </Notice>
         ) : (
           <Notice tone="warning" title="No approved list">
-            Until a list is approved, nobody can be cleared at bind: every bind is held for a person to review.
+            Until a list is approved, nobody can be cleared at bind: every bind is held for a person
+            to review.
           </Notice>
         )}
       </div>
       <Card>
         {items.length === 0 ? (
-          <EmptyState icon={<ShieldAlert className="size-5" />} title="No list loaded" description="Download SDN.CSV and ALT.CSV from the Treasury's sanctions list service and load them here." />
+          <EmptyState
+            icon={<ShieldAlert className="size-5" />}
+            title="No list loaded"
+            description="Download SDN.CSV and ALT.CSV from the Treasury's sanctions list service and load them here."
+          />
         ) : (
           <Table caption="Sanctions lists">
             <THead>
@@ -79,7 +91,9 @@ export default async function SanctionsPage() {
                   <TD>
                     {l.status === 'draft' && me.permissions.includes('underwriting:approve') ? (
                       l.loadedBy === me.subject ? (
-                        <span className="text-xs text-muted">You loaded this list, so someone else approves it.</span>
+                        <span className="text-xs text-muted">
+                          You loaded this list, so someone else approves it.
+                        </span>
                       ) : (
                         <SanctionsDecisionForm listId={l.id} />
                       )

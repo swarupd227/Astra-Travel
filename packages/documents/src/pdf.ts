@@ -68,7 +68,14 @@ export async function renderPdf(doc: DocModel): Promise<Uint8Array> {
       y = PAGE.h - PAGE.margin;
     }
   };
-  const draw = (text: string, f: PDFFont, size: number, x = PAGE.margin, w = width, color = rgb(0, 0, 0)) => {
+  const draw = (
+    text: string,
+    f: PDFFont,
+    size: number,
+    x = PAGE.margin,
+    w = width,
+    color = rgb(0, 0, 0),
+  ) => {
     for (const l of wrap(pdfSafe(text, f), f, size, w)) {
       ensure(size * LINE);
       y -= size * LINE;
@@ -119,7 +126,8 @@ export async function renderPdf(doc: DocModel): Promise<Uint8Array> {
           let yy = top;
           for (const l of lines) {
             yy -= (SIZE.body - 1) * LINE;
-            if (l) page.drawText(l, { x: PAGE.margin + i * cw, y: yy, size: SIZE.body - 1, font: f });
+            if (l)
+              page.drawText(l, { x: PAGE.margin + i * cw, y: yy, size: SIZE.body - 1, font: f });
           }
         });
         y = top - h - 4;

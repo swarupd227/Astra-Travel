@@ -12,16 +12,24 @@ import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { RemoveCaseButton, StartRuleSetForm, TestCaseDialog } from '../../uw-forms';
 
 export const metadata = { title: 'Plan rules' };
-const TONES = { draft: 'primary', approved: 'warning', published: 'success', superseded: 'neutral' } as const;
+const TONES = {
+  draft: 'primary',
+  approved: 'warning',
+  published: 'success',
+  superseded: 'neutral',
+} as const;
 
 export default async function PlanRulesPage({ params }: { params: Promise<{ planId: string }> }) {
   const me = (await getMe())!;
-  if (!me.permissions.includes('underwriting:read')) return <AccessDenied permission="underwriting:read" />;
+  if (!me.permissions.includes('underwriting:read'))
+    return <AccessDenied permission="underwriting:read" />;
   const { planId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(planId)) notFound();
   const [plan, sets, cases] = await Promise.all([
     load(() => api<{ plan: Plan }>(`/v1/plans/${planId}`)),
-    load(() => api<{ items: Omit<RuleSet, 'document' | 'problems'>[] }>(`/v1/plans/${planId}/rule-sets`)),
+    load(() =>
+      api<{ items: Omit<RuleSet, 'document' | 'problems'>[] }>(`/v1/plans/${planId}/rule-sets`),
+    ),
     load(() => api<{ items: RuleTestCase[] }>(`/v1/plans/${planId}/rule-test-cases`)),
   ]);
   if (plan.error instanceof ApiProblem && plan.error.problem.code === 'not_found') notFound();
@@ -35,10 +43,17 @@ export default async function PlanRulesPage({ params }: { params: Promise<{ plan
   const today = new Date().toISOString().slice(0, 10);
   return (
     <>
-      <Link href="/underwriting/plans" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg">
+      <Link
+        href="/underwriting/plans"
+        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg"
+      >
         <ChevronLeft aria-hidden className="size-4" /> Rule sets
       </Link>
-      <PageHeader eyebrow={`${p.kind === 'state' ? 'State' : 'Account'} plan · ${p.state}`} title={p.name} description={`${p.code}. Rule set versions and the test cases every version must pass.`} />
+      <PageHeader
+        eyebrow={`${p.kind === 'state' ? 'State' : 'Account'} plan · ${p.state}`}
+        title={p.name}
+        description={`${p.code}. Rule set versions and the test cases every version must pass.`}
+      />
       <div className="space-y-6">
         <Card>
           <CardHeader title="Rule set versions" />
@@ -63,7 +78,10 @@ export default async function PlanRulesPage({ params }: { params: Promise<{ plan
               {items.map((s) => (
                 <TR key={s.id}>
                   <TD>
-                    <Link href={`/underwriting/rule-sets/${s.id}`} className="font-medium text-fg hover:text-primary hover:underline">
+                    <Link
+                      href={`/underwriting/rule-sets/${s.id}`}
+                      className="font-medium text-fg hover:text-primary hover:underline"
+                    >
                       Version {s.version}
                     </Link>
                   </TD>
@@ -111,9 +129,15 @@ export default async function PlanRulesPage({ params }: { params: Promise<{ plan
                     <TD className="text-xs">
                       {[
                         sentenceCase(c.expected.outcome),
-                        ...(c.expected.referralRules?.length ? [`rules ${c.expected.referralRules.join(', ')}`] : []),
-                        ...(c.expected.waiver !== undefined ? [`waiver ${c.expected.waiver ? 'applies' : 'does not apply'}`] : []),
-                        ...(c.expected.cfarOffered !== undefined ? [`CFAR ${c.expected.cfarOffered ? 'offered' : 'not offered'}`] : []),
+                        ...(c.expected.referralRules?.length
+                          ? [`rules ${c.expected.referralRules.join(', ')}`]
+                          : []),
+                        ...(c.expected.waiver !== undefined
+                          ? [`waiver ${c.expected.waiver ? 'applies' : 'does not apply'}`]
+                          : []),
+                        ...(c.expected.cfarOffered !== undefined
+                          ? [`CFAR ${c.expected.cfarOffered ? 'offered' : 'not offered'}`]
+                          : []),
                       ].join(' · ')}
                     </TD>
                     {manage ? (
@@ -126,7 +150,9 @@ export default async function PlanRulesPage({ params }: { params: Promise<{ plan
               </tbody>
             </Table>
           ) : (
-            <p className="border-t border-border px-5 py-4 text-sm text-muted">No test cases yet.</p>
+            <p className="border-t border-border px-5 py-4 text-sm text-muted">
+              No test cases yet.
+            </p>
           )}
         </Card>
       </div>

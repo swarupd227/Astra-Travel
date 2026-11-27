@@ -26,17 +26,23 @@ export interface GoldenComparison {
 const stable = (v: unknown): string =>
   JSON.stringify(v, (_k, x) =>
     x && typeof x === 'object' && !Array.isArray(x)
-      ? Object.fromEntries(Object.entries(x as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : 1)))
+      ? Object.fromEntries(
+          Object.entries(x as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : 1)),
+        )
       : x,
   );
 
-export function compareToGolden(proposed: GoldenVariable[], golden: GoldenVariable[]): GoldenComparison {
+export function compareToGolden(
+  proposed: GoldenVariable[],
+  golden: GoldenVariable[],
+): GoldenComparison {
   const byExcerpt = new Map(proposed.map((p) => [p.excerpt, p]));
   const out: GoldenComparison = { matched: [], missing: [], mismatched: [], extra: [], recall: 1 };
   for (const g of golden) {
     const p = byExcerpt.get(g.excerpt);
     if (!p) out.missing.push(g.excerpt);
-    else if (p.type !== g.type || stable(p.constraints) !== stable(g.constraints)) out.mismatched.push({ excerpt: g.excerpt, expected: g, actual: p });
+    else if (p.type !== g.type || stable(p.constraints) !== stable(g.constraints))
+      out.mismatched.push({ excerpt: g.excerpt, expected: g, actual: p });
     else out.matched.push(g.excerpt);
   }
   const wanted = new Set(golden.map((g) => g.excerpt));

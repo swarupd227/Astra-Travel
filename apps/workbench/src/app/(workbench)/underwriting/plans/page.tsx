@@ -9,15 +9,30 @@ import { Badge, Card, EmptyState, PageHeader } from '@/components/ui/primitives'
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 
 export const metadata = { title: 'Rule sets' };
-const TONES = { draft: 'primary', approved: 'warning', published: 'success', superseded: 'neutral' } as const;
+const TONES = {
+  draft: 'primary',
+  approved: 'warning',
+  published: 'success',
+  superseded: 'neutral',
+} as const;
 
 export default async function RuleSetPlansPage() {
   const me = (await getMe())!;
-  if (!me.permissions.includes('underwriting:read')) return <AccessDenied permission="underwriting:read" />;
-  const [states, accounts] = await Promise.all([load(() => api<{ items: Plan[] }>('/v1/plans?kind=state')), load(() => api<{ items: Plan[] }>('/v1/plans?kind=account'))]);
+  if (!me.permissions.includes('underwriting:read'))
+    return <AccessDenied permission="underwriting:read" />;
+  const [states, accounts] = await Promise.all([
+    load(() => api<{ items: Plan[] }>('/v1/plans?kind=state')),
+    load(() => api<{ items: Plan[] }>('/v1/plans?kind=account')),
+  ]);
   if (states.error) return <ErrorPanel error={states.error} />;
   const plans = [...states.data.items, ...(accounts.data?.items ?? [])];
-  const sets = await Promise.all(plans.map((p) => load(() => api<{ items: Omit<RuleSet, 'document' | 'problems'>[] }>(`/v1/plans/${p.id}/rule-sets`))));
+  const sets = await Promise.all(
+    plans.map((p) =>
+      load(() =>
+        api<{ items: Omit<RuleSet, 'document' | 'problems'>[] }>(`/v1/plans/${p.id}/rule-sets`),
+      ),
+    ),
+  );
   return (
     <>
       <PageHeader
@@ -27,7 +42,11 @@ export default async function RuleSetPlansPage() {
       />
       <Card>
         {plans.length === 0 ? (
-          <EmptyState icon={<ListChecks className="size-5" />} title="No state or account plans yet" description="Rule sets belong to state and account plans. Build one under Plans first." />
+          <EmptyState
+            icon={<ListChecks className="size-5" />}
+            title="No state or account plans yet"
+            description="Rule sets belong to state and account plans. Build one under Plans first."
+          />
         ) : (
           <Table caption="Plans and their rule sets">
             <THead>
@@ -44,7 +63,10 @@ export default async function RuleSetPlansPage() {
                 return (
                   <TR key={p.id}>
                     <TD>
-                      <Link href={`/underwriting/plans/${p.id}`} className="font-medium text-fg hover:text-primary hover:underline">
+                      <Link
+                        href={`/underwriting/plans/${p.id}`}
+                        className="font-medium text-fg hover:text-primary hover:underline"
+                      >
                         {p.name}
                       </Link>
                       <span className="block font-mono text-xs text-muted">{p.code}</span>

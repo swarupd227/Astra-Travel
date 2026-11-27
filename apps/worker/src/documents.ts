@@ -1,6 +1,14 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import { DocumentDeliveryFailed } from '@astra/contracts';
-import { publishEvent, systemContext, withTx, writeAudit, type FileStore, type Logger, type Pool } from '@astra/platform';
+import {
+  publishEvent,
+  systemContext,
+  withTx,
+  writeAudit,
+  type FileStore,
+  type Logger,
+  type Pool,
+} from '@astra/platform';
 import type { WorkerConfig } from './config';
 import { Loop } from './loops';
 
@@ -33,7 +41,20 @@ export class SmtpSender implements EmailSender {
     this.transport = nodemailer.createTransport(url);
   }
   async send(m: EmailMessage): Promise<string> {
-    const info = await this.transport.sendMail({ from: this.from, to: m.to, subject: m.subject, text: m.text, ...(m.deliveryId ? { headers: { 'X-Astra-Delivery-Id': m.deliveryId } } : {}), attachments: [{ filename: m.attachment.filename, content: m.attachment.content, contentType: 'application/pdf' }] });
+    const info = await this.transport.sendMail({
+      from: this.from,
+      to: m.to,
+      subject: m.subject,
+      text: m.text,
+      ...(m.deliveryId ? { headers: { 'X-Astra-Delivery-Id': m.deliveryId } } : {}),
+      attachments: [
+        {
+          filename: m.attachment.filename,
+          content: m.attachment.content,
+          contentType: 'application/pdf',
+        },
+      ],
+    });
     return `accepted by the mail server (${info.messageId})`;
   }
 }
@@ -44,7 +65,9 @@ export class PermanentDeliveryError extends Error {}
 
 export class NoMailServer implements EmailSender {
   async send(): Promise<string> {
-    throw new PermanentDeliveryError('No mail server is configured (SMTP_URL), so email cannot be sent.');
+    throw new PermanentDeliveryError(
+      'No mail server is configured (SMTP_URL), so email cannot be sent.',
+    );
   }
 }
 
@@ -74,7 +97,13 @@ interface Due {
 }
 
 /** Sends the next due email delivery. Returns true when it handled one (so there may be more). */
-export async function deliverNext(pool: Pool, files: FileStore, sender: EmailSender, logger: Logger, delays: readonly number[] = RETRY_DELAYS_MS): Promise<boolean> {
+export async function deliverNext(
+  pool: Pool,
+  files: FileStore,
+  sender: EmailSender,
+  logger: Logger,
+  delays: readonly number[] = RETRY_DELAYS_MS,
+): Promise<boolean> {
   const ctx = systemContext('document-delivery');
   return withTx(pool, ctx, async (tx) => {
     const due = (
@@ -96,7 +125,10 @@ export async function deliverNext(pool: Pool, files: FileStore, sender: EmailSen
         deliveryId: due.id,
         subject: due.number ? `${due.title}, policy ${due.number}` : due.title,
         text: `Your ${due.title.toLowerCase()}${due.number ? ` for policy ${due.number}` : ''} is attached.\n\nKeep it with your travel documents.`,
-        attachment: { filename: `${(due.number ?? due.kind).replace(/[^A-Za-z0-9._-]/g, '_')}-${due.kind}.pdf`, content: pdf },
+        attachment: {
+          filename: `${(due.number ?? due.kind).replace(/[^A-Za-z0-9._-]/g, '_')}-${due.kind}.pdf`,
+          content: pdf,
+        },
       });
       ok = true;
     } catch (err) {
@@ -104,24 +136,70 @@ export async function deliverNext(pool: Pool, files: FileStore, sender: EmailSen
       permanent = err instanceof PermanentDeliveryError;
     }
     const attempts = due.attempts + 1;
-    await tx.query(`INSERT INTO documents.delivery_attempts (delivery_id, account_id, ok, detail) VALUES ($1, $2, $3, $4)`, [due.id, due.account_id, ok, detail.slice(0, 1000)]);
+    await tx.query(
+      `INSERT INTO documents.delivery_attempts (delivery_id, account_id, ok, detail) VALUES ($1, $2, $3, $4)`,
+      [due.id, due.account_id, ok, detail.slice(0, 1000)],
+    );
     if (ok) {
-      await tx.query(`UPDATE documents.deliveries SET status = 'sent', attempts = $2, last_error = NULL, next_attempt_at = NULL, delivered_at = now(), updated_at = now() WHERE id = $1`, [due.id, attempts]);
+      await tx.query(
+        `UPDATE documents.deliveries SET status = 'sent', attempts = $2, last_error = NULL, next_attempt_at = NULL, delivered_at = now(), updated_at = now() WHERE id = $1`,
+        [due.id, attempts],
+      );
       logger.info({ deliveryId: due.id, documentId: due.document_id }, 'Document emailed');
     } else if (permanent || attempts > delays.length) {
-      await tx.query(`UPDATE documents.deliveries SET status = 'failed', attempts = $2, last_error = $3, next_attempt_at = NULL, updated_at = now() WHERE id = $1`, [due.id, attempts, detail.slice(0, 1000)]);
-      await publishEvent(tx, ctx, DocumentDeliveryFailed, { deliveryId: due.id, documentId: due.document_id, channel: 'email', reason: detail.slice(0, 500), attempts }, { accountId: due.account_id });
-      await writeAudit(tx, ctx, { action: 'document_delivery.failed', resourceType: 'document_delivery', resourceId: due.id, accountId: due.account_id, data: { documentId: due.document_id, attempts, reason: detail.slice(0, 500) } });
-      logger.warn({ deliveryId: due.id, attempts, reason: detail }, 'Document delivery failed for good');
+      await tx.query(
+        `UPDATE documents.deliveries SET status = 'failed', attempts = $2, last_error = $3, next_attempt_at = NULL, updated_at = now() WHERE id = $1`,
+        [due.id, attempts, detail.slice(0, 1000)],
+      );
+      await publishEvent(
+        tx,
+        ctx,
+        DocumentDeliveryFailed,
+        {
+          deliveryId: due.id,
+          documentId: due.document_id,
+          channel: 'email',
+          reason: detail.slice(0, 500),
+          attempts,
+        },
+        { accountId: due.account_id },
+      );
+      await writeAudit(tx, ctx, {
+        action: 'document_delivery.failed',
+        resourceType: 'document_delivery',
+        resourceId: due.id,
+        accountId: due.account_id,
+        data: { documentId: due.document_id, attempts, reason: detail.slice(0, 500) },
+      });
+      logger.warn(
+        { deliveryId: due.id, attempts, reason: detail },
+        'Document delivery failed for good',
+      );
     } else {
-      await tx.query(`UPDATE documents.deliveries SET attempts = $2, last_error = $3, next_attempt_at = now() + ($4 || ' milliseconds')::interval, updated_at = now() WHERE id = $1`, [due.id, attempts, detail.slice(0, 1000), String(delays[attempts - 1])]);
-      logger.warn({ deliveryId: due.id, attempts, reason: detail }, 'Document delivery failed; will retry');
+      await tx.query(
+        `UPDATE documents.deliveries SET attempts = $2, last_error = $3, next_attempt_at = now() + ($4 || ' milliseconds')::interval, updated_at = now() WHERE id = $1`,
+        [due.id, attempts, detail.slice(0, 1000), String(delays[attempts - 1])],
+      );
+      logger.warn(
+        { deliveryId: due.id, attempts, reason: detail },
+        'Document delivery failed; will retry',
+      );
     }
     return true;
   });
 }
 
-export function documentDeliveryLoop(pool: Pool, files: FileStore, config: WorkerConfig, logger: Logger): Loop {
+export function documentDeliveryLoop(
+  pool: Pool,
+  files: FileStore,
+  config: WorkerConfig,
+  logger: Logger,
+): Loop {
   const sender = senderFor(config);
-  return new Loop('document-delivery', config.WORKER_POLL_MS * 2, () => deliverNext(pool, files, sender, logger), logger);
+  return new Loop(
+    'document-delivery',
+    config.WORKER_POLL_MS * 2,
+    () => deliverNext(pool, files, sender, logger),
+    logger,
+  );
 }

@@ -12,9 +12,16 @@ export async function summariseReferral(form: FormData) {
   const referralId = text(form, 'referralId');
   if (!/^[0-9a-f-]{36}$/i.test(referralId)) redirect('/underwriting/referrals');
   try {
-    await api<AgentRun>('/v1/agents/AG-04/runs', { method: 'POST', body: { question: `Summarise referral ${referralId}.` }, idempotencyKey: randomUUID() });
+    await api<AgentRun>('/v1/agents/AG-04/runs', {
+      method: 'POST',
+      body: { question: `Summarise referral ${referralId}.` },
+      idempotencyKey: randomUUID(),
+    });
   } catch (err) {
-    if (err instanceof ApiProblem) redirect(`/underwriting/referrals/${referralId}?askError=${encodeURIComponent(err.problem.detail ?? err.problem.title)}`);
+    if (err instanceof ApiProblem)
+      redirect(
+        `/underwriting/referrals/${referralId}?askError=${encodeURIComponent(err.problem.detail ?? err.problem.title)}`,
+      );
     throw err;
   }
   redirect(`/underwriting/referrals/${referralId}?asked=1`);
@@ -37,5 +44,13 @@ export async function decideSummary(_prev: ActionState, form: FormData): Promise
     return fromError(err, form);
   }
   revalidatePath('/underwriting/referrals');
-  return { status: 'success', message: decision === 'accepted' ? 'Recorded: you accepted the summary.' : decision === 'edited' ? 'Recorded: your edited summary replaces it.' : 'Recorded: you rejected the summary.' };
+  return {
+    status: 'success',
+    message:
+      decision === 'accepted'
+        ? 'Recorded: you accepted the summary.'
+        : decision === 'edited'
+          ? 'Recorded: your edited summary replaces it.'
+          : 'Recorded: you rejected the summary.',
+  };
 }

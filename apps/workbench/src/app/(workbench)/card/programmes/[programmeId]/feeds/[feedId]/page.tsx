@@ -1,7 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronLeft, ListChecks } from 'lucide-react';
-import type { CardProgramme, EligibilityFeed, FeedRejection, Proposal, RejectionExplanation } from '@astra/contracts';
+import type {
+  CardProgramme,
+  EligibilityFeed,
+  FeedRejection,
+  Proposal,
+  RejectionExplanation,
+} from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
 import { nameOf, peopleNames } from '@/lib/people';
 import {
@@ -67,11 +73,23 @@ export default async function FeedPage({
   const s = f.stats;
   const names = await peopleNames([f.receivedBy]);
   // The agent's open explanation of this feed's rejected records, if it has made one.
-  const found = me.permissions.includes('proposals:read') ? await load(() => api<{ items: Omit<Proposal, 'content'>[] }>('/v1/agent-proposals', { query: { subjectId: feedId, kind: 'feed_rejections', status: 'open' } })) : null;
+  const found = me.permissions.includes('proposals:read')
+    ? await load(() =>
+        api<{ items: Omit<Proposal, 'content'>[] }>('/v1/agent-proposals', {
+          query: { subjectId: feedId, kind: 'feed_rejections', status: 'open' },
+        }),
+      )
+    : null;
   const openId = found?.data?.items[0]?.id;
-  const proposal = openId ? (await load(() => api<Proposal>(`/v1/agent-proposals/${openId}`))).data : null;
-  const explained = proposal?.content as { explanations?: RejectionExplanation[]; counts?: Record<string, number> } | undefined;
-  const canAsk = me.permissions.includes('agents:use') && me.permissions.includes('proposals:create') && (rejections.data?.items.length ?? 0) > 0;
+  const proposal = openId
+    ? (await load(() => api<Proposal>(`/v1/agent-proposals/${openId}`))).data
+    : null;
+  const explained = proposal?.content as
+    { explanations?: RejectionExplanation[]; counts?: Record<string, number> } | undefined;
+  const canAsk =
+    me.permissions.includes('agents:use') &&
+    me.permissions.includes('proposals:create') &&
+    (rejections.data?.items.length ?? 0) > 0;
   const canReject =
     me.permissions.includes('card:feeds') &&
     me.accountScope.type === 'all' &&
@@ -227,12 +245,29 @@ export default async function FeedPage({
         <Card className="mt-6">
           <CardHeader
             title="Why records were rejected"
-            description={proposal ? proposal.summary : 'The Eligibility Feed agent explains each kind of rejection and proposes a fix. A programme manager approves every fix.'}
-            actions={canAsk && !proposal ? <AskAgentForm question={`Explain rejections: programme ${p.id}, feed ${f.id}.`} label="Ask the agent to explain" /> : undefined}
+            description={
+              proposal
+                ? proposal.summary
+                : 'The Eligibility Feed agent explains each kind of rejection and proposes a fix. A programme manager approves every fix.'
+            }
+            actions={
+              canAsk && !proposal ? (
+                <AskAgentForm
+                  question={`Explain rejections: programme ${p.id}, feed ${f.id}.`}
+                  label="Ask the agent to explain"
+                />
+              ) : undefined
+            }
           />
           {proposal && explained?.explanations ? (
             <div className="p-5">
-              <ExplanationsForm programmeId={p.id} proposalId={proposal.id} explanations={explained.explanations} counts={explained.counts ?? {}} canDecide={me.permissions.includes('card:manage')} />
+              <ExplanationsForm
+                programmeId={p.id}
+                proposalId={proposal.id}
+                explanations={explained.explanations}
+                counts={explained.counts ?? {}}
+                canDecide={me.permissions.includes('card:manage')}
+              />
             </div>
           ) : null}
         </Card>

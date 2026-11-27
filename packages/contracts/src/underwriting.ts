@@ -55,7 +55,11 @@ export type Condition =
   | { all: Condition[] }
   | { any: Condition[] }
   | { not: Condition }
-  | { field: RuleField; op: (typeof RULE_OPS)[number]; value: z.infer<typeof Scalar> | z.infer<typeof Scalar>[] };
+  | {
+      field: RuleField;
+      op: (typeof RULE_OPS)[number];
+      value: z.infer<typeof Scalar> | z.infer<typeof Scalar>[];
+    };
 
 export const ConditionSchema: z.ZodType<Condition> = z.lazy(() =>
   z.union([
@@ -70,7 +74,14 @@ export const ConditionSchema: z.ZodType<Condition> = z.lazy(() =>
   ]),
 );
 
-export const LIMIT_KINDS = ['min_age', 'max_age', 'min_trip_days', 'max_trip_days', 'min_trip_cost', 'max_trip_cost'] as const;
+export const LIMIT_KINDS = [
+  'min_age',
+  'max_age',
+  'min_trip_days',
+  'max_trip_days',
+  'min_trip_cost',
+  'max_trip_cost',
+] as const;
 export const LIMIT_LABELS: Record<(typeof LIMIT_KINDS)[number], string> = {
   min_age: 'Minimum age',
   max_age: 'Maximum age',
@@ -101,8 +112,18 @@ export const RuleSetDocumentSchema = z.object({
   timeBasedBenefits: z.array(z.object({ benefit: CODE })).default([]),
   ableToTravelRequired: z.boolean().default(true),
   prohibitedDestinations: z.boolean().default(true),
-  sanctions: z.object({ enabled: z.boolean().default(true), matchThreshold: z.number().min(0.5).max(1).default(0.9) }).default({ enabled: true, matchThreshold: 0.9 }),
-  duplicates: z.object({ enabled: z.boolean().default(true), allowSingleAndAnnual: z.boolean().default(false) }).default({ enabled: true, allowSingleAndAnnual: false }),
+  sanctions: z
+    .object({
+      enabled: z.boolean().default(true),
+      matchThreshold: z.number().min(0.5).max(1).default(0.9),
+    })
+    .default({ enabled: true, matchThreshold: 0.9 }),
+  duplicates: z
+    .object({
+      enabled: z.boolean().default(true),
+      allowSingleAndAnnual: z.boolean().default(false),
+    })
+    .default({ enabled: true, allowSingleAndAnnual: false }),
 });
 export type RuleSetDocument = z.infer<typeof RuleSetDocumentSchema>;
 
@@ -158,7 +179,18 @@ export const EvaluationInputSchema = z
       premiumReceivedDate: date.optional(),
       departureDate: date,
       returnDate: date,
-      destinations: z.array(z.object({ country: z.string().regex(/^[A-Z]{2}$/).optional(), region: z.string().max(100).optional() })).max(30).default([]),
+      destinations: z
+        .array(
+          z.object({
+            country: z
+              .string()
+              .regex(/^[A-Z]{2}$/)
+              .optional(),
+            region: z.string().max(100).optional(),
+          }),
+        )
+        .max(30)
+        .default([]),
       totalTripCost: money.optional(),
     }),
     /** Percentage of the relevant trip costs the plan insures (100 means all of them). */
@@ -180,7 +212,17 @@ export type EvaluationInput = z.infer<typeof EvaluationInputSchema>;
 
 export const CheckSchema = z.object({
   /** Which rule family made the check. */
-  area: z.enum(['declaration', 'limit', 'prohibited_destination', 'sanctions', 'duplicate', 'referral_rule', 'waiver', 'cfar', 'time_based']),
+  area: z.enum([
+    'declaration',
+    'limit',
+    'prohibited_destination',
+    'sanctions',
+    'duplicate',
+    'referral_rule',
+    'waiver',
+    'cfar',
+    'time_based',
+  ]),
   code: z.string(),
   passed: z.boolean(),
   detail: z.string(),
@@ -197,18 +239,53 @@ export const EvaluationResultSchema = z.object({
   checks: z.array(CheckSchema),
   /** Plain reasons the case is ineligible. */
   reasons: z.array(z.string()),
-  referrals: z.array(z.object({ rule: z.string(), reason: z.string(), recommendation: z.enum(['refer', 'recommend_decline']) })),
-  waiver: z.object({ applies: z.boolean(), conditions: z.array(CheckSchema), timeSensitiveDays: z.number().nullable(), lookbackDays: z.number().nullable() }),
-  cfar: CfarEligibilitySchema.extend({ offered: z.boolean(), conditions: z.array(CheckSchema), noticePeriod: z.number().nullable() }),
-  benefitAvailability: z.array(z.object({ benefit: z.string(), available: z.boolean(), reason: z.string() })),
+  referrals: z.array(
+    z.object({
+      rule: z.string(),
+      reason: z.string(),
+      recommendation: z.enum(['refer', 'recommend_decline']),
+    }),
+  ),
+  waiver: z.object({
+    applies: z.boolean(),
+    conditions: z.array(CheckSchema),
+    timeSensitiveDays: z.number().nullable(),
+    lookbackDays: z.number().nullable(),
+  }),
+  cfar: CfarEligibilitySchema.extend({
+    offered: z.boolean(),
+    conditions: z.array(CheckSchema),
+    noticePeriod: z.number().nullable(),
+  }),
+  benefitAvailability: z.array(
+    z.object({ benefit: z.string(), available: z.boolean(), reason: z.string() }),
+  ),
   screening: z.object({
     listVersion: z.string().nullable(),
     screened: z.number().int(),
     possibleMatches: z.array(
-      z.object({ travellerId: z.string(), uid: z.string(), name: z.string(), program: z.string().nullable(), score: z.number(), reason: z.string() }),
+      z.object({
+        travellerId: z.string(),
+        uid: z.string(),
+        name: z.string(),
+        program: z.string().nullable(),
+        score: z.number(),
+        reason: z.string(),
+      }),
     ),
   }),
-  duplicates: z.object({ registerRows: z.number().int(), matches: z.array(z.object({ travellerId: z.string(), policyRef: z.string(), tripStart: date, tripEnd: date, term: z.string() })) }),
+  duplicates: z.object({
+    registerRows: z.number().int(),
+    matches: z.array(
+      z.object({
+        travellerId: z.string(),
+        policyRef: z.string(),
+        tripStart: date,
+        tripEnd: date,
+        term: z.string(),
+      }),
+    ),
+  }),
   referralId: z.uuid().nullable(),
   summary: z.string(),
 });
@@ -231,7 +308,17 @@ export const RuleTestCaseSchema = z.object({
   }),
   /** For duplicate checks: covers to treat as existing instead of the register. */
   existingCovers: z
-    .array(z.object({ firstName: z.string(), lastName: z.string(), dateOfBirth: date.optional(), policyRef: z.string(), tripStart: date, tripEnd: date, term: z.enum(['single_trip', 'annual']) }))
+    .array(
+      z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: date.optional(),
+        policyRef: z.string(),
+        tripStart: date,
+        tripEnd: date,
+        term: z.enum(['single_trip', 'annual']),
+      }),
+    )
     .optional(),
 });
 export type RuleTestCase = z.infer<typeof RuleTestCaseSchema>;
@@ -241,7 +328,9 @@ export const RuleTestRunSchema = z.object({
   ranAt: z.iso.datetime({ offset: true }),
   total: z.number().int(),
   passed: z.number().int(),
-  results: z.array(z.object({ caseId: z.uuid(), name: z.string(), passed: z.boolean(), message: z.string() })),
+  results: z.array(
+    z.object({ caseId: z.uuid(), name: z.string(), passed: z.boolean(), message: z.string() }),
+  ),
 });
 export type RuleTestRun = z.infer<typeof RuleTestRunSchema>;
 

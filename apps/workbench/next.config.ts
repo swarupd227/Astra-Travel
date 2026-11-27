@@ -30,7 +30,10 @@ const csp = [
 // Two places need more than the default: the staff widget preview loads the API's widget script and calls the API from
 // the browser, and the hosted journey shows partners' https logos.
 const apiOrigin = process.env.API_BASE_URL ? new URL(process.env.API_BASE_URL).origin : '';
-const widgetCsp = csp.replace("script-src 'self'", `script-src 'self' ${apiOrigin}`).replace("connect-src 'self'", `connect-src 'self' ${apiOrigin}`).replace("img-src 'self' data:", "img-src 'self' data: https:");
+const widgetCsp = csp
+  .replace("script-src 'self'", `script-src 'self' ${apiOrigin}`)
+  .replace("connect-src 'self'", `connect-src 'self' ${apiOrigin}`)
+  .replace("img-src 'self' data:", "img-src 'self' data: https:");
 const journeyCsp = csp.replace("img-src 'self' data:", "img-src 'self' data: https:");
 
 const config: NextConfig = {
@@ -61,7 +64,10 @@ const config: NextConfig = {
             : [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' }]),
         ],
       },
-      { source: '/quotes/:quoteId/widget', headers: [{ key: 'Content-Security-Policy', value: widgetCsp }] },
+      {
+        source: '/quotes/:quoteId/widget',
+        headers: [{ key: 'Content-Security-Policy', value: widgetCsp }],
+      },
       { source: '/j/:path*', headers: [{ key: 'Content-Security-Policy', value: journeyCsp }] },
     ];
   },

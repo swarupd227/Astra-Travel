@@ -13,7 +13,11 @@ export interface ExistingCover {
 }
 
 /** Traveller identity: normalised name and date of birth. Without a date of birth the identity cannot be established. */
-export function travellerKey(t: { firstName: string; lastName: string; dateOfBirth?: string | undefined }): string | null {
+export function travellerKey(t: {
+  firstName: string;
+  lastName: string;
+  dateOfBirth?: string | undefined;
+}): string | null {
   if (!t.dateOfBirth) return null;
   const tokens = normaliseName(`${t.firstName} ${t.lastName}`).sort();
   return `${tokens.join(' ')}|${t.dateOfBirth}`;
@@ -21,7 +25,12 @@ export function travellerKey(t: { firstName: string; lastName: string; dateOfBir
 
 export function findDuplicates(
   traveller: { id: string; firstName: string; lastName: string; dateOfBirth?: string | undefined },
-  trip: { start: string; end: string; term: 'single_trip' | 'annual'; policyRef?: string | undefined },
+  trip: {
+    start: string;
+    end: string;
+    term: 'single_trip' | 'annual';
+    policyRef?: string | undefined;
+  },
   covers: ExistingCover[],
   allowSingleAndAnnual: boolean,
 ): ExistingCover[] {

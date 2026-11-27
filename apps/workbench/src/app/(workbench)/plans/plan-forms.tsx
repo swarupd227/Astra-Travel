@@ -6,7 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Field, FormMessage, Input, Select, SubmitButton, Textarea } from '@/components/ui/form';
 import { idle, previous } from '@/lib/actions';
-import { approveVersion, createPlan, publishVersion, removeTestCase, runTests, saveTestCase, startDraft } from './actions';
+import {
+  approveVersion,
+  createPlan,
+  publishVersion,
+  removeTestCase,
+  runTests,
+  saveTestCase,
+  startDraft,
+} from './actions';
 
 export interface PlanOption {
   id: string;
@@ -52,14 +60,25 @@ export function NewPlanDialog({
               ['account', 'Account plan'],
             ].map(([value, label]) => (
               <label key={value} className="flex items-center gap-2 text-sm">
-                <input type="radio" name="kind" value={value} checked={kind === value} onChange={() => setKind(value!)} />
+                <input
+                  type="radio"
+                  name="kind"
+                  value={value}
+                  checked={kind === value}
+                  onChange={() => setKind(value!)}
+                />
                 {label}
               </label>
             ))}
           </div>
         </fieldset>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Plan code" required error={errors.code} hint="Capital letters, digits and hyphens, for example TC-DE-0426.">
+          <Field
+            label="Plan code"
+            required
+            error={errors.code}
+            hint="Capital letters, digits and hyphens, for example TC-DE-0426."
+          >
             {(f) => (
               <Input
                 id={f.id}
@@ -87,13 +106,34 @@ export function NewPlanDialog({
           </Field>
         </div>
         <Field label="Plan name" required error={errors.name}>
-          {(f) => <Input id={f.id} name="name" required defaultValue={previous(state, 'name')} aria-invalid={f.invalid} aria-describedby={f.describedBy} />}
+          {(f) => (
+            <Input
+              id={f.id}
+              name="name"
+              required
+              defaultValue={previous(state, 'name')}
+              aria-invalid={f.invalid}
+              aria-describedby={f.describedBy}
+            />
+          )}
         </Field>
         {kind === 'base' ? (
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Benefit catalogue" required error={errors.catalogueId} hint={catalogues.length ? undefined : 'No catalogue is approved yet.'}>
+            <Field
+              label="Benefit catalogue"
+              required
+              error={errors.catalogueId}
+              hint={catalogues.length ? undefined : 'No catalogue is approved yet.'}
+            >
               {(f) => (
-                <Select id={f.id} name="catalogueId" required defaultValue={previous(state, 'catalogueId')} aria-invalid={f.invalid} aria-describedby={f.describedBy}>
+                <Select
+                  id={f.id}
+                  name="catalogueId"
+                  required
+                  defaultValue={previous(state, 'catalogueId')}
+                  aria-invalid={f.invalid}
+                  aria-describedby={f.describedBy}
+                >
                   <option value="">Choose…</option>
                   {catalogues.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -105,7 +145,13 @@ export function NewPlanDialog({
             </Field>
             <Field label="Term" required error={errors.term}>
               {(f) => (
-                <Select id={f.id} name="term" defaultValue={previous(state, 'term') ?? 'single_trip'} aria-invalid={f.invalid} aria-describedby={f.describedBy}>
+                <Select
+                  id={f.id}
+                  name="term"
+                  defaultValue={previous(state, 'term') ?? 'single_trip'}
+                  aria-invalid={f.invalid}
+                  aria-describedby={f.describedBy}
+                >
                   <option value="single_trip">Single trip</option>
                   <option value="annual">Annual</option>
                 </Select>
@@ -118,10 +164,23 @@ export function NewPlanDialog({
               label={kind === 'state' ? 'Base plan' : 'State plan'}
               required
               error={errors.parentPlanId}
-              hint={parents.length ? undefined : kind === 'state' ? 'No base plan has an approved version yet.' : 'No state plan is published yet.'}
+              hint={
+                parents.length
+                  ? undefined
+                  : kind === 'state'
+                    ? 'No base plan has an approved version yet.'
+                    : 'No state plan is published yet.'
+              }
             >
               {(f) => (
-                <Select id={f.id} name="parentPlanId" required defaultValue={previous(state, 'parentPlanId')} aria-invalid={f.invalid} aria-describedby={f.describedBy}>
+                <Select
+                  id={f.id}
+                  name="parentPlanId"
+                  required
+                  defaultValue={previous(state, 'parentPlanId')}
+                  aria-invalid={f.invalid}
+                  aria-describedby={f.describedBy}
+                >
                   <option value="">Choose…</option>
                   {parents.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -132,7 +191,12 @@ export function NewPlanDialog({
               )}
             </Field>
             {kind === 'state' ? (
-              <Field label="State" required error={errors.state} hint="Two-letter code, for example DE.">
+              <Field
+                label="State"
+                required
+                error={errors.state}
+                hint="Two-letter code, for example DE."
+              >
                 {(f) => (
                   <Input
                     id={f.id}
@@ -149,7 +213,14 @@ export function NewPlanDialog({
             ) : (
               <Field label="Account" required error={errors.accountId}>
                 {(f) => (
-                  <Select id={f.id} name="accountId" required defaultValue={previous(state, 'accountId')} aria-invalid={f.invalid} aria-describedby={f.describedBy}>
+                  <Select
+                    id={f.id}
+                    name="accountId"
+                    required
+                    defaultValue={previous(state, 'accountId')}
+                    aria-invalid={f.invalid}
+                    aria-describedby={f.describedBy}
+                  >
                     <option value="">Choose…</option>
                     {accounts.map((a) => (
                       <option key={a.id} value={a.id}>
@@ -179,8 +250,22 @@ export function ApproveVersionForm({ versionId }: { versionId: string }) {
   return (
     <form action={action} className="space-y-3">
       <input type="hidden" name="versionId" value={versionId} />
-      <Field label="What you checked" required error={state.status === 'error' ? state.fieldErrors.note : undefined}>
-        {(f) => <Textarea id={f.id} name="note" required minLength={5} maxLength={500} aria-invalid={f.invalid} aria-describedby={f.describedBy} />}
+      <Field
+        label="What you checked"
+        required
+        error={state.status === 'error' ? state.fieldErrors.note : undefined}
+      >
+        {(f) => (
+          <Textarea
+            id={f.id}
+            name="note"
+            required
+            minLength={5}
+            maxLength={500}
+            aria-invalid={f.invalid}
+            aria-describedby={f.describedBy}
+          />
+        )}
       </Field>
       <FormMessage state={state} />
       <SubmitButton pendingLabel="Approving…">Approve version</SubmitButton>
@@ -207,8 +292,21 @@ export function StartDraftForm({ planId }: { planId: string }) {
   return (
     <form action={action} className="flex flex-wrap items-end gap-3">
       <input type="hidden" name="planId" value={planId} />
-      <Field label="New version effective from" required error={state.status === 'error' ? state.fieldErrors.effectiveFrom : undefined}>
-        {(f) => <Input id={f.id} type="date" name="effectiveFrom" required aria-invalid={f.invalid} aria-describedby={f.describedBy} />}
+      <Field
+        label="New version effective from"
+        required
+        error={state.status === 'error' ? state.fieldErrors.effectiveFrom : undefined}
+      >
+        {(f) => (
+          <Input
+            id={f.id}
+            type="date"
+            name="effectiveFrom"
+            required
+            aria-invalid={f.invalid}
+            aria-describedby={f.describedBy}
+          />
+        )}
       </Field>
       <SubmitButton pendingLabel="Starting…" variant="secondary">
         <FilePlus2 aria-hidden className="size-4" /> Start a new draft
@@ -225,7 +323,11 @@ export function RunTestsForm({ versionId, cases }: { versionId: string; cases: n
   return (
     <form action={action} className="flex flex-wrap items-center gap-3">
       <input type="hidden" name="versionId" value={versionId} />
-      <SubmitButton pendingLabel="Rating the test cases…" variant="secondary" disabled={cases === 0}>
+      <SubmitButton
+        pendingLabel="Rating the test cases…"
+        variant="secondary"
+        disabled={cases === 0}
+      >
         <Play aria-hidden className="size-4" /> Run {cases} test case{cases === 1 ? '' : 's'}
       </SubmitButton>
       <FormMessage state={state} />
@@ -255,7 +357,16 @@ export function TestCaseDialog({ planId }: { planId: string }) {
       <form action={action} className="space-y-4" noValidate>
         <input type="hidden" name="planId" value={planId} />
         <Field label="Case name" required error={errors.name}>
-          {(f) => <Input id={f.id} name="name" required defaultValue={keep('name')} aria-invalid={f.invalid} aria-describedby={f.describedBy} />}
+          {(f) => (
+            <Input
+              id={f.id}
+              name="name"
+              required
+              defaultValue={keep('name')}
+              aria-invalid={f.invalid}
+              aria-describedby={f.describedBy}
+            />
+          )}
         </Field>
         <Field
           label="Travellers"
@@ -263,7 +374,17 @@ export function TestCaseDialog({ planId }: { planId: string }) {
           error={err('input.travellers')}
           hint="One per line: age, trip cost, pre-existing waiver (yes or no). For example: 45, 4200, yes"
         >
-          {(f) => <Textarea id={f.id} name="travellers" required rows={3} defaultValue={keep('travellers')} aria-invalid={f.invalid} aria-describedby={f.describedBy} />}
+          {(f) => (
+            <Textarea
+              id={f.id}
+              name="travellers"
+              required
+              rows={3}
+              defaultValue={keep('travellers')}
+              aria-invalid={f.invalid}
+              aria-describedby={f.describedBy}
+            />
+          )}
         </Field>
         <div className="grid gap-4 sm:grid-cols-4">
           {[
@@ -272,28 +393,85 @@ export function TestCaseDialog({ planId }: { planId: string }) {
             ['departureDate', 'Departure'],
             ['returnDate', 'Return'],
           ].map(([name, label]) => (
-            <Field key={name} label={label!} required error={err(`input.${name === 'rateDate' ? 'rateDate' : `trip.${name}`}`)}>
-              {(f) => <Input id={f.id} type="date" name={name} required defaultValue={keep(name!)} aria-invalid={f.invalid} aria-describedby={f.describedBy} />}
+            <Field
+              key={name}
+              label={label!}
+              required
+              error={err(`input.${name === 'rateDate' ? 'rateDate' : `trip.${name}`}`)}
+            >
+              {(f) => (
+                <Input
+                  id={f.id}
+                  type="date"
+                  name={name}
+                  required
+                  defaultValue={keep(name!)}
+                  aria-invalid={f.invalid}
+                  aria-describedby={f.describedBy}
+                />
+              )}
             </Field>
           ))}
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Destination region" error={err('input.trip.destinations')}>
-            {(f) => <Input id={f.id} name="destinationRegion" defaultValue={keep('destinationRegion')} aria-invalid={f.invalid} aria-describedby={f.describedBy} />}
+            {(f) => (
+              <Input
+                id={f.id}
+                name="destinationRegion"
+                defaultValue={keep('destinationRegion')}
+                aria-invalid={f.invalid}
+                aria-describedby={f.describedBy}
+              />
+            )}
           </Field>
           <Field label="Cancellation penalty days" error={err('input.trip.penaltyDays')}>
-            {(f) => <Input id={f.id} type="number" name="penaltyDays" defaultValue={keep('penaltyDays')} aria-invalid={f.invalid} aria-describedby={f.describedBy} />}
+            {(f) => (
+              <Input
+                id={f.id}
+                type="number"
+                name="penaltyDays"
+                defaultValue={keep('penaltyDays')}
+                aria-invalid={f.invalid}
+                aria-describedby={f.describedBy}
+              />
+            )}
           </Field>
           <Field label="Business segment" error={err('input.account')}>
-            {(f) => <Input id={f.id} name="businessSegment" defaultValue={keep('businessSegment')} aria-invalid={f.invalid} aria-describedby={f.describedBy} />}
+            {(f) => (
+              <Input
+                id={f.id}
+                name="businessSegment"
+                defaultValue={keep('businessSegment')}
+                aria-invalid={f.invalid}
+                aria-describedby={f.describedBy}
+              />
+            )}
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Expected policy total" error={err('expected')} hint="For example 103.94.">
-            {(f) => <Input id={f.id} name="expectedTotal" inputMode="decimal" defaultValue={keep('expectedTotal')} aria-invalid={f.invalid} aria-describedby={f.describedBy} />}
+            {(f) => (
+              <Input
+                id={f.id}
+                name="expectedTotal"
+                inputMode="decimal"
+                defaultValue={keep('expectedTotal')}
+                aria-invalid={f.invalid}
+                aria-describedby={f.describedBy}
+              />
+            )}
           </Field>
           <Field label="Expected per benefit" hint="For example TCAN: 103.94; TINT: 12.10">
-            {(f) => <Input id={f.id} name="expectedPerBenefit" defaultValue={keep('expectedPerBenefit')} aria-invalid={f.invalid} aria-describedby={f.describedBy} />}
+            {(f) => (
+              <Input
+                id={f.id}
+                name="expectedPerBenefit"
+                defaultValue={keep('expectedPerBenefit')}
+                aria-invalid={f.invalid}
+                aria-describedby={f.describedBy}
+              />
+            )}
           </Field>
         </div>
         <FormMessage state={state} />
@@ -308,13 +486,26 @@ export function TestCaseDialog({ planId }: { planId: string }) {
   );
 }
 
-export function RemoveTestCaseButton({ planId, caseId, name }: { planId: string; caseId: string; name: string }) {
+export function RemoveTestCaseButton({
+  planId,
+  caseId,
+  name,
+}: {
+  planId: string;
+  caseId: string;
+  name: string;
+}) {
   const [state, action] = useActionState(removeTestCase, idle);
   return (
     <form action={action}>
       <input type="hidden" name="planId" value={planId} />
       <input type="hidden" name="caseId" value={caseId} />
-      <SubmitButton pendingLabel="Removing…" variant="ghost" size="sm" aria-label={`Remove test case ${name}`}>
+      <SubmitButton
+        pendingLabel="Removing…"
+        variant="ghost"
+        size="sm"
+        aria-label={`Remove test case ${name}`}
+      >
         <Trash2 aria-hidden className="size-3.5" />
       </SubmitButton>
       {state.status === 'error' ? <p className="text-xs text-danger">{state.message}</p> : null}

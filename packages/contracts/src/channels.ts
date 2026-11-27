@@ -7,7 +7,9 @@ import { z } from 'zod';
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
 function luminance(hex: string): number {
-  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  const c = [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
   return 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
 }
 
@@ -21,7 +23,11 @@ export const BrandingSchema = z
   .object({
     displayName: z.string().trim().min(2).max(80),
     /** An https image URL shown in the widget and journey header; optional. */
-    logoUrl: z.url({ protocol: /^https$/ }).max(500).nullable().default(null),
+    logoUrl: z
+      .url({ protocol: /^https$/ })
+      .max(500)
+      .nullable()
+      .default(null),
     /** Buttons and selected controls. */
     primaryColor: z.string().regex(HEX, 'A colour such as #0b5cad'),
     /** The text on primary-coloured buttons. */
@@ -30,26 +36,59 @@ export const BrandingSchema = z
   .superRefine((b, ctx) => {
     if (!HEX.test(b.primaryColor) || !HEX.test(b.textOnPrimary)) return;
     const text = contrastRatio(b.primaryColor, b.textOnPrimary);
-    if (text < 4.5) ctx.addIssue({ code: 'custom', path: ['textOnPrimary'], message: `The text on the primary colour has a contrast of ${text.toFixed(2)}:1; WCAG 2.2 AA needs 4.5:1.` });
+    if (text < 4.5)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['textOnPrimary'],
+        message: `The text on the primary colour has a contrast of ${text.toFixed(2)}:1; WCAG 2.2 AA needs 4.5:1.`,
+      });
     const edge = contrastRatio(b.primaryColor, '#ffffff');
-    if (edge < 3) ctx.addIssue({ code: 'custom', path: ['primaryColor'], message: `The primary colour has a contrast of ${edge.toFixed(2)}:1 against a white page; WCAG 2.2 AA needs 3:1 for controls and focus.` });
+    if (edge < 3)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['primaryColor'],
+        message: `The primary colour has a contrast of ${edge.toFixed(2)}:1 against a white page; WCAG 2.2 AA needs 3:1 for controls and focus.`,
+      });
   });
 export type Branding = z.infer<typeof BrandingSchema>;
 
 // ---------------- Settings ----------------
 
-const ORIGIN = z.string().regex(/^https?:\/\/[a-z0-9.-]+(:\d{1,5})?$/i, 'An origin such as https://book.example.com');
+const ORIGIN = z
+  .string()
+  .regex(/^https?:\/\/[a-z0-9.-]+(:\d{1,5})?$/i, 'An origin such as https://book.example.com');
 
-export const WidgetSettingsSchema = z.object({ enabled: z.boolean().default(false), allowedOrigins: z.array(ORIGIN).max(20).default([]) });
+export const WidgetSettingsSchema = z.object({
+  enabled: z.boolean().default(false),
+  allowedOrigins: z.array(ORIGIN).max(20).default([]),
+});
 export const JourneySettingsSchema = z.object({
   enabled: z.boolean().default(false),
-  slug: z.string().regex(/^[a-z0-9][a-z0-9-]{2,39}$/, 'Lower-case letters, digits and hyphens, 3 to 40 characters').nullable().default(null),
-  planCodes: z.array(z.string().regex(/^[A-Z0-9][A-Z0-9-]{2,39}$/)).max(20).default([]),
+  slug: z
+    .string()
+    .regex(
+      /^[a-z0-9][a-z0-9-]{2,39}$/,
+      'Lower-case letters, digits and hyphens, 3 to 40 characters',
+    )
+    .nullable()
+    .default(null),
+  planCodes: z
+    .array(z.string().regex(/^[A-Z0-9][A-Z0-9-]{2,39}$/))
+    .max(20)
+    .default([]),
   headline: z.string().trim().max(120).default(''),
 });
 
-export const ChannelSettingsInputSchema = z.object({ branding: BrandingSchema.nullable(), widget: WidgetSettingsSchema, journey: JourneySettingsSchema });
-export const ChannelSettingsSchema = ChannelSettingsInputSchema.extend({ accountId: z.uuid(), updatedBy: z.string().nullable(), updatedAt: z.iso.datetime({ offset: true }).nullable() });
+export const ChannelSettingsInputSchema = z.object({
+  branding: BrandingSchema.nullable(),
+  widget: WidgetSettingsSchema,
+  journey: JourneySettingsSchema,
+});
+export const ChannelSettingsSchema = ChannelSettingsInputSchema.extend({
+  accountId: z.uuid(),
+  updatedBy: z.string().nullable(),
+  updatedAt: z.iso.datetime({ offset: true }).nullable(),
+});
 export type ChannelSettings = z.infer<typeof ChannelSettingsSchema>;
 
 /** What the public may see of a journey. */
@@ -67,7 +106,13 @@ export const JourneyConfigSchema = z.object({
 
 // ---------------- Widget ----------------
 
-export const WidgetSessionSchema = z.object({ token: z.string(), expiresAt: z.iso.datetime({ offset: true }), scriptUrl: z.string(), apiUrl: z.string(), snippet: z.string() });
+export const WidgetSessionSchema = z.object({
+  token: z.string(),
+  expiresAt: z.iso.datetime({ offset: true }),
+  scriptUrl: z.string(),
+  apiUrl: z.string(),
+  snippet: z.string(),
+});
 
 export const OfferSchema = z.object({
   quoteId: z.uuid(),
@@ -78,7 +123,18 @@ export const OfferSchema = z.object({
   expiresAt: z.iso.datetime({ offset: true }),
   outcome: z.enum(['eligible', 'ineligible', 'referred', 'held']),
   notBindable: z.array(z.string()),
-  benefits: z.array(z.object({ code: z.string(), name: z.string(), packaging: z.string(), selected: z.boolean(), available: z.boolean(), reason: z.string().nullable(), limit: z.string().nullable(), premium: z.string().nullable() })),
+  benefits: z.array(
+    z.object({
+      code: z.string(),
+      name: z.string(),
+      packaging: z.string(),
+      selected: z.boolean(),
+      available: z.boolean(),
+      reason: z.string().nullable(),
+      limit: z.string().nullable(),
+      premium: z.string().nullable(),
+    }),
+  ),
   total: z.string().nullable(),
   /** Absolute link to the filed wording; null when the plan has no filed form on record. */
   wordingUrl: z.string().nullable(),

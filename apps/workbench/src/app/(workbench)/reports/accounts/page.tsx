@@ -48,7 +48,11 @@ function Sales({ title, first, rows }: { title: string; first: string; rows: Sal
   );
 }
 
-export default async function AccountReportsPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
+export default async function AccountReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
   const me = (await getMe())!;
   if (!me.permissions.includes('reports:read')) return <AccessDenied permission="reports:read" />;
   const p = periodFrom(await searchParams);
@@ -85,7 +89,10 @@ export default async function AccountReportsPage({ searchParams }: { searchParam
         <Sales title="By benefit" first="Benefit" rows={r.byBenefit} />
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
-            <CardHeader title="Quotes that became policies" description="Of the quotes made in the period." />
+            <CardHeader
+              title="Quotes that became policies"
+              description="Of the quotes made in the period."
+            />
             {r.conversion.length === 0 ? (
               <p className="p-5 text-sm text-muted">No quotes in this period.</p>
             ) : (
@@ -112,7 +119,10 @@ export default async function AccountReportsPage({ searchParams }: { searchParam
             )}
           </Card>
           <Card>
-            <CardHeader title="Benefit take-up" description="Of the policies sold in the period, the share carrying each benefit." />
+            <CardHeader
+              title="Benefit take-up"
+              description="Of the policies sold in the period, the share carrying each benefit."
+            />
             {r.takeUp.length === 0 ? (
               <p className="p-5 text-sm text-muted">No policies sold in this period.</p>
             ) : (

@@ -21,9 +21,13 @@ export interface CommissionResult {
   rule: string;
 }
 
-const pct = (cents: number, premium: number) => (premium === 0 ? '0.0000' : ((cents / premium) * 100).toFixed(4));
+const pct = (cents: number, premium: number) =>
+  premium === 0 ? '0.0000' : ((cents / premium) * 100).toFixed(4);
 
-export function commissionOnCharge(rule: CommissionRuleDocument, c: CommissionContext): CommissionResult {
+export function commissionOnCharge(
+  rule: CommissionRuleDocument,
+  c: CommissionContext,
+): CommissionResult {
   switch (rule.kind) {
     case 'none':
       return { cents: 0, ratePercent: '0.0000', rule: 'No commission' };
@@ -49,11 +53,20 @@ export function commissionOnCharge(rule: CommissionRuleDocument, c: CommissionCo
         }
         lower = upper;
       }
-      return { cents, ratePercent: pct(cents, c.premiumCents), rule: `Tiered by monthly premium (${rule.tiers.length} tiers)` };
+      return {
+        cents,
+        ratePercent: pct(cents, c.premiumCents),
+        rule: `Tiered by monthly premium (${rule.tiers.length} tiers)`,
+      };
     }
     case 'volume': {
-      const band = [...rule.bands].reverse().find((b) => c.monthPolicies >= b.minPolicies) ?? rule.bands[0]!;
-      return { cents: mulPercent(c.premiumCents, band.percent), ratePercent: band.percent.toFixed(4), rule: `Volume: ${band.percent}% from ${band.minPolicies} policies a month` };
+      const band =
+        [...rule.bands].reverse().find((b) => c.monthPolicies >= b.minPolicies) ?? rule.bands[0]!;
+      return {
+        cents: mulPercent(c.premiumCents, band.percent),
+        ratePercent: band.percent.toFixed(4),
+        rule: `Volume: ${band.percent}% from ${band.minPolicies} policies a month`,
+      };
     }
   }
 }

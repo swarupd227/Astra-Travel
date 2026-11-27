@@ -148,9 +148,17 @@ export const PlanDocumentSchema = z.object({
     .array(z.object({ code: CODE, levels: z.array(z.enum(COVERAGE_LEVELS)).min(1) }))
     .default([]),
   /** Values for form variables, keyed `schedule:key` or `policy:key`. */
-  values: z.record(z.string().regex(/^(schedule|policy):[a-z][a-z0-9_]{1,63}$/), PlanValueSchema).default({}),
+  values: z
+    .record(z.string().regex(/^(schedule|policy):[a-z][a-z0-9_]{1,63}$/), PlanValueSchema)
+    .default({}),
   settings: z
-    .array(z.object({ setting: z.enum(PLAN_SETTINGS), variable: VariableRefSchema, value: PlanValueSchema }))
+    .array(
+      z.object({
+        setting: z.enum(PLAN_SETTINGS),
+        variable: VariableRefSchema,
+        value: PlanValueSchema,
+      }),
+    )
     .default([]),
   /** Base plans: what account plans may change, within these narrower bounds. */
   bounds: z
@@ -166,7 +174,11 @@ export const PlanDocumentSchema = z.object({
   productType: z.string().max(40).nullable().default(null),
   /** Cover start and end per benefit group (or per benefit, which wins), keyed by group or benefit code. */
   timing: z.record(z.string().regex(/^[a-z][a-z0-9_]{1,63}$/), TimingSchema).default({}),
-  servicing: ServicingRulesSchema.default({ postReviewRefund: 'none', additionalCostDays: null, addBenefitDays: null }),
+  servicing: ServicingRulesSchema.default({
+    postReviewRefund: 'none',
+    additionalCostDays: null,
+    addBenefitDays: null,
+  }),
 });
 export type PlanDocument = z.infer<typeof PlanDocumentSchema>;
 
@@ -183,12 +195,20 @@ export const PlanSchema = z.object({
   policyEditionId: z.uuid().nullable(),
   createdBy: z.string(),
   createdAt: z.iso.datetime({ offset: true }),
-  current: z.object({ id: z.uuid(), version: z.number().int(), status: z.string(), effectiveFrom: date }).nullable(),
+  current: z
+    .object({ id: z.uuid(), version: z.number().int(), status: z.string(), effectiveFrom: date })
+    .nullable(),
   draft: z.object({ id: z.uuid(), version: z.number().int() }).nullable(),
 });
 export type Plan = z.infer<typeof PlanSchema>;
 
-export const PLAN_VERSION_STATUSES = ['draft', 'approved', 'published', 'superseded', 'withdrawn'] as const;
+export const PLAN_VERSION_STATUSES = [
+  'draft',
+  'approved',
+  'published',
+  'superseded',
+  'withdrawn',
+] as const;
 
 export const PlanProblemSchema = z.object({ path: z.string(), message: z.string() });
 export type PlanProblem = z.infer<typeof PlanProblemSchema>;
@@ -216,7 +236,10 @@ export type PlanVersion = z.infer<typeof PlanVersionSchema>;
 export const CreatePlanRequestSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('base'),
-    code: z.string().trim().regex(/^[A-Z0-9][A-Z0-9-]{2,39}$/, 'Capital letters, digits and -'),
+    code: z
+      .string()
+      .trim()
+      .regex(/^[A-Z0-9][A-Z0-9-]{2,39}$/, 'Capital letters, digits and -'),
     name: z.string().trim().min(2).max(200),
     term: z.enum(['single_trip', 'annual']),
     catalogueId: z.uuid(),
@@ -224,7 +247,10 @@ export const CreatePlanRequestSchema = z.discriminatedUnion('kind', [
   }),
   z.object({
     kind: z.literal('state'),
-    code: z.string().trim().regex(/^[A-Z0-9][A-Z0-9-]{2,39}$/),
+    code: z
+      .string()
+      .trim()
+      .regex(/^[A-Z0-9][A-Z0-9-]{2,39}$/),
     name: z.string().trim().min(2).max(200),
     parentPlanId: z.uuid(),
     state: z.string().regex(/^[A-Z]{2}$/),
@@ -232,7 +258,10 @@ export const CreatePlanRequestSchema = z.discriminatedUnion('kind', [
   }),
   z.object({
     kind: z.literal('account'),
-    code: z.string().trim().regex(/^[A-Z0-9][A-Z0-9-]{2,39}$/),
+    code: z
+      .string()
+      .trim()
+      .regex(/^[A-Z0-9][A-Z0-9-]{2,39}$/),
     name: z.string().trim().min(2).max(200),
     parentPlanId: z.uuid(),
     accountId: z.uuid(),
@@ -244,7 +273,12 @@ export const PlanTestCaseSchema = z.object({
   id: z.uuid(),
   name: z.string(),
   /** Travellers, trip and account; the plan supplies benefits, package types, perils and settings. */
-  input: QuoteRatingRequestSchema.pick({ rateDate: true, travellers: true, trip: true, account: true }),
+  input: QuoteRatingRequestSchema.pick({
+    rateDate: true,
+    travellers: true,
+    trip: true,
+    account: true,
+  }),
   expected: z.object({
     policyTotal: DecimalString.optional(),
     perBenefit: z.record(z.string(), DecimalString).optional(),
@@ -263,7 +297,9 @@ export const PlanTestRunSchema = z.object({
       name: z.string(),
       passed: z.boolean(),
       message: z.string(),
-      actual: z.object({ policyTotal: z.string(), perBenefit: z.record(z.string(), z.string()) }).nullable(),
+      actual: z
+        .object({ policyTotal: z.string(), perBenefit: z.record(z.string(), z.string()) })
+        .nullable(),
     }),
   ),
 });
@@ -274,7 +310,17 @@ export const PlanDiffSchema = z.object({
   to: z.object({ id: z.uuid(), version: z.number().int() }),
   changes: z.array(
     z.object({
-      area: z.enum(['benefit', 'upgrade', 'covered_reason', 'value', 'setting', 'bound', 'timing', 'link', 'dates']),
+      area: z.enum([
+        'benefit',
+        'upgrade',
+        'covered_reason',
+        'value',
+        'setting',
+        'bound',
+        'timing',
+        'link',
+        'dates',
+      ]),
       item: z.string(),
       change: z.enum(['added', 'removed', 'changed']),
       before: z.string().nullable(),

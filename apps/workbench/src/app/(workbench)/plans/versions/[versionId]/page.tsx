@@ -1,13 +1,27 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CheckCircle2, ChevronLeft, CircleDashed } from 'lucide-react';
-import type { CatalogueDocument, Plan, PlanDiff, PlanDocument, PlanTestRun, PlanVersion } from '@astra/contracts';
+import type {
+  CatalogueDocument,
+  Plan,
+  PlanDiff,
+  PlanDocument,
+  PlanTestRun,
+  PlanVersion,
+} from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
 import { sentenceCase } from '@/lib/format';
 import { nameOf, peopleNames } from '@/lib/people';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
-import { Badge, Card, CardHeader, DescriptionList, Notice, PageHeader } from '@/components/ui/primitives';
+import {
+  Badge,
+  Card,
+  CardHeader,
+  DescriptionList,
+  Notice,
+  PageHeader,
+} from '@/components/ui/primitives';
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
 import { PlanBuilder, type BuilderVariable } from '../../builder';
@@ -17,7 +31,11 @@ import { VersionTemplates } from '../../../documents/version-templates';
 
 export const metadata = { title: 'Plan version' };
 
-type Readiness = { ready: boolean; checks: { check: string; passed: boolean; detail: string }[]; links: Record<string, string> };
+type Readiness = {
+  ready: boolean;
+  checks: { check: string; passed: boolean; detail: string }[];
+  links: Record<string, string>;
+};
 const CHECK_LABELS: Record<string, string> = {
   approved: 'Approved by a second person',
   catalogue: 'Benefit catalogue is the approved version',
@@ -55,11 +73,19 @@ export default async function VersionPage({
   if (res.error) return <ErrorPanel error={res.error} />;
   const v = res.data;
   const [planRes, builder, readiness, run] = await Promise.all([
-    load(() => api<{ plan: Plan; versions: { id: string; version: number; status: string }[] }>(`/v1/plans/${v.planId}`)),
     load(() =>
-      api<{ catalogue: CatalogueDocument; catalogueVersion: number; variables: BuilderVariable[]; required: string[]; bounds: PlanDocument['bounds'] }>(
-        `/v1/plan-versions/${versionId}/builder`,
+      api<{ plan: Plan; versions: { id: string; version: number; status: string }[] }>(
+        `/v1/plans/${v.planId}`,
       ),
+    ),
+    load(() =>
+      api<{
+        catalogue: CatalogueDocument;
+        catalogueVersion: number;
+        variables: BuilderVariable[];
+        required: string[];
+        bounds: PlanDocument['bounds'];
+      }>(`/v1/plan-versions/${versionId}/builder`),
     ),
     load(() => api<Readiness>(`/v1/plan-versions/${versionId}/readiness`)),
     load(() => api<PlanTestRun>(`/v1/plan-versions/${versionId}/test-runs/latest`)),
@@ -69,7 +95,9 @@ export default async function VersionPage({
   const { plan, versions } = planRes.data;
   const others = versions.filter((x) => x.id !== v.id);
   const compareWith = compare && others.some((o) => o.id === compare) ? compare : null;
-  const diff = compareWith ? await load(() => api<PlanDiff>(`/v1/plan-versions/${v.id}/compare?with=${compareWith}`)) : null;
+  const diff = compareWith
+    ? await load(() => api<PlanDiff>(`/v1/plan-versions/${v.id}/compare?with=${compareWith}`))
+    : null;
   const names = await peopleNames([v.approvedBy, v.publishedBy, ...v.contributors]);
   const canManage = me.permissions.includes('plans:manage');
   const canApprove = me.permissions.includes('plans:approve');
@@ -78,7 +106,10 @@ export default async function VersionPage({
 
   return (
     <>
-      <Link href={`/plans/${plan.id}`} className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg">
+      <Link
+        href={`/plans/${plan.id}`}
+        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg"
+      >
         <ChevronLeft aria-hidden className="size-4" /> {plan.name}
       </Link>
       <PageHeader
@@ -90,7 +121,8 @@ export default async function VersionPage({
       <div className="mb-6 space-y-3">
         {created ? (
           <Notice tone="success" title="Plan created">
-            This is its first draft. Choose benefits, covered reasons, values and conditions, then save. Someone else approves it.
+            This is its first draft. Choose benefits, covered reasons, values and conditions, then
+            save. Someone else approves it.
           </Notice>
         ) : null}
         {done ? (
@@ -104,7 +136,10 @@ export default async function VersionPage({
         ) : null}
         {v.status !== 'draft' ? (
           <Notice tone="neutral" title={`This version is ${v.status}`}>
-            It cannot change. {canManage && !plan.draft ? 'Start a new draft from the plan page to make changes.' : ''}
+            It cannot change.{' '}
+            {canManage && !plan.draft
+              ? 'Start a new draft from the plan page to make changes.'
+              : ''}
           </Notice>
         ) : null}
       </div>
@@ -126,7 +161,12 @@ export default async function VersionPage({
 
         <div className="space-y-6">
           {me.permissions.includes('documents:read') && plan.kind !== 'base' ? (
-            <VersionTemplates versionId={v.id} hasPolicyForm={!!plan.policyEditionId} canManage={me.permissions.includes('documents:manage')} assemblable={v.status === 'approved' || v.status === 'published'} />
+            <VersionTemplates
+              versionId={v.id}
+              hasPolicyForm={!!plan.policyEditionId}
+              canManage={me.permissions.includes('documents:manage')}
+              assemblable={v.status === 'approved' || v.status === 'published'}
+            />
           ) : null}
           <Card>
             <CardHeader title={plan.kind === 'base' ? 'Approval' : 'Ready to publish?'} />
@@ -138,9 +178,15 @@ export default async function VersionPage({
                     .map((c) => (
                       <li key={c.check} className="flex gap-2 text-sm">
                         {c.passed ? (
-                          <CheckCircle2 aria-hidden className="mt-0.5 size-4 shrink-0 text-success" />
+                          <CheckCircle2
+                            aria-hidden
+                            className="mt-0.5 size-4 shrink-0 text-success"
+                          />
                         ) : (
-                          <CircleDashed aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
+                          <CircleDashed
+                            aria-hidden
+                            className="mt-0.5 size-4 shrink-0 text-warning"
+                          />
                         )}
                         <span>
                           <span className="font-medium text-fg">{CHECK_LABELS[c.check]}</span>
@@ -152,13 +198,21 @@ export default async function VersionPage({
                 </ul>
               ) : null}
               {plan.kind === 'base' ? (
-                <p className="text-xs text-muted">Base plans are templates: they are approved, then state plans are made from them and published.</p>
+                <p className="text-xs text-muted">
+                  Base plans are templates: they are approved, then state plans are made from them
+                  and published.
+                </p>
               ) : null}
               {v.status === 'draft' && canApprove ? (
                 v.contributors.includes(me.subject) ? (
-                  <Notice tone="neutral">You built or edited this draft, so someone else must approve it.</Notice>
+                  <Notice tone="neutral">
+                    You built or edited this draft, so someone else must approve it.
+                  </Notice>
                 ) : v.problems.length ? (
-                  <Notice tone="warning">The draft has {v.problems.length} thing{v.problems.length === 1 ? '' : 's'} to finish before it can be approved.</Notice>
+                  <Notice tone="warning">
+                    The draft has {v.problems.length} thing{v.problems.length === 1 ? '' : 's'} to
+                    finish before it can be approved.
+                  </Notice>
                 ) : (
                   <ApproveVersionForm versionId={v.id} />
                 )
@@ -168,7 +222,10 @@ export default async function VersionPage({
               ) : null}
               <DescriptionList
                 items={[
-                  { term: 'Built by', value: v.contributors.map((c) => nameOf(names, c)).join(', ') },
+                  {
+                    term: 'Built by',
+                    value: v.contributors.map((c) => nameOf(names, c)).join(', '),
+                  },
                   { term: 'Approved by', value: nameOf(names, v.approvedBy) },
                   { term: 'Published by', value: nameOf(names, v.publishedBy) },
                   { term: 'Last saved', value: <LocalTime iso={v.updatedAt} /> },
@@ -179,7 +236,10 @@ export default async function VersionPage({
 
           {plan.kind !== 'base' ? (
             <Card>
-              <CardHeader title="Test cases" description="Rated with this version and the published manuals, compared to the cent." />
+              <CardHeader
+                title="Test cases"
+                description="Rated with this version and the published manuals, compared to the cent."
+              />
               <div className="space-y-3 p-5">
                 {canManage ? <RunTestsForm versionId={v.id} cases={cases ?? 0} /> : null}
                 <p className="text-xs text-muted">
@@ -190,12 +250,16 @@ export default async function VersionPage({
                 {run.data ? (
                   <>
                     <p className="text-sm">
-                      Last run <LocalTime iso={run.data.ranAt} />: <strong>{run.data.passed}</strong> of {run.data.total} pass.
+                      Last run <LocalTime iso={run.data.ranAt} />:{' '}
+                      <strong>{run.data.passed}</strong> of {run.data.total} pass.
                     </p>
                     <ul className="space-y-2">
                       {run.data.results.map((r) => (
                         <li key={r.caseId} className="text-sm">
-                          <Badge tone={r.passed ? 'success' : 'danger'}>{r.passed ? 'Pass' : 'Fail'}</Badge> {r.name}
+                          <Badge tone={r.passed ? 'success' : 'danger'}>
+                            {r.passed ? 'Pass' : 'Fail'}
+                          </Badge>{' '}
+                          {r.name}
                           <span className="block text-xs text-muted">{r.message}</span>
                         </li>
                       ))}
@@ -224,7 +288,10 @@ export default async function VersionPage({
                     ))}
                   </select>
                 </label>
-                <button type="submit" className="h-9 rounded-md border border-border px-3 text-sm font-medium hover:bg-subtle">
+                <button
+                  type="submit"
+                  className="h-9 rounded-md border border-border px-3 text-sm font-medium hover:bg-subtle"
+                >
                   Compare
                 </button>
               </form>
@@ -243,7 +310,9 @@ export default async function VersionPage({
                         {diff.data.changes.map((c, i) => (
                           <TR key={i}>
                             <TD>
-                              <span className="block text-xs text-muted">{AREA_LABELS[c.area]}</span>
+                              <span className="block text-xs text-muted">
+                                {AREA_LABELS[c.area]}
+                              </span>
                               <span className="font-mono text-xs">{c.item}</span>
                             </TD>
                             <TD className="text-xs break-all">{c.before ?? '—'}</TD>

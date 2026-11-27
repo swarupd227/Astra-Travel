@@ -16,18 +16,46 @@ const WORDING = [
 ].join('\n');
 
 const GOLDEN: GoldenVariable[] = [
-  { excerpt: '[ten (10) - fifteen (15)]', type: 'time_period', constraints: { min: 10, max: 15, unit: 'days' } },
-  { excerpt: '[twenty-five percent (25%) – one hundred percent (100%)]', type: 'percentage_range', constraints: { min: 25, max: 100, bases: [] } },
-  { excerpt: '[$0-$5,000,000]', type: 'numeric_range', constraints: { min: 0, max: 5_000_000, unit: 'usd' } },
-  { excerpt: '[[Optional] Trip Delay maximum [$100-$10,000] per person]', type: 'optional_benefit', constraints: {} },
-  { excerpt: '[$100-$10,000]', type: 'numeric_range', constraints: { min: 100, max: 10_000, unit: 'usd' } },
-  { excerpt: '[PER PERSON] [PER TRIP]', type: 'limit_basis', constraints: { options: ['PER PERSON', 'PER TRIP'] } },
+  {
+    excerpt: '[ten (10) - fifteen (15)]',
+    type: 'time_period',
+    constraints: { min: 10, max: 15, unit: 'days' },
+  },
+  {
+    excerpt: '[twenty-five percent (25%) – one hundred percent (100%)]',
+    type: 'percentage_range',
+    constraints: { min: 25, max: 100, bases: [] },
+  },
+  {
+    excerpt: '[$0-$5,000,000]',
+    type: 'numeric_range',
+    constraints: { min: 0, max: 5_000_000, unit: 'usd' },
+  },
+  {
+    excerpt: '[[Optional] Trip Delay maximum [$100-$10,000] per person]',
+    type: 'optional_benefit',
+    constraints: {},
+  },
+  {
+    excerpt: '[$100-$10,000]',
+    type: 'numeric_range',
+    constraints: { min: 100, max: 10_000, unit: 'usd' },
+  },
+  {
+    excerpt: '[PER PERSON] [PER TRIP]',
+    type: 'limit_basis',
+    constraints: { options: ['PER PERSON', 'PER TRIP'] },
+  },
 ];
 
 const fromRules = (): GoldenVariable[] =>
   findBrackets(WORDING)
     .filter((b) => b.suggestion)
-    .map((b) => ({ excerpt: b.text, type: b.suggestion!.type, constraints: b.suggestion!.constraints as Record<string, unknown> }));
+    .map((b) => ({
+      excerpt: b.text,
+      type: b.suggestion!.type,
+      constraints: b.suggestion!.constraints as Record<string, unknown>,
+    }));
 
 describe('golden list comparison (E01-F01-S03)', () => {
   it('finds every manually listed variable in the form-reading rule’s baseline', () => {
@@ -40,7 +68,11 @@ describe('golden list comparison (E01-F01-S03)', () => {
   it('says what is missing, what differs in type or range, and what is extra', () => {
     const proposed = fromRules()
       .filter((p) => p.excerpt !== '[$0-$5,000,000]')
-      .map((p) => (p.excerpt === '[ten (10) - fifteen (15)]' ? { ...p, constraints: { min: 10, max: 14, unit: 'days' } } : p))
+      .map((p) =>
+        p.excerpt === '[ten (10) - fifteen (15)]'
+          ? { ...p, constraints: { min: 10, max: 14, unit: 'days' } }
+          : p,
+      )
       .concat({ excerpt: '[an invented one]', type: 'optional_benefit', constraints: {} });
     const c = compareToGolden(proposed, GOLDEN);
     expect(c.missing).toEqual(['[$0-$5,000,000]']);
@@ -50,7 +82,10 @@ describe('golden list comparison (E01-F01-S03)', () => {
   });
 
   it('ignores the order of constraint fields', () => {
-    const c = compareToGolden([{ excerpt: 'x', type: 'numeric_range', constraints: { unit: 'usd', max: 2, min: 1 } }], [{ excerpt: 'x', type: 'numeric_range', constraints: { min: 1, max: 2, unit: 'usd' } }]);
+    const c = compareToGolden(
+      [{ excerpt: 'x', type: 'numeric_range', constraints: { unit: 'usd', max: 2, min: 1 } }],
+      [{ excerpt: 'x', type: 'numeric_range', constraints: { min: 1, max: 2, unit: 'usd' } }],
+    );
     expect(c.recall).toBe(1);
   });
 });

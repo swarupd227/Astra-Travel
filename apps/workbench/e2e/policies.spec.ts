@@ -19,17 +19,29 @@ async function signIn(page: Page, username: string, path = '/') {
 }
 
 async function expectAccessible(page: Page) {
-  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
-  expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .analyze();
+  expect(
+    results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
+  ).toEqual([]);
 }
 
-test('staff review a quote, re-rate it, and read a policy as it was at a date', async ({ page, isMobile }) => {
+test('staff review a quote, re-rate it, and read a policy as it was at a date', async ({
+  page,
+  isMobile,
+}) => {
   test.skip(isMobile, 'One journey is enough; the screens are checked with axe here.');
   test.setTimeout(600_000);
 
   await signIn(page, 'platform.admin', '/quotes');
-  await expect(page.getByRole('heading', { name: 'Quotes', level: 1 })).toBeVisible({ timeout: 90_000 });
-  test.skip((await page.getByRole('row').filter({ hasText: 'Open' }).count()) === 0, 'Seed the synthetic stack first');
+  await expect(page.getByRole('heading', { name: 'Quotes', level: 1 })).toBeVisible({
+    timeout: 90_000,
+  });
+  test.skip(
+    (await page.getByRole('row').filter({ hasText: 'Open' }).count()) === 0,
+    'Seed the synthetic stack first',
+  );
   await expectAccessible(page);
 
   // An open quote: its price, benefits with cover dates, eligibility, versions and disclosure.
@@ -44,20 +56,28 @@ test('staff review a quote, re-rate it, and read a policy as it was at a date', 
   const total = await page.getByRole('heading', { level: 1 }).innerText();
   await page.getByRole('checkbox', { name: /Trip Interruption/ }).check();
   await page.getByRole('button', { name: 'Re-rate' }).click();
-  await expect(page.getByText('Re-rated. The quote keeps its number.')).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText('Re-rated. The quote keeps its number.')).toBeVisible({
+    timeout: 60_000,
+  });
   await expect(page.getByRole('heading', { level: 1 })).not.toHaveText(total, { timeout: 30_000 });
 
   // The new-quote form renders and is accessible.
   await page.goto('/quotes/new');
-  await expect(page.getByRole('heading', { name: 'New quote', level: 1 })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole('heading', { name: 'New quote', level: 1 })).toBeVisible({
+    timeout: 60_000,
+  });
   await expectAccessible(page);
 
   // A policy: record, benefits with underwriters, history; and the record as it was before it existed.
   await page.goto('/policies');
-  await expect(page.getByRole('heading', { name: 'Policies', level: 1 })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole('heading', { name: 'Policies', level: 1 })).toBeVisible({
+    timeout: 60_000,
+  });
   await expectAccessible(page);
   await page.getByRole('row').filter({ hasText: 'ATP-' }).first().getByRole('link').click();
-  await expect(page.getByRole('heading', { name: /^ATP-\d{4}-\d{6}$/ })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole('heading', { name: /^ATP-\d{4}-\d{6}$/ })).toBeVisible({
+    timeout: 60_000,
+  });
   await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
   await expect(page.getByText(/Bound by/)).toBeVisible();
   await expect(page.getByText('Virginia Surety Company (VSC)').first()).toBeVisible();
