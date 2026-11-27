@@ -1,6 +1,6 @@
 {
   "realm": "astra",
-  "displayName": "Astra Travel (local)",
+  "displayName": "Astra Travel",
   "enabled": true,
   "sslRequired": "external",
   "registrationAllowed": false,

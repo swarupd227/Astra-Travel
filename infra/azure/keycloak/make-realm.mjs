@@ -11,7 +11,7 @@ const target = new URL('./realm-astra.json', import.meta.url);
 
 const realm = JSON.parse(readFileSync(source, 'utf8'));
 
-realm.displayName = 'Astra Travel (Azure development)';
+realm.displayName = 'Astra Travel';
 realm.sslRequired = 'all';
 
 // Only the workbench signs in. The local sandbox, claims and billing clients are not created: nothing external is

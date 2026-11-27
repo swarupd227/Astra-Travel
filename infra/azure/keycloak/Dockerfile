@@ -8,5 +8,8 @@ RUN /opt/keycloak/bin/kc.sh build
 FROM quay.io/keycloak/keycloak:26.4
 COPY --from=build /opt/keycloak/ /opt/keycloak/
 COPY realm-astra.json /opt/keycloak/data/import/realm-astra.json
+# Our wording on the sign-in pages (themes/astra); a runtime setting, so it needs no change to an existing realm.
+COPY themes/astra /opt/keycloak/themes/astra
+ENV KC_SPI_THEME_DEFAULT=astra
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
 CMD ["start", "--optimized", "--import-realm"]

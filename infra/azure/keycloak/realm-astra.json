@@ -1,6 +1,6 @@
 {
   "realm": "astra",
-  "displayName": "Astra Travel (Azure development)",
+  "displayName": "Astra Travel",
   "enabled": true,
   "sslRequired": "all",
   "registrationAllowed": false,
