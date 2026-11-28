@@ -60,8 +60,10 @@ function Invoke-Job([string] $job) {
 
 Invoke-Az group create -n $ResourceGroup -l $Location --tags application=astra-travel environment=dev -o none
 
-# 1. Foundations. The database host is not known until the server exists.
-Set-DatabaseUrls 'pending.invalid'
+# 1. Foundations. The database host is not known until the server exists. On a redeployment it does, and the real
+# address is written from the start, so the running applications never read a placeholder from the vault.
+$existing = Invoke-Az postgres flexible-server list -g $ResourceGroup --query '[0].fullyQualifiedDomainName' -o tsv --only-show-errors
+Set-DatabaseUrls $(if ($existing) { "$existing".Trim() } else { 'pending.invalid' })
 $base = Publish-Template 'foundations' $false
 Set-DatabaseUrls $base.databaseHost.value
 $registry = $base.registryName.value
