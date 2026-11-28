@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { accountScopeSetting, type RequestContext } from './context';
+import { createLogger } from './logger';
 
 export type Pool = pg.Pool;
 export type Tx = pg.PoolClient;
@@ -18,13 +19,21 @@ export interface PoolOptions {
 }
 
 export function createPool(connectionString: string, opts: PoolOptions = {}): Pool {
-  return new pg.Pool({
+  const pool = new pg.Pool({
     connectionString,
     max: opts.max ?? 20,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: opts.connectionTimeoutMillis ?? 5_000,
     application_name: opts.applicationName ?? 'astra',
   });
+  const logger = createLogger(opts.applicationName ?? 'astra');
+  // The pool listens for errors only on idle connections. Without this, the database ending a session that is in use
+  // (its transaction time limit, a restart) would end the whole process. The query in hand, or the next one, still
+  // fails, and the pool replaces the connection.
+  pool.on('connect', (client) => {
+    client.on('error', (err) => logger.warn({ err }, 'The database ended a connection'));
+  });
+  return pool;
 }
 
 /**
