@@ -44,9 +44,8 @@ export default async function BillingPage({
   return (
     <>
       <PageHeader
-        eyebrow="Billing"
         title="Premium records"
-        description="One record for every bind, change and cancellation, with premium split by benefit, traveller and underwriting entity, the commission and the premium tax. Records go to Assurant’s billing system in batches."
+        description="Every charge and refund, with commission and tax, on its way to Assurant’s billing system."
         actions={
           <div className="flex flex-wrap gap-2">
             <ButtonLink href="/billing/batches" variant="secondary">

@@ -60,9 +60,8 @@ export default async function PlansPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Product & compliance"
         title="Plans"
-        description="Plans combine benefits, covered reasons, limits and conditions from the filed forms. Every version is approved by a second person; a state or account plan is published only when its forms are filed, its rate manuals are published and its test cases pass."
+        description="What each plan covers. A second person approves every version before it can be sold."
         actions={
           canManage ? (
             <NewPlanDialog

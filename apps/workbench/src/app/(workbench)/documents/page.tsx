@@ -35,9 +35,8 @@ export default async function DocumentsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Documents"
         title="Document templates"
-        description="A template is a plan version’s schedule or policy assembled from the filed form and the plan’s values. Policies are issued with the released template; assemble one from the plan version’s page."
+        description="The schedules and policies travellers receive. Create one from a plan version’s page."
         actions={
           <ButtonLink href="/documents/failures" variant="secondary">
             <TriangleAlert aria-hidden className="size-4" /> Failed documents and deliveries

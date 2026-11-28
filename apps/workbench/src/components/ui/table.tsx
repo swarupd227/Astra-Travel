@@ -2,8 +2,9 @@ import clsx from 'clsx';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
+import { StackTable } from './stack-table';
 
-/** Accessible data table: captioned, keyboard-scrollable on small screens. */
+/** Accessible data table: captioned, stacked into records on a phone, scrollable when it cannot be. */
 export function Table({
   caption,
   children,
@@ -15,22 +16,20 @@ export function Table({
 }) {
   return (
     <div
-      className={clsx('overflow-x-auto', className)}
+      // Positioned, so hidden text inside wide tables cannot stretch the page on a phone.
+      className={clsx('relative overflow-x-auto', className)}
       role="region"
       aria-label={caption}
       tabIndex={0}
     >
-      <table className="w-full border-collapse text-left text-sm">
-        <caption className="sr-only">{caption}</caption>
-        {children}
-      </table>
+      <StackTable caption={caption}>{children}</StackTable>
     </div>
   );
 }
 
 export function THead({ children }: { children: ReactNode }) {
   return (
-    <thead className="border-b border-border bg-surface-muted/60 text-xs font-semibold uppercase tracking-wide text-muted">
+    <thead className="border-b border-border bg-surface-muted/60 text-xs text-muted">
       {children}
     </thead>
   );

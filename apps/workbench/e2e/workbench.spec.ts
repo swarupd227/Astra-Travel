@@ -93,7 +93,13 @@ test('navigation follows the role: an underwriter does not see governance screen
   await signIn(page, 'underwriter');
   if (isMobile) await page.getByRole('button', { name: 'Open navigation' }).click();
   const nav = page.getByRole('navigation', { name: 'Workbench' }).last();
+  // Their own groups start open; the others open on request.
+  await expect(nav.getByRole('link', { name: 'Referrals' })).toBeVisible();
+  for (const group of ['Partners', 'Compliance']) {
+    await nav.getByRole('button', { name: group }).click();
+  }
   await expect(nav.getByRole('link', { name: 'Accounts' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Filing register' })).toBeVisible();
   await expect(nav.getByRole('link', { name: 'Audit trail' })).toHaveCount(0);
   await page.goto('/governance/audit');
   await expect(page.getByText('You don’t have access to this page')).toBeVisible();

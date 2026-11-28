@@ -58,9 +58,8 @@ export default async function RulesPage() {
         <ChevronLeft aria-hidden className="size-4" /> Premium records
       </Link>
       <PageHeader
-        eyebrow="Billing"
         title="Commission and programme rules"
-        description="No commission or programme rate is assumed: an account with no approved rule has its records held. A second person approves each rule."
+        description="How commission and card premium are calculated. A second person approves each rule."
       />
 
       <Card className="mb-6">

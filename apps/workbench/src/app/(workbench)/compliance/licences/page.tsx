@@ -26,7 +26,6 @@ export default async function LicencesPage({
   return (
     <>
       <PageHeader
-        eyebrow="Compliance"
         title="Licences and registrations"
         description={`Active licences and registrations that expire within ${days} days, soonest first. An alert goes out 60 and 30 days before expiry; an account that has gone live cannot sell in a state once its licence there has expired.`}
       />

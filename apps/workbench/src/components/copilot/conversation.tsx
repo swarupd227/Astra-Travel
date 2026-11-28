@@ -1,118 +1,58 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState, useTransition } from 'react';
-import { ArrowUp, Check, CircleAlert, Loader2, ShieldCheck, Sparkles } from 'lucide-react';
+import clsx from 'clsx';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowUp, Check, CircleAlert, Loader2, ShieldCheck } from 'lucide-react';
 import { AnswerText } from '@/components/answer-text';
 import { STOP_EXPLANATIONS, TOOL_ACTIVITY, usd } from '@/lib/agents';
-import { askCopilot, runProgress, type RunProgress } from './actions';
+import { AgentMark } from './agent-mark';
+import { useCopilot, type Turn } from './provider';
 
-const SUGGESTIONS = [
-  'Which accounts are still in onboarding?',
-  'Have any event deliveries failed for good?',
-  'What changed on the platform today, and who changed it?',
-  'Which feature flags are switched on?',
-];
-
-interface Turn {
-  id: string;
-  question: string;
-  runId: string | null;
-  progress: RunProgress | null;
-  error: string | null;
-}
-
-const POLL_MS = 1_500;
-const MAX_WAIT_MS = 4 * 60_000;
-
-export function CopilotConsole({
-  available,
-  unavailableReason,
-}: {
-  available: boolean;
-  unavailableReason: string | null;
-}) {
-  const [turns, setTurns] = useState<Turn[]>([]);
+export function Conversation({ variant }: { variant: 'page' | 'panel' }) {
+  const { turns, busy, ask, unavailableReason, suggestions } = useCopilot();
   const [question, setQuestion] = useState('');
-  const [pending, startTransition] = useTransition();
   const endRef = useRef<HTMLDivElement>(null);
-  const busy =
-    pending ||
-    turns.some(
-      (t) => t.runId && (!t.progress || ['queued', 'running'].includes(t.progress.status)),
-    );
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const available = unavailableReason === null;
+  const panel = variant === 'panel';
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    if (turns.length) endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [turns]);
 
-  function update(id: string, patch: Partial<Turn>) {
-    setTurns((all) => all.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-  }
+  useEffect(() => {
+    if (panel) inputRef.current?.focus();
+  }, [panel]);
 
-  async function follow(turnId: string, runId: string) {
-    const started = Date.now();
-    while (Date.now() - started < MAX_WAIT_MS) {
-      await new Promise((r) => setTimeout(r, POLL_MS));
-      try {
-        const progress = await runProgress(runId);
-        update(turnId, { progress });
-        if (!['queued', 'running'].includes(progress.status)) return;
-      } catch {
-        // A transient failure; keep polling until the time limit.
-      }
-    }
-    update(turnId, {
-      error: 'The answer is taking longer than expected. Check back on this run later.',
-    });
-  }
-
-  function submit(text: string) {
-    const q = text.trim();
-    if (q.length < 3 || busy) return;
-    const turn: Turn = {
-      id: crypto.randomUUID(),
-      question: q,
-      runId: null,
-      progress: null,
-      error: null,
-    };
-    setTurns((all) => [...all, turn]);
-    setQuestion('');
-    startTransition(async () => {
-      const res = await askCopilot(q, turn.id);
-      if (!res.ok) {
-        update(turn.id, { error: res.message });
-        return;
-      }
-      update(turn.id, { runId: res.runId });
-      void follow(turn.id, res.runId);
-    });
-  }
+  const submit = (text: string) => {
+    if (ask(text)) setQuestion('');
+  };
 
   return (
-    <div className="flex min-h-[calc(100dvh-14rem)] flex-col">
-      <div className="flex-1 space-y-6" aria-live="polite">
+    <div className={clsx('flex flex-col', panel ? 'min-h-0 flex-1' : 'min-h-[calc(100dvh-14rem)]')}>
+      <div
+        className={clsx('flex-1 space-y-6', panel && 'min-h-0 overflow-y-auto px-4 py-4')}
+        aria-live="polite"
+      >
         {turns.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border-strong bg-surface px-6 py-10 text-center">
-            <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-full bg-primary-soft text-primary">
-              <Sparkles aria-hidden className="size-5" />
-            </div>
+          <div className="px-2 py-8 text-center">
+            <AgentMark size="lg" className="mx-auto mb-4" />
             <p className="font-semibold text-fg">
               Ask about accounts, events, deliveries, the audit trail or feature flags
             </p>
-            <p className="mx-auto mt-1 max-w-lg text-sm text-muted">
+            <p className="mx-auto mt-1.5 max-w-lg text-sm text-muted">
               The Copilot looks the answer up in records you’re allowed to see. It can’t change
               anything, and every step it takes is recorded.
             </p>
             {available ? (
-              <div className="mt-5 flex flex-wrap justify-center gap-2">
-                {SUGGESTIONS.map((s) => (
+              <div className="mt-5 flex flex-col items-stretch gap-2 sm:items-center">
+                {suggestions.map((s) => (
                   <button
                     key={s}
                     type="button"
                     onClick={() => submit(s)}
-                    className="rounded-full border border-border-strong bg-surface px-3.5 py-1.5 text-sm text-fg hover:border-primary hover:bg-primary-soft"
+                    className="rounded-xl border border-border bg-surface px-3.5 py-2 text-left text-sm text-fg shadow-card transition-colors hover:border-primary/50 hover:bg-primary-soft sm:text-center"
                   >
                     {s}
                   </button>
@@ -125,17 +65,12 @@ export function CopilotConsole({
         {turns.map((t) => (
           <article key={t.id} className="space-y-3">
             <div className="flex justify-end">
-              <p className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-[15px] text-primary-contrast">
+              <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-[15px] text-primary-contrast">
                 {t.question}
               </p>
             </div>
             <div className="flex gap-3">
-              <span
-                aria-hidden
-                className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary"
-              >
-                <Sparkles className="size-4" />
-              </span>
+              <AgentMark className="mt-1" />
               <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md border border-border bg-surface px-4 py-3 shadow-card">
                 <TurnBody turn={t} />
               </div>
@@ -146,7 +81,11 @@ export function CopilotConsole({
       </div>
 
       <form
-        className="sticky bottom-0 mt-6 bg-bg/90 pb-2 pt-3 backdrop-blur"
+        className={clsx(
+          panel
+            ? 'border-t border-border bg-surface px-4 pb-3 pt-3'
+            : 'sticky bottom-0 mt-6 bg-bg/90 pb-2 pt-3 backdrop-blur',
+        )}
         onSubmit={(e) => {
           e.preventDefault();
           submit(question);
@@ -163,9 +102,10 @@ export function CopilotConsole({
         <label htmlFor="copilot-question" className="sr-only">
           Your question
         </label>
-        <div className="flex items-end gap-2 rounded-2xl border border-border-strong bg-surface p-2 shadow-card focus-within:border-primary">
+        <div className="ai-ring flex items-end gap-2 rounded-2xl p-2 shadow-card">
           <textarea
             id="copilot-question"
+            ref={inputRef}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={(e) => {
@@ -178,12 +118,12 @@ export function CopilotConsole({
             maxLength={4000}
             disabled={!available}
             placeholder={available ? 'Ask the Operations Copilot…' : 'The Copilot is not available'}
-            className="max-h-40 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-[15px] text-fg outline-none placeholder:text-subtle"
+            className="field-sizing-content max-h-40 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-[15px] text-fg outline-none placeholder:text-subtle"
           />
           <button
             type="submit"
             disabled={!available || busy || question.trim().length < 3}
-            className="inline-flex size-10 items-center justify-center rounded-xl bg-primary text-primary-contrast disabled:opacity-40"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-contrast disabled:opacity-40"
             aria-label="Send question"
           >
             {busy ? (
@@ -193,8 +133,8 @@ export function CopilotConsole({
             )}
           </button>
         </div>
-        <p className="mt-2 flex items-center gap-1.5 px-1 text-xs text-muted">
-          <ShieldCheck aria-hidden className="size-3.5" />
+        <p className="mt-2 flex items-start gap-1.5 px-1 text-xs text-muted">
+          <ShieldCheck aria-hidden className="mt-0.5 size-3.5 shrink-0" />
           Answers come from an AI agent acting with your access. Card and social security numbers
           are removed before the model sees them.
         </p>
@@ -217,7 +157,7 @@ function TurnBody({ turn }: { turn: Turn }) {
   return (
     <div className="space-y-3">
       {activity.length || working ? (
-        <ul className="space-y-1 text-sm text-muted">
+        <ul className="space-y-1.5 text-sm text-muted">
           {activity.map((a, i) => (
             <li key={i} className="flex items-center gap-2">
               <Check aria-hidden className="size-3.5 text-success" /> {a}
@@ -226,7 +166,7 @@ function TurnBody({ turn }: { turn: Turn }) {
           {working ? (
             <li className="flex items-center gap-2">
               <Loader2 aria-hidden className="size-3.5 animate-spin text-primary" />
-              {p?.status === 'running' ? 'Thinking…' : 'Starting…'}
+              {p?.status === 'running' ? 'Working…' : 'Starting…'}
             </li>
           ) : null}
         </ul>

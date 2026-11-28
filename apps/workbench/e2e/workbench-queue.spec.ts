@@ -46,11 +46,19 @@ test('the work queue: a supervisor sees it with timers, and work is taken and ha
   await expect(page.getByRole('heading', { name: 'Work queue', level: 1 })).toBeVisible({
     timeout: 120_000,
   });
-  await expect(page.getByRole('heading', { name: 'How long work may wait' })).toBeVisible();
-  await expect(page.getByText('Overdue', { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByRole('navigation', { name: 'Queue views' }).getByRole('link', { name: /^Overdue/ }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Timers' }).click();
+  await expect(page.getByRole('dialog', { name: 'How long work may wait' })).toBeVisible();
+  await expectAccessible(page);
+  await page.keyboard.press('Escape');
   await expectAccessible(page);
 
-  const rows = page.getByRole('row').filter({ has: page.getByRole('button', { name: /^Take / }) });
+  const rows = page
+    .getByRole('list', { name: 'Work waiting for a person' })
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('button', { name: /^Take / }) });
   test.skip(
     (await rows.count()) === 0,
     'Nothing is waiting in this database; the API tests cover the queue',
@@ -60,8 +68,8 @@ test('the work queue: a supervisor sees it with timers, and work is taken and ha
   const heldBefore = await held.count();
 
   // The supervisor gives it to the first person listed.
-  await first.getByRole('combobox').selectOption({ index: 1 });
-  await first.getByRole('button', { name: 'Give', exact: true }).click();
+  await first.getByRole('button', { name: /^Assign / }).click();
+  await page.getByRole('menuitem').first().click();
   await expect(page.getByText('Done: assigned')).toBeVisible({ timeout: 60_000 });
   await expect(held).toHaveCount(heldBefore + 1);
 
@@ -78,15 +86,14 @@ test('policy search: a trip detail finds the policy and says what matched', asyn
   test.skip(isMobile, 'One journey is enough.');
   test.setTimeout(300_000);
   await signIn(page, 'account.manager', '/search');
-  await expect(page.getByRole('heading', { name: 'Find a policy', level: 1 })).toBeVisible({
+  // The old address of policy search leads to the Policies page, where search now lives.
+  await expect(page.getByRole('heading', { name: 'Policies', level: 1 })).toBeVisible({
     timeout: 120_000,
   });
   await expectAccessible(page);
   await page.getByRole('searchbox').fill('ATP-');
-  await page.getByRole('button', { name: 'Search' }).click();
-  const status = page
-    .getByRole('status')
-    .filter({ hasText: /for “ATP-” in \d+ ms|No policy found/ });
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  const status = page.getByRole('status').filter({ hasText: /for “ATP-”|No policy found/ });
   await expect(status.or(page.getByText('No policy found'))).toBeVisible({ timeout: 120_000 });
   await expectAccessible(page);
 });

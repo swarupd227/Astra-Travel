@@ -16,7 +16,7 @@ export const metadata = { title: 'Events & deliveries' };
 type Page<T> = { items: T[]; nextCursor: string | null };
 const VIEWS = [
   { key: 'events', label: 'Events' },
-  { key: 'dead', label: 'Dead-letter queue' },
+  { key: 'dead', label: 'Failed' },
   { key: 'deliveries', label: 'All deliveries' },
 ] as const;
 
@@ -30,9 +30,8 @@ export default async function EventsPage({ searchParams }: { searchParams: Searc
   return (
     <>
       <PageHeader
-        eyebrow="Operations"
         title="Events & deliveries"
-        description="Every business change raises an event. Events are delivered to each subscriber at least once; deliveries that use up their retries land in the dead-letter queue."
+        description="Changes on the platform, and whether each partner system received them."
       />
       <nav aria-label="Views" className="mb-4 flex gap-1 border-b border-border">
         {VIEWS.map((v) => (
@@ -88,7 +87,7 @@ async function EventsView({ params }: { params: Record<string, string | undefine
                 <TH>Event</TH>
                 <TH>Source</TH>
                 <TH>Account</TH>
-                <TH>Correlation ID</TH>
+                <TH>Reference</TH>
                 <TH>Time</TH>
                 <TH>Relayed</TH>
               </tr>
@@ -97,7 +96,9 @@ async function EventsView({ params }: { params: Record<string, string | undefine
               {result.data.items.map((e) => (
                 <TR key={e.id}>
                   <TD>
-                    <span className="font-medium">{e.type}</span>
+                    <span className="font-medium">
+                      {sentenceCase(e.type.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase())}
+                    </span>
                     <span className="ml-1.5 text-xs text-subtle">v{e.version}</span>
                   </TD>
                   <TD className="font-mono text-xs text-muted">{e.source}</TD>
@@ -171,7 +172,7 @@ async function DeliveriesView({
       {result.data.items.length === 0 ? (
         <EmptyState
           icon={<CheckCircle2 className="size-5" />}
-          title={dead ? 'The dead-letter queue is empty' : 'No deliveries yet'}
+          title={dead ? 'No failed deliveries' : 'No deliveries yet'}
           description={
             dead
               ? 'Every event has been delivered or is still being retried.'
@@ -180,7 +181,7 @@ async function DeliveriesView({
         />
       ) : (
         <>
-          <Table caption={dead ? 'Dead-lettered deliveries' : 'Event deliveries'}>
+          <Table caption={dead ? 'Failed deliveries' : 'Event deliveries'}>
             <THead>
               <tr>
                 <TH>Event</TH>

@@ -79,7 +79,7 @@ test('a sandbox journey and widget: price, options, test payment and documents',
   await expectAccessible(page);
   await page.getByLabel('Departure date').fill(iso(25));
   await page.getByLabel('Return date').fill(iso(32));
-  await page.getByLabel('Destination country').fill('FR');
+  await page.getByLabel('Destination country').selectOption('FR');
   await page.getByLabel('Destination region').fill('Europe');
   await page.getByLabel('First name').first().fill('Sam');
   await page

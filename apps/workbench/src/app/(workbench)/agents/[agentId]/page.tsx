@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CheckCircle2, ChevronLeft, CircleAlert, CircleX } from 'lucide-react';
+import { CheckCircle2, CircleAlert, CircleX } from 'lucide-react';
 import {
   PERMISSIONS,
   ROLE_LABELS,
@@ -12,7 +12,7 @@ import {
 } from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
 import { nameOf, peopleNames } from '@/lib/people';
-import { RUN_STATUS_TONES, usd } from '@/lib/agents';
+import { RUN_STATUS_TONES, TOOL_ACTIVITY, usd } from '@/lib/agents';
 import { sentenceCase } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
@@ -28,6 +28,7 @@ import {
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
 import { BudgetBar } from '@/components/budget-bar';
+import { BackLink } from '@/components/ui/back-link';
 import {
   AutoRefresh,
   BudgetForm,
@@ -75,12 +76,7 @@ export default async function AgentPage({ params }: { params: Promise<{ agentId:
   return (
     <>
       <AutoRefresh active={evaluating} />
-      <Link
-        href="/agents"
-        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg"
-      >
-        <ChevronLeft aria-hidden className="size-4" /> Agent registry
-      </Link>
+      <BackLink href="/agents">Agent registry</BackLink>
       <PageHeader
         eyebrow={`${a.id} · Autonomy ${a.autonomy}`}
         title={a.name}
@@ -92,10 +88,50 @@ export default async function AgentPage({ params }: { params: Promise<{ agentId:
 
       <div className="mb-6">
         {blockers.length ? (
-          <Notice tone={a.status === 'paused' ? 'danger' : 'warning'} title="Not serving requests">
-            {blockers.join(' ')}{' '}
-            {a.status === 'paused' && a.statusReason ? `Reason: ${a.statusReason}` : null}
-          </Notice>
+          <Card className="ai-surface overflow-hidden" aria-labelledby="release">
+            <CardHeader
+              titleId="release"
+              title="Not serving requests"
+              description={
+                a.status === 'paused'
+                  ? `Paused. ${a.statusReason ? `Reason: ${a.statusReason}` : ''}`
+                  : 'A person takes it through these steps. Nothing happens on its own.'
+              }
+            />
+            <ol className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                { title: 'Set what it may do', done: !!a.warrant, note: 'The warrant' },
+                { title: 'Set what it may spend', done: !!a.budget, note: 'A monthly budget' },
+                {
+                  title: 'Test it',
+                  done: !!a.liveVersion || a.versions.some((v) => v.latestEvaluation?.passed),
+                  note: 'A version passes its evaluation',
+                },
+                {
+                  title: 'Approve a version',
+                  done: !!a.liveVersion,
+                  note: 'It then serves requests',
+                },
+              ].map((step, i) => (
+                <li key={step.title} className="flex gap-3 bg-surface px-5 py-4">
+                  {step.done ? (
+                    <CheckCircle2 aria-label="Done" className="size-6 shrink-0 text-success" />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border-strong text-xs font-semibold text-muted"
+                    >
+                      {i + 1}
+                    </span>
+                  )}
+                  <span className="min-w-0 text-sm">
+                    <span className="block font-medium text-fg">{step.title}</span>
+                    <span className="block text-xs text-muted">{step.note}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </Card>
         ) : (
           <Notice tone="success" title={`Version ${a.liveVersion} is live`}>
             Serving requests under warrant version {a.warrantVersion}. {a.autonomyLabel}.
@@ -350,22 +386,25 @@ export default async function AgentPage({ params }: { params: Promise<{ agentId:
               {a.warrant ? (
                 <>
                   <div>
-                    <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-subtle">
+                    <p className="mb-1.5 text-xs font-semibold text-muted">
                       Permitted tools (calls per run)
                     </p>
                     <ul className="space-y-1">
                       {a.warrant.document.tools.map((t) => (
-                        <li key={t.name} className="flex justify-between gap-2">
-                          <span className="font-mono text-xs">{t.name}</span>
+                        <li key={t.name} className="flex justify-between gap-3">
+                          <span className="min-w-0">
+                            {TOOL_ACTIVITY[t.name] ?? sentenceCase(t.name)}
+                            <span className="block break-all font-mono text-[11px] text-subtle">
+                              {t.name}
+                            </span>
+                          </span>
                           <span className="tabular-nums text-muted">{t.maxCallsPerRun}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
                   <div>
-                    <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-subtle">
-                      Access it may use
-                    </p>
+                    <p className="mb-1.5 text-xs font-semibold text-muted">Access it may use</p>
                     <ul className="space-y-0.5 text-muted">
                       {a.warrant.document.dataAccess.map((p) => (
                         <li key={p}>{PERMISSIONS[p]}</li>

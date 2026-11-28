@@ -47,7 +47,7 @@ export function StatusDot({ tone }: { tone: Tone }) {
 export function Card({ className, ...props }: ComponentProps<'section'>) {
   return (
     <section
-      className={clsx('rounded-xl border border-border bg-surface shadow-card', className)}
+      className={clsx('rounded-2xl border border-border bg-surface shadow-card', className)}
       {...props}
     />
   );
@@ -91,11 +91,7 @@ export function PageHeader({
   return (
     <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0 max-w-3xl">
-        {eyebrow ? (
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-accent">
-            {eyebrow}
-          </p>
-        ) : null}
+        {eyebrow ? <p className="mb-1 text-xs font-medium text-muted">{eyebrow}</p> : null}
         <h1 className="text-2xl font-semibold tracking-tight text-fg">{title}</h1>
         {description ? <p className="mt-1.5 text-sm leading-6 text-muted">{description}</p> : null}
       </div>
@@ -169,7 +165,7 @@ export function DescriptionList({ items }: { items: { term: string; value: React
     <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
       {items.map((i) => (
         <div key={i.term} className="min-w-0">
-          <dt className="text-xs font-medium uppercase tracking-wide text-subtle">{i.term}</dt>
+          <dt className="text-xs font-medium text-muted">{i.term}</dt>
           <dd className="mt-1 break-words text-sm text-fg">{i.value}</dd>
         </div>
       ))}

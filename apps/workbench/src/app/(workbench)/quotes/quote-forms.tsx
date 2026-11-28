@@ -1,16 +1,41 @@
 'use client';
 
-import { useActionState } from 'react';
-import { Calculator, FileCheck2, RefreshCw } from 'lucide-react';
+import { useActionState, useState } from 'react';
+import { Calculator, FileCheck2, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import type { Quote } from '@astra/contracts';
-import { Field, FormMessage, Input, Select, SubmitButton, Textarea } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
+import { Field, FormMessage, Input, Select, SubmitButton } from '@/components/ui/form';
 import { idle, previous } from '@/lib/actions';
+import { COUNTRIES } from '@/lib/countries';
+import { fieldLabel } from '@/lib/field-labels';
+import { money } from '@/lib/format';
 import { changeSelection, createQuote, issuePolicy } from './actions';
 
 export interface PlanOption {
   code: string;
   label: string;
   state: string | null;
+}
+
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <fieldset className="min-w-0 rounded-2xl border border-border bg-surface p-5 shadow-card">
+      <legend className="sr-only">{title}</legend>
+      <div aria-hidden className="mb-4">
+        <p className="text-[15px] font-semibold text-fg">{title}</p>
+        {description ? <p className="mt-0.5 text-sm text-muted">{description}</p> : null}
+      </div>
+      <div className="space-y-4">{children}</div>
+    </fieldset>
+  );
 }
 
 export function NewQuoteForm({
@@ -24,7 +49,11 @@ export function NewQuoteForm({
 }) {
   const [state, action] = useActionState(createQuote, idle);
   const errors = state.status === 'error' ? state.fieldErrors : {};
+  const values = state.status === 'error' ? state.values : {};
   const keep = (name: string, fallback = '') => previous(state, name) ?? fallback;
+  const [people, setPeople] = useState([0]);
+  const [saleState, setSaleState] = useState('');
+
   const text = (
     name: string,
     label: string,
@@ -32,7 +61,6 @@ export function NewQuoteForm({
       required?: boolean;
       type?: string;
       hint?: string;
-      className?: string;
       fallback?: string;
     } = {},
   ) => (
@@ -44,131 +72,202 @@ export function NewQuoteForm({
           type={opts.type ?? 'text'}
           required={opts.required}
           defaultValue={keep(name, opts.fallback)}
-          className={opts.className}
           aria-invalid={f.invalid}
           aria-describedby={f.describedBy}
         />
       )}
     </Field>
   );
+
+  const traveller = (
+    index: number,
+    name: string,
+    label: string,
+    props: React.ComponentProps<'input'>,
+    hint?: string,
+  ) => (
+    <Field label={label} hint={hint} error={errors[`travellers.${index}.${name}`]}>
+      {(f) => (
+        <Input
+          id={f.id}
+          name={name}
+          defaultValue={values[name]?.[index] ?? ''}
+          aria-invalid={f.invalid}
+          aria-describedby={f.describedBy}
+          {...props}
+        />
+      )}
+    </Field>
+  );
+
   return (
-    <form action={action} className="space-y-6" noValidate>
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="Account" required error={errors.accountId}>
-          {(f) => (
-            <Select
-              id={f.id}
-              name="accountId"
-              required
-              defaultValue={keep('accountId')}
-              aria-invalid={f.invalid}
-              aria-describedby={f.describedBy}
-            >
-              <option value="">Choose…</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
-        <Field
-          label="Plan"
-          required
-          error={errors.planCode}
-          hint={plans.length ? undefined : 'No state plan is published yet.'}
-        >
-          {(f) => (
-            <Select
-              id={f.id}
-              name="planCode"
-              required
-              defaultValue={keep('planCode')}
-              aria-invalid={f.invalid}
-              aria-describedby={f.describedBy}
-            >
-              <option value="">Choose…</option>
-              {plans.map((p) => (
-                <option key={p.code} value={p.code}>
-                  {p.label}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
-        {text('state', 'State of sale', {
-          required: true,
-          className: 'uppercase',
-          hint: 'Two letters, for example DE.',
-        })}
-      </div>
-      <fieldset className="space-y-4 rounded-lg border border-border p-4">
-        <legend className="px-1 text-sm font-medium text-fg">First traveller</legend>
-        <div className="grid gap-4 sm:grid-cols-4">
-          {text('firstName', 'First name', { required: true })}
-          {text('lastName', 'Last name', { required: true })}
-          {text('dateOfBirth', 'Date of birth', { type: 'date', hint: 'Or give an age.' })}
-          {text('age', 'Age', { type: 'number' })}
+    <form action={action} className="space-y-5" noValidate>
+      <Section title="Sale">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_2fr_1fr]">
+          <Field label="Account" required error={errors.accountId}>
+            {(f) => (
+              <Select
+                id={f.id}
+                name="accountId"
+                required
+                defaultValue={keep('accountId')}
+                aria-invalid={f.invalid}
+                aria-describedby={f.describedBy}
+              >
+                <option value="">Choose an account</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.label}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <Field
+            label="Plan"
+            required
+            error={errors.planCode}
+            hint={plans.length ? undefined : 'No state plan is published yet.'}
+          >
+            {(f) => (
+              <Select
+                id={f.id}
+                name="planCode"
+                required
+                defaultValue={keep('planCode')}
+                onChange={(e) =>
+                  setSaleState(plans.find((p) => p.code === e.target.value)?.state ?? '')
+                }
+                aria-invalid={f.invalid}
+                aria-describedby={f.describedBy}
+              >
+                <option value="">Choose a plan</option>
+                {plans.map((p) => (
+                  <option key={p.code} value={p.code}>
+                    {p.label}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <Field label="State of sale" required hint="Filled from the plan." error={errors.state}>
+            {(f) => (
+              <Input
+                id={f.id}
+                name="state"
+                required
+                maxLength={2}
+                value={saleState}
+                onChange={(e) => setSaleState(e.target.value.toUpperCase())}
+                aria-invalid={f.invalid}
+                aria-describedby={f.describedBy}
+              />
+            )}
+          </Field>
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {text('costPerTraveller', 'Trip cost per traveller', {
-            required: true,
-            hint: 'For example 4200.00',
-          })}
-          {text('insuredPercent', 'Trip costs insured (%)', { type: 'number', fallback: '100' })}
-          {text('businessSegment', 'Business segment')}
-        </div>
-        <Field
-          label="More travellers"
-          hint="One per line: first name, last name, date of birth, trip cost (the cost is optional)."
+      </Section>
+
+      <Section title="Travellers" description="Give each traveller a date of birth or an age.">
+        <ol className="space-y-4">
+          {people.map((id, index) => (
+            <li key={id} className="rounded-xl border border-border p-4">
+              <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-fg">Traveller {index + 1}</p>
+                {people.length > 1 ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setPeople((all) => all.filter((x) => x !== id))}
+                    aria-label={`Remove traveller ${index + 1}`}
+                  >
+                    <Trash2 aria-hidden className="size-4" /> Remove
+                  </Button>
+                ) : null}
+              </div>
+              <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_2fr_2fr_1fr_2fr]">
+                {traveller(index, 'firstName', 'First name', { required: true })}
+                {traveller(index, 'lastName', 'Last name', { required: true })}
+                {traveller(index, 'dateOfBirth', 'Date of birth', { type: 'date' })}
+                {traveller(index, 'age', 'Age', { type: 'number', min: 0 })}
+                {traveller(
+                  index,
+                  'costPerTraveller',
+                  'Trip cost (USD)',
+                  { inputMode: 'decimal', required: index === 0 },
+                  index ? 'Blank: as traveller 1.' : undefined,
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={people.length >= 20}
+          onClick={() => setPeople((all) => [...all, Math.max(...all) + 1])}
         >
-          {(f) => (
-            <Textarea
-              id={f.id}
-              name="moreTravellers"
-              rows={2}
-              defaultValue={keep('moreTravellers')}
-              aria-describedby={f.describedBy}
-            />
-          )}
-        </Field>
-      </fieldset>
-      <fieldset className="space-y-4 rounded-lg border border-border p-4">
-        <legend className="px-1 text-sm font-medium text-fg">Trip</legend>
-        <div className="grid gap-4 sm:grid-cols-4">
-          {text('purchaseDate', 'Purchase date', { type: 'date', fallback: today })}
-          {text('initialDepositDate', 'Initial deposit date', {
-            type: 'date',
-            hint: 'Needed for the waiver and CFAR time conditions.',
-          })}
+          <Plus aria-hidden className="size-4" /> Add a traveller
+        </Button>
+      </Section>
+
+      <Section title="Trip">
+        <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {text('departureDate', 'Departure', { type: 'date', required: true })}
           {text('returnDate', 'Return', { type: 'date', required: true })}
-        </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {text('destinationCountry', 'Destination country', {
-            className: 'uppercase',
-            hint: 'Two letters, for example FR.',
-          })}
+          <Field label="Destination country" error={errors.destinationCountry}>
+            {(f) => (
+              <Select
+                id={f.id}
+                name="destinationCountry"
+                defaultValue={keep('destinationCountry')}
+                aria-describedby={f.describedBy}
+              >
+                <option value="">Not given</option>
+                {COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
           {text('destinationRegion', 'Destination region', {
-            hint: 'As the rate manual names it.',
+            hint: 'As the rates name it, for example Europe.',
           })}
-          {text('penaltyDays', 'Cancellation penalty days', { type: 'number' })}
         </div>
-      </fieldset>
+        <details className="rounded-xl border border-border">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-fg">
+            More options
+          </summary>
+          <div className="grid items-start gap-4 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-3">
+            {text('purchaseDate', 'Purchase date', { type: 'date', fallback: today })}
+            {text('initialDepositDate', 'Initial deposit date', {
+              type: 'date',
+              hint: 'Used by the waiver and cancel-for-any-reason time limits.',
+            })}
+            {text('insuredPercent', 'Trip costs insured (%)', { type: 'number', fallback: '100' })}
+            {text('businessSegment', 'Business segment')}
+            {text('penaltyDays', 'Cancellation penalty days', { type: 'number' })}
+          </div>
+        </details>
+      </Section>
+
       <FormMessage state={state} />
       {state.status === 'error' && Object.keys(errors).length ? (
         <ul className="list-disc space-y-1 pl-5 text-sm text-danger">
           {Object.entries(errors).map(([k, m]) => (
             <li key={k + m}>
-              {k}: {m}
+              {fieldLabel(k)}: {m}
             </li>
           ))}
         </ul>
       ) : null}
-      <SubmitButton pendingLabel="Pricing…">
-        <Calculator aria-hidden className="size-4" /> Get a quote
-      </SubmitButton>
+      <div className="flex flex-wrap items-center gap-4">
+        <SubmitButton pendingLabel="Pricing…">
+          <Calculator aria-hidden className="size-4" /> Get a quote
+        </SubmitButton>
+        <p className="text-sm text-muted">Nothing is bought until the traveller pays.</p>
+      </div>
     </form>
   );
 }
@@ -185,22 +284,26 @@ export function SelectionForm({ quote }: { quote: Quote }) {
       <ul className="space-y-2">
         {optional.map((b) => (
           <li key={b.code}>
-            <label className="flex items-start gap-2 text-sm">
+            <label className="flex items-start gap-3 rounded-xl border border-border p-3 text-sm has-[:checked]:border-primary/50 has-[:checked]:bg-primary-soft">
               <input
                 type="checkbox"
                 name="selection"
                 value={b.code}
                 defaultChecked={b.selected}
                 disabled={!b.available && !b.selected}
-                className="mt-1"
+                className="mt-0.5 size-4"
               />
-              <span>
-                <span className="font-medium text-fg">{b.name}</span>
-                {b.premium ? (
-                  <span className="ml-2 font-mono text-xs text-muted">{b.premium}</span>
-                ) : null}
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap justify-between gap-x-3">
+                  <span className="font-medium text-fg">{b.name}</span>
+                  {b.premium ? (
+                    <span className="tabular-nums text-fg">{money(b.premium)}</span>
+                  ) : null}
+                </span>
                 {!b.available ? (
-                  <span className="block text-xs text-warning">Not available: {b.reason}</span>
+                  <span className="block text-xs text-warning">
+                    Not available: {b.reason?.replace(/^Not available:s*/, '')}
+                  </span>
                 ) : null}
               </span>
             </label>
@@ -251,7 +354,9 @@ export function IssueForm({ quote, keyId }: { quote: Quote; keyId: string }) {
         </Field>
         <Field
           label="Amount paid"
-          hint={`Must equal the premium, ${quote.premium?.total ?? ''}.`}
+          hint={
+            quote.premium ? `Must equal the premium, ${money(quote.premium.total)}.` : undefined
+          }
           required
           error={errors['payment.amount']}
         >
@@ -290,7 +395,7 @@ export function IssueForm({ quote, keyId }: { quote: Quote; keyId: string }) {
       </SubmitButton>
       <p className="text-xs text-muted">
         The policy records you as the person who issued it. Eligibility, sanctions and payment are
-        checked again exactly as for the API.
+        checked again.
       </p>
     </form>
   );

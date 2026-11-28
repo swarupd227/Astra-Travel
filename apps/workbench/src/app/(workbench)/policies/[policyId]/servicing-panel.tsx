@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useId, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { ClipboardCheck, Eye } from 'lucide-react';
 import { SERVICING_LABELS, SERVICING_TYPES, type ServicingType } from '@astra/contracts';
 import { Field, FormMessage, Input, Select, SubmitButton, Textarea } from '@/components/ui/form';
@@ -23,8 +23,12 @@ export function ServicingPanel({ policyId, travellers, optionalBenefits }: Props
   const [type, setType] = useState<ServicingType>('cancel');
   const [state, preview] = useActionState<PreviewState, FormData>(previewServicing, idle);
   const [applied, apply] = useActionState(applyServicing, idle);
-  const key = useId();
   const p = state.status === 'success' ? state.preview : undefined;
+  const previewRef = useRef<HTMLDivElement>(null);
+  // The price and the confirm button come into view when they arrive.
+  useEffect(() => {
+    if (p) previewRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [p]);
   const traveller = (
     <Field label="Traveller">
       {(f) => (
@@ -220,7 +224,11 @@ export function ServicingPanel({ policyId, travellers, optionalBenefits }: Props
       </form>
 
       {p ? (
-        <div className="space-y-4 rounded-lg border border-border p-4" aria-live="polite">
+        <div
+          ref={previewRef}
+          className="space-y-4 rounded-xl border border-border p-4"
+          aria-live="polite"
+        >
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-semibold text-fg">
               {p.allowed ? 'What would change' : 'This cannot be done'}
@@ -253,8 +261,8 @@ export function ServicingPanel({ policyId, travellers, optionalBenefits }: Props
                     {p.changes.map((c, i) => (
                       <TR key={i}>
                         <TD>{c.what}</TD>
-                        <TD className="font-mono text-xs break-all">{c.before}</TD>
-                        <TD className="font-mono text-xs break-all">{c.after}</TD>
+                        <TD className="break-words">{c.before}</TD>
+                        <TD className="break-words font-medium">{c.after}</TD>
                       </TR>
                     ))}
                   </tbody>
@@ -264,17 +272,17 @@ export function ServicingPanel({ policyId, travellers, optionalBenefits }: Props
                 {p.premium ? (
                   <>
                     <dt className="text-muted">Premium</dt>
-                    <dd className="font-mono">
+                    <dd className="tabular-nums">
                       {money(p.premium.before)} → {money(p.premium.after)}
                     </dd>
                   </>
                 ) : null}
                 <dt className="text-muted">Charged</dt>
-                <dd className="font-mono">{money(p.money.charge)}</dd>
+                <dd className="tabular-nums">{money(p.money.charge)}</dd>
                 <dt className="text-muted">Refunded</dt>
-                <dd className="font-mono">{money(p.money.refund)}</dd>
+                <dd className="tabular-nums">{money(p.money.refund)}</dd>
                 <dt className="text-muted">Kept</dt>
-                <dd className="font-mono">{money(p.money.retained)}</dd>
+                <dd className="tabular-nums">{money(p.money.retained)}</dd>
               </dl>
               <p className="text-sm text-muted">{p.money.explanation}</p>
               <form action={apply} className="space-y-3">
@@ -288,10 +296,7 @@ export function ServicingPanel({ policyId, travellers, optionalBenefits }: Props
                 <input
                   type="hidden"
                   name="idempotencyKey"
-                  value={`${key}-${p.confirmAmount}-${p.summary.length}`.replace(
-                    /[^A-Za-z0-9._:-]/g,
-                    '-',
-                  )}
+                  value={state.status === 'success' ? (state.idempotencyKey ?? '') : ''}
                 />
                 <FormMessage state={applied} />
                 <SubmitButton pendingLabel="Making the change…">

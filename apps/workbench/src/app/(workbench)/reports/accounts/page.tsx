@@ -1,5 +1,6 @@
 import type { AccountReport, SalesRow } from '@astra/contracts';
 import { api, getMe } from '@/lib/api';
+import { money } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
 import { PeriodForm, periodFrom } from '@/components/report-period';
@@ -34,9 +35,9 @@ function Sales({ title, first, rows }: { title: string; first: string; rows: Sal
               <TR key={r.key}>
                 <TD>{r.label}</TD>
                 <TD className="text-right tabular-nums">{r.policiesSold}</TD>
-                <TD className="text-right tabular-nums">{r.premiumCharged}</TD>
-                <TD className="text-right tabular-nums">{r.premiumRefunded}</TD>
-                <TD className="text-right font-medium tabular-nums">{r.netPremium}</TD>
+                <TD className="text-right tabular-nums">{money(r.premiumCharged)}</TD>
+                <TD className="text-right tabular-nums">{money(r.premiumRefunded)}</TD>
+                <TD className="text-right font-medium tabular-nums">{money(r.netPremium)}</TD>
                 <TD className="text-right tabular-nums">{r.cancellations}</TD>
                 <TD className="text-right tabular-nums">{r.refunds}</TD>
               </TR>
@@ -62,9 +63,8 @@ export default async function AccountReportsPage({
   return (
     <>
       <PageHeader
-        eyebrow="Reports"
         title="Account reports"
-        description="Sales, premium, take-up, cancellations and refunds, worked out when you open the page from the premium records, quotes and policies. Amounts are in US dollars by the UTC date of each transaction. Sandbox accounts are left out."
+        description="Sales, premium, take-up and refunds by account, in US dollars by UTC transaction date. Sandbox accounts are left out."
       />
       <Card className="mb-6">
         <PeriodForm {...p} csvHref={`/api/reports/accounts?from=${p.from}&to=${p.to}`} />
@@ -72,9 +72,9 @@ export default async function AccountReportsPage({
       <dl className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           ['Policies sold', String(r.totals.policiesSold)],
-          ['Net premium', r.totals.netPremium],
+          ['Net premium', money(r.totals.netPremium)],
           ['Cancellations', String(r.totals.cancellations)],
-          ['Refunded', r.totals.premiumRefunded],
+          ['Refunded', money(r.totals.premiumRefunded)],
         ].map(([label, value]) => (
           <div key={label} className="rounded-xl border border-border bg-surface p-4 shadow-card">
             <dt className="text-xs font-medium uppercase tracking-wide text-muted">{label}</dt>

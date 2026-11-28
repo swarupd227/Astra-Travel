@@ -1,7 +1,14 @@
+import Link from 'next/link';
 import { ROLE_LABELS } from '@astra/contracts';
+import { quickActions } from '@/lib/actions-menu';
+import { getAgents } from '@/lib/agent-data';
+import { copilotSuggestions, copilotUnavailableReason } from '@/lib/agents';
 import { getMe, getSession } from '@/lib/api';
 import { env } from '@/lib/env';
-import { visibleNavigation } from '@/lib/navigation';
+import { homeGroups, visibleNavigation } from '@/lib/navigation';
+import { CopilotButton, CopilotPanel, CopilotShift } from '@/components/copilot/panel';
+import { CopilotProvider } from '@/components/copilot/provider';
+import { CommandMenu, type CommandEntry } from '@/components/shell/command-menu';
 import { MobileNav, Sidebar } from '@/components/shell/sidebar';
 import { UserMenu } from '@/components/shell/user-menu';
 import { Logo } from '@/components/shell/logo';
@@ -37,40 +44,69 @@ export default async function WorkbenchLayout({ children }: { children: React.Re
     );
   }
 
-  const sections = visibleNavigation(me.permissions);
+  const navigation = visibleNavigation(me.permissions);
+  const defaultOpen = homeGroups(me.roles);
   const environment = environmentName();
   const name = me.name ?? session?.name ?? me.subject;
 
+  const commands: CommandEntry[] = [
+    ...quickActions(me.permissions).map((a) => ({ ...a, section: 'Action' })),
+    ...navigation.primary.map((i) => ({ ...i, section: 'Page' })),
+    ...navigation.groups.flatMap((g) => g.items.map((i) => ({ ...i, section: g.label }))),
+  ].map(({ href, label, section, description }) => ({ href, label, section, description }));
+
+  const canAsk = me.permissions.includes('agents:use');
+  const copilot = {
+    allowed: canAsk,
+    unavailableReason: canAsk ? copilotUnavailableReason(await getAgents()) : null,
+    suggestions: copilotSuggestions(me.permissions),
+  };
+
   return (
-    <div className="min-h-dvh">
-      <a
-        href="#main"
-        className="sr-only z-50 rounded-md bg-primary px-4 py-2 text-primary-contrast focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
-      >
-        Skip to main content
-      </a>
-      <Sidebar sections={sections} environment={environment} />
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-border bg-surface/85 px-4 backdrop-blur sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 lg:hidden">
-            <MobileNav sections={sections} environment={environment} />
-            <span className="rounded-lg bg-sidebar px-2 py-1">
-              <Logo />
-            </span>
-          </div>
-          <p className="hidden text-sm text-muted lg:block">
-            Assurant Travel · Policy management platform
-          </p>
-          <UserMenu name={name} email={me.email} roleLabels={me.roles.map((r) => ROLE_LABELS[r])} />
-        </header>
-        <main
-          id="main"
-          tabIndex={-1}
-          className="mx-auto max-w-7xl px-4 py-8 outline-none sm:px-6 lg:px-8"
+    <CopilotProvider availability={copilot}>
+      <div className="min-h-dvh">
+        <a
+          href="#main"
+          className="sr-only z-50 rounded-md bg-primary px-4 py-2 text-primary-contrast focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
         >
-          {children}
-        </main>
+          Skip to main content
+        </a>
+        <Sidebar navigation={navigation} defaultOpen={defaultOpen} environment={environment} />
+        <CopilotShift>
+          <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-border bg-surface/85 px-3 backdrop-blur sm:gap-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-1 lg:hidden">
+              <MobileNav
+                navigation={navigation}
+                defaultOpen={defaultOpen}
+                environment={environment}
+              />
+              <Link href="/" aria-label="Astra Travel home" className="rounded-lg md:mr-2">
+                <Logo tone="default" wordmarkClassName="max-[419px]:hidden" />
+              </Link>
+            </div>
+            <div className="flex min-w-0 flex-1 justify-end sm:justify-start">
+              <CommandMenu
+                entries={commands}
+                canSearchPolicies={me.permissions.includes('policies:read')}
+              />
+            </div>
+            <CopilotButton />
+            <UserMenu
+              name={name}
+              email={me.email}
+              roleLabels={me.roles.map((r) => ROLE_LABELS[r])}
+            />
+          </header>
+          <main
+            id="main"
+            tabIndex={-1}
+            className="mx-auto max-w-7xl px-4 py-6 outline-none sm:px-6 sm:py-8 lg:px-8"
+          >
+            {children}
+          </main>
+        </CopilotShift>
+        <CopilotPanel />
       </div>
-    </div>
+    </CopilotProvider>
   );
 }

@@ -7,6 +7,7 @@ import { api, ApiProblem, getMe } from '@/lib/api';
 import { sentenceCase } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
+import { plainReason } from '@/lib/plain-errors';
 import { Badge, Card, CardHeader, DescriptionList, PageHeader } from '@/components/ui/primitives';
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
@@ -84,7 +85,7 @@ export default async function DocumentPage({
               {d.text}
             </pre>
           ) : (
-            <p className="p-5 text-sm text-danger">{d.failure}</p>
+            <p className="p-5 text-sm text-danger">{plainReason(d.failure ?? '')}</p>
           )}
         </Card>
         <div className="space-y-6">
@@ -147,7 +148,9 @@ export default async function DocumentPage({
                           </span>
                         ) : null}
                         {x.lastError ? (
-                          <span className="mt-1 block text-xs text-danger">{x.lastError}</span>
+                          <span className="mt-1 block text-xs text-danger">
+                            {plainReason(x.lastError ?? '')}
+                          </span>
                         ) : null}
                       </TD>
                     </TR>

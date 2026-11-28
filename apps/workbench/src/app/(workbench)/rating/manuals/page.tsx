@@ -27,9 +27,8 @@ export default async function ManualsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Rating"
         title="Rate manuals"
-        description="Filed manuals by state and benefit, with their tables and formula. A manual is used for rating only once it is approved by a second analyst, filed and approved in its state, and matches every parity case to the cent."
+        description="Filed rates by state and benefit. A manual prices quotes only after approval and testing."
         actions={
           me.permissions.includes('rating:manage') ? (
             <LoadManualDialog

@@ -1,5 +1,6 @@
 import type { FieldError } from '@astra/contracts';
 import { ApiProblem } from './api-problem';
+import { plainMessage } from './plain-errors';
 
 /** Result of a server action, rendered by forms with useActionState. */
 export type ActionState =
@@ -30,10 +31,11 @@ export function fromError(err: unknown, form?: FormData): ActionState {
   const values = submittedValues(form);
   if (err instanceof ApiProblem) {
     const fieldErrors: Record<string, string> = {};
-    for (const e of err.problem.errors ?? ([] as FieldError[])) fieldErrors[e.field] = e.message;
+    for (const e of err.problem.errors ?? ([] as FieldError[]))
+      fieldErrors[e.field] = plainMessage(e.message);
     return {
       status: 'error',
-      message: err.problem.detail ?? err.problem.title,
+      message: plainMessage(err.problem.detail ?? err.problem.title),
       fieldErrors,
       correlationId: err.problem.correlationId,
       values,

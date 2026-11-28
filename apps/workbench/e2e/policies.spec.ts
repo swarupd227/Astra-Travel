@@ -54,7 +54,9 @@ test('staff review a quote, re-rate it, and read a policy as it was at a date', 
 
   // Ticking an optional benefit re-rates the same quote.
   const total = await page.getByRole('heading', { level: 1 }).innerText();
-  await page.getByRole('checkbox', { name: /Trip Interruption/ }).check();
+  // Whichever way the quote stands, changing the option changes its price.
+  const option = page.getByRole('checkbox', { name: /Trip Interruption/ });
+  await option.setChecked(!(await option.isChecked()));
   await page.getByRole('button', { name: 'Re-rate' }).click();
   await expect(page.getByText('Re-rated. The quote keeps its number.')).toBeVisible({
     timeout: 60_000,

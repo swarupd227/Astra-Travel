@@ -39,9 +39,8 @@ export default async function WebhooksPage({ searchParams }: { searchParams: Sea
   return (
     <>
       <PageHeader
-        eyebrow="Integrations"
         title="Webhooks"
-        description="Partner endpoints that receive signed event notifications. Failed deliveries are retried with exponential back-off for about nine hours, then dead-lettered."
+        description="Where partners are notified of changes. Failed deliveries are retried for about nine hours."
         actions={
           canManage && selectable.length > 0 ? (
             <CreateWebhookDialog

@@ -9,24 +9,28 @@ import { fromError, text, type ActionState } from '@/lib/actions';
 
 const num = (v: string) => (v === '' ? undefined : Number(v));
 
-/** Prices a trip for one or more travellers. Extra travellers are read from the "more travellers" lines. */
+/** The travellers on the form: each field repeats once per person, in order. */
+function travellersFrom(form: FormData) {
+  const column = (name: string) => form.getAll(name).map((v) => String(v).trim());
+  const first = column('firstName');
+  const last = column('lastName');
+  const born = column('dateOfBirth');
+  const age = column('age');
+  const cost = column('costPerTraveller');
+  return first.map((firstName, i) => ({
+    firstName,
+    lastName: last[i] ?? '',
+    ...(born[i] ? { dateOfBirth: born[i] } : {}),
+    ...(age[i] ? { age: Number(age[i]) } : {}),
+    // A cost left blank for a companion is the same as the first traveller's.
+    costPerTraveller: cost[i] || (cost[0] ?? ''),
+  }));
+}
+
+/** Prices a trip for one or more travellers. */
 export async function createQuote(_prev: ActionState, form: FormData): Promise<ActionState> {
-  const extra = text(form, 'moreTravellers')
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((l) => {
-      const [first = '', last = '', dob = '', cost = ''] = l.split(',').map((x) => x.trim());
-      return {
-        firstName: first,
-        lastName: last,
-        ...(dob ? { dateOfBirth: dob } : {}),
-        costPerTraveller: cost || text(form, 'costPerTraveller'),
-      };
-    });
   const country = text(form, 'destinationCountry').toUpperCase();
   const region = text(form, 'destinationRegion');
-  const dob = text(form, 'dateOfBirth');
   let quote: Quote;
   try {
     quote = await api<Quote>('/v1/quotes', {
@@ -36,16 +40,7 @@ export async function createQuote(_prev: ActionState, form: FormData): Promise<A
         accountId: text(form, 'accountId'),
         planCode: text(form, 'planCode'),
         state: text(form, 'state').toUpperCase(),
-        travellers: [
-          {
-            firstName: text(form, 'firstName'),
-            lastName: text(form, 'lastName'),
-            ...(dob ? { dateOfBirth: dob } : {}),
-            ...(text(form, 'age') ? { age: num(text(form, 'age')) } : {}),
-            costPerTraveller: text(form, 'costPerTraveller'),
-          },
-          ...extra,
-        ],
+        travellers: travellersFrom(form),
         trip: {
           ...(text(form, 'purchaseDate') ? { purchaseDate: text(form, 'purchaseDate') } : {}),
           ...(text(form, 'initialDepositDate')

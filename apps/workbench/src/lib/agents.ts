@@ -1,4 +1,30 @@
 /** Display helpers for agent screens. */
+import type { AgentSummary, Permission } from '@astra/contracts';
+
+export const COPILOT_ID = 'AG-10';
+
+/** Why the Operations Copilot cannot answer, in words for the person asking; null when it can. */
+export function copilotUnavailableReason(agents: AgentSummary[] | null): string | null {
+  if (!agents) return 'The Copilot’s status could not be checked. Reload the page to try again.';
+  const copilot = agents.find((a) => a.id === COPILOT_ID);
+  if (!copilot) return 'The Operations Copilot is not registered on this platform.';
+  if (copilot.status !== 'active')
+    return `The Operations Copilot is ${copilot.status}: ${copilot.statusReason ?? 'no reason given'}.`;
+  if (!copilot.liveVersion)
+    return 'The Operations Copilot has no approved version yet. An AI governance lead must evaluate and approve it.';
+  return null;
+}
+
+/** Starter questions the Copilot can answer with the person's own access. */
+export function copilotSuggestions(permissions: readonly Permission[]): string[] {
+  const all: [Permission, string][] = [
+    ['accounts:read', 'Which accounts are still in onboarding?'],
+    ['events:read', 'Have any event deliveries failed for good?'],
+    ['audit:read', 'What changed on the platform today, and who changed it?'],
+    ['flags:read', 'Which feature flags are switched on?'],
+  ];
+  return all.filter(([p]) => permissions.includes(p)).map(([, question]) => question);
+}
 
 export const TOOL_ACTIVITY: Record<string, string> = {
   list_accounts: 'Looking up accounts',

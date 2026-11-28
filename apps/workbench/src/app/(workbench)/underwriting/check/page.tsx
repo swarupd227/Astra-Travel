@@ -20,14 +20,13 @@ export default async function CheckPage() {
     .filter((p) => p.current)
     .map((p) => ({
       id: p.current!.id,
-      label: `${p.code} · ${p.state} · version ${p.current!.version} (${p.current!.status})`,
+      label: `${p.name} (${p.code}), version ${p.current!.version}, ${p.current!.status}`,
     }));
   return (
     <>
       <PageHeader
-        eyebrow="Underwriting"
         title="Eligibility check"
-        description="Run a case through the rules a quote or bind would use: plan limits, prohibited destinations, sanctions screening, duplicate cover, referral rules, the pre-existing waiver and CFAR. Nothing is saved."
+        description="Test a case against the same rules a quote uses, including sanctions screening. Nothing is saved."
       />
       <CheckForm planVersions={versions} today={new Date().toISOString().slice(0, 10)} />
     </>

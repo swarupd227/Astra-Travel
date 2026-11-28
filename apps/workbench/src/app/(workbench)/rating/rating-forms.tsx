@@ -489,10 +489,7 @@ export function RatingCalculator({ manuals }: { manuals: { id: string; label: st
               <Input id={f.id} name="airCost" inputMode="decimal" defaultValue={k('airCost')} />
             )}
           </Field>
-          <Field
-            label="CFAR eligibility decision"
-            hint="From the CFAR eligibility rules (Increment 7)."
-          >
+          <Field label="CFAR eligibility decision" hint="From the cancel-for-any-reason rules.">
             {(f) => (
               <Select
                 id={f.id}

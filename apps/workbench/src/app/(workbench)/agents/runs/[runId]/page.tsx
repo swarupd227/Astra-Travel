@@ -228,7 +228,7 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
                 { term: 'Cost', value: usd(r.costUsd) },
                 { term: 'Stop reason', value: r.stopReason ? sentenceCase(r.stopReason) : '—' },
                 {
-                  term: 'Correlation ID',
+                  term: 'Reference',
                   value: (
                     <Link
                       className="break-all font-mono text-xs text-primary hover:underline"

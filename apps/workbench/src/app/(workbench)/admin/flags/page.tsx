@@ -23,9 +23,8 @@ export default async function FlagsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Governance"
         title="Feature flags"
-        description="Release switches. New capabilities ship turned off and are turned on globally or for one account at a time, so a release can be rolled back without a deployment."
+        description="Switch new features on for everyone or one account at a time, and off again without a release."
       />
       <div className="space-y-4">
         {flags.data.items.map((f) => (

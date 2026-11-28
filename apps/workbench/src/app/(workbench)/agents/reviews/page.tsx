@@ -25,9 +25,8 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Sear
   return (
     <>
       <PageHeader
-        eyebrow="AI agents"
         title="Agent reviews"
-        description="Work that agents handed to people: requests made while an agent was paused or over budget, warrant refusals, withheld answers and failures."
+        description="Work the agents passed to people, with the reason for each."
       />
       <nav aria-label="Review status" className="mb-4 flex gap-1 border-b border-border">
         {(['open', 'resolved'] as const).map((s) => (

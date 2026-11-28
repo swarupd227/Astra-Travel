@@ -7,42 +7,96 @@ import {
   type CatalogueDocument,
   type Policy,
   type PlanVersion,
+  type PolicyEvent,
 } from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
-import { sentenceCase } from '@/lib/format';
+import { countryName, dayRange, formatDay, formatDayTime, money, sentenceCase } from '@/lib/format';
 import { nameOf, peopleNames } from '@/lib/people';
 import { AccessDenied } from '@/components/access-denied';
+import { AgentMark } from '@/components/copilot/agent-mark';
 import { ErrorPanel, load } from '@/components/error-panel';
-import {
-  Badge,
-  Card,
-  CardHeader,
-  DescriptionList,
-  Notice,
-  PageHeader,
-} from '@/components/ui/primitives';
-import { Table, TD, TH, THead, TR } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/form';
+import { Badge, Card, CardHeader, Notice } from '@/components/ui/primitives';
 import { LocalTime } from '@/components/ui/time';
 import { PolicyDocuments } from '../../documents/policy-documents';
-import { ServicingPanel } from './servicing-panel';
 import { PolicyPremium } from '../../billing/policy-premium';
+import { ServiceButton } from './service-button';
 
 export const metadata = { title: 'Policy' };
 
 const TONES = { active: 'success', cancelled: 'neutral', expired: 'neutral' } as const;
-const when = (s: string) => s.replace('T', ' ');
+
+function BackLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="mb-3 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg"
+    >
+      <ChevronLeft aria-hidden className="size-4" /> {children}
+    </Link>
+  );
+}
+
+function Fact({ term, value, note }: { term: string; value: string; note?: string }) {
+  return (
+    <div className="min-w-0 bg-surface px-5 py-4">
+      <dt className="text-xs font-medium text-muted">{term}</dt>
+      <dd className="mt-1">
+        <span className="block text-lg font-semibold tracking-tight text-fg">{value}</span>
+        {note ? <span className="block text-xs text-muted">{note}</span> : null}
+      </dd>
+    </div>
+  );
+}
+
+function Details({ items }: { items: { term: string; value: React.ReactNode }[] }) {
+  return (
+    <dl className="space-y-3 px-5 py-4 text-sm">
+      {items.map((i) => (
+        <div key={i.term} className="flex justify-between gap-4">
+          <dt className="shrink-0 text-muted">{i.term}</dt>
+          <dd className="min-w-0 break-words text-right text-fg">{i.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+const eventTitle = (h: PolicyEvent) =>
+  h.type === 'bound'
+    ? 'Bound'
+    : h.type === 'status_changed'
+      ? `Status changed to ${String(h.data.to)}`
+      : 'Details changed';
+
+/** The trip as the record holds it: when the traveller goes and where. */
+function tripOf(trip: Record<string, unknown>) {
+  const text = (v: unknown) => (typeof v === 'string' ? v : null);
+  const destinations = Array.isArray(trip.destinations)
+    ? (trip.destinations as { country?: string; region?: string }[])
+    : [];
+  return {
+    departure: text(trip.departureDate),
+    return: text(trip.returnDate),
+    places: destinations
+      .map((d) => (d.country ? countryName(d.country) : d.region))
+      .filter(Boolean)
+      .join(', '),
+  };
+}
 
 export default async function PolicyPage({
   params,
   searchParams,
 }: {
   params: Promise<{ policyId: string }>;
-  searchParams: Promise<{ asOf?: string; serviced?: string }>;
+  searchParams: Promise<{ asOf?: string; serviced?: string; issued?: string }>;
 }) {
   const me = (await getMe())!;
   if (!me.permissions.includes('policies:read')) return <AccessDenied permission="policies:read" />;
   const { policyId } = await params;
-  const { asOf, serviced } = await searchParams;
+  const { asOf, serviced, issued } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(policyId)) notFound();
   // The date and time field gives a local time; the record is asked for at that instant.
   const asOfIso = asOf && !Number.isNaN(Date.parse(asOf)) ? new Date(asOf).toISOString() : null;
@@ -53,14 +107,9 @@ export default async function PolicyPage({
     if (asOfIso) {
       return (
         <>
-          <Link
-            href={`/policies/${policyId}`}
-            className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg"
-          >
-            <ChevronLeft aria-hidden className="size-4" /> The policy now
-          </Link>
+          <BackLink href={`/policies/${policyId}`}>The policy now</BackLink>
           <Notice tone="warning" title="The policy did not exist then">
-            It was bound after {asOf?.replace('T', ' ')}. Choose a later time.
+            It was bought after {formatDayTime(asOf!)}. Choose a later time.
           </Notice>
         </>
       );
@@ -89,122 +138,62 @@ export default async function PolicyPage({
         }));
     }
   }
+  const travellers = r.travellers.map((t) => ({
+    id: t.id,
+    name: `${t.firstName} ${t.lastName}`,
+  }));
+  const trip = tripOf(r.trip);
+  // Review period times carry no zone, so they are compared with the clock as written.
+  const now = (asOfIso ?? new Date().toISOString()).slice(0, 16);
+  const reviewOpen = !!r.reviewPeriodEndsAt && r.reviewPeriodEndsAt > now;
+
   return (
     <>
-      <Link
-        href="/policies"
-        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg"
-      >
-        <ChevronLeft aria-hidden className="size-4" /> Policies
-      </Link>
-      <PageHeader
-        eyebrow={`${r.plan.code} · ${r.plan.state}`}
-        title={p.number}
-        description={`${r.travellers.map((t) => `${t.firstName} ${t.lastName}`).join(', ')}. Cover ${when(r.term.start)} to ${when(r.term.end)}.`}
-        actions={<Badge tone={TONES[p.status]}>{sentenceCase(p.status)}</Badge>}
-      />
-
-      <form
-        method="get"
-        className="mb-6 flex flex-wrap items-end gap-3"
-        aria-label="See the policy as it was"
-      >
-        <label className="space-y-1.5 text-sm font-medium text-fg">
-          See the policy as it was on
-          <input
-            type="datetime-local"
-            name="asOf"
-            defaultValue={asOf ?? ''}
-            className="block h-10 rounded-lg border border-border-strong bg-surface px-3 text-sm"
+      {asOfIso ? (
+        <BackLink href={`/policies/${p.id}`}>The policy now</BackLink>
+      ) : (
+        <BackLink href="/policies">Policies</BackLink>
+      )}
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
+              {p.number}
+            </h1>
+            <Badge tone={TONES[p.status]} className="px-2.5 py-1">
+              {sentenceCase(p.status)}
+            </Badge>
+          </div>
+          <p className="mt-1.5 text-sm text-muted">
+            <span className="font-medium text-fg">{travellers.map((t) => t.name).join(', ')}</span>{' '}
+            · {r.plan.name} · {r.plan.state}
+          </p>
+        </div>
+        {canService ? (
+          // A new event on the record closes the dialog that made it.
+          <ServiceButton
+            key={p.history.length}
+            policyId={p.id}
+            travellers={travellers}
+            optionalBenefits={optionalBenefits}
           />
-        </label>
-        <button className="inline-flex h-10 items-center rounded-lg border border-border-strong bg-surface px-4 text-sm font-medium text-fg shadow-card hover:bg-surface-muted">
-          Show
-        </button>
-        {asOfIso ? (
-          <Link href={`/policies/${p.id}`} className="text-sm text-primary hover:underline">
-            Back to now
-          </Link>
         ) : null}
-      </form>
+      </header>
+
       {asOfIso ? (
         <div className="mb-6">
-          <Notice tone="primary" title={`As it was on ${asOf?.replace('T', ' ')}`}>
+          <Notice tone="primary" title={`As it was on ${formatDayTime(asOf!)}`}>
             This is the record after the last event at or before that time. Status then: {p.status}.
           </Notice>
         </div>
       ) : null}
-
-      <div className="mb-6 grid gap-6 lg:grid-cols-3">
-        <Card>
-          <CardHeader title="Policy" />
-          <div className="p-5">
-            <DescriptionList
-              items={[
-                { term: 'Status', value: sentenceCase(p.status) },
-                { term: 'Purchased', value: r.purchasedOn },
-                {
-                  term: 'Review period ends',
-                  value: r.reviewPeriodEndsAt ? when(r.reviewPeriodEndsAt) : '—',
-                },
-                { term: 'Term', value: `${when(r.term.start)} to ${when(r.term.end)}` },
-                { term: 'Plan', value: `${r.plan.name} (version ${r.plan.version})` },
-                { term: 'Rule set', value: `Version ${r.ruleSet.version}` },
-                ...Object.entries(r.manuals).map(([b, m]) => ({
-                  term: `${b} manual`,
-                  value: `${m.code} v${m.version}`,
-                })),
-              ]}
-            />
-          </div>
-        </Card>
-        <Card>
-          <CardHeader title="Premium and payment" />
-          <div className="p-5">
-            <DescriptionList
-              items={[
-                { term: 'Premium', value: <span className="font-mono">{r.premium.total}</span> },
-                {
-                  term: 'Payment reference',
-                  value: <span className="font-mono">{r.payment.reference}</span>,
-                },
-                {
-                  term: 'Purchaser',
-                  value: `${r.purchaser.name}${r.purchaser.email ? ` (${r.purchaser.email})` : ''}`,
-                },
-                {
-                  term: 'Disclosure',
-                  value: `${r.disclosure.title}, acknowledged by ${r.disclosure.acknowledgedBy}`,
-                },
-                { term: 'Waiver', value: r.waiver.applies ? 'Applied' : 'Did not apply' },
-                {
-                  term: 'CFAR',
-                  value: r.cfar.offered
-                    ? `Offered${r.cfar.noticePeriod ? `, ${r.cfar.noticePeriod} notice` : ''}`
-                    : 'Not offered',
-                },
-              ]}
-            />
-          </div>
-        </Card>
-        <Card>
-          <CardHeader title="Travellers" />
-          <ul className="divide-y divide-border">
-            {r.travellers.map((t) => (
-              <li key={t.id} className="px-5 py-3 text-sm">
-                <span className="font-medium text-fg">
-                  {t.firstName} {t.lastName}
-                </span>
-                <span className="block text-xs text-muted">
-                  {t.dateOfBirth ? `Born ${t.dateOfBirth}` : t.age !== null ? `Age ${t.age}` : ''} ·
-                  trip cost {t.costPerTraveller}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      </div>
-
+      {issued ? (
+        <div className="mb-6">
+          <Notice tone="success" title="Policy issued">
+            Its documents are listed below as they are produced.
+          </Notice>
+        </div>
+      ) : null}
       {serviced ? (
         <div className="mb-6">
           <Notice tone="success" title="Done">
@@ -213,105 +202,211 @@ export default async function PolicyPage({
           </Notice>
         </div>
       ) : null}
-      {canService ? (
-        <Card className="mb-6">
-          <CardHeader
-            title="Service this policy"
-            description="Changes are re-rated and re-screened with the versions the policy was bound with. You see the price before you confirm."
-          />
-          <div className="p-5">
-            <ServicingPanel
+
+      {/* One-pixel gaps over the border colour draw the dividers at every width. */}
+      <dl className="mb-6 grid gap-px overflow-hidden rounded-2xl border border-border bg-border shadow-card sm:grid-cols-2 xl:grid-cols-4">
+        <Fact
+          term="Premium"
+          value={money(r.premium.total)}
+          note={`Paid · ${r.payment.reference}`}
+        />
+        <Fact
+          term="Cover"
+          value={dayRange(r.term.start.slice(0, 10), r.term.end.slice(0, 10))}
+          note={`From ${formatDayTime(r.term.start)} to ${formatDayTime(r.term.end)}`}
+        />
+        <Fact
+          term="Trip"
+          value={trip.places || 'Not recorded'}
+          note={dayRange(trip.departure, trip.return)}
+        />
+        <Fact
+          term="Review period"
+          value={!r.reviewPeriodEndsAt ? 'None' : reviewOpen ? 'Open' : 'Over'}
+          note={
+            r.reviewPeriodEndsAt
+              ? `${reviewOpen ? 'Until' : 'Ended'} ${formatDayTime(r.reviewPeriodEndsAt)}`
+              : undefined
+          }
+        />
+      </dl>
+
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
+        <div className="min-w-0 space-y-6 xl:col-span-2">
+          <Card aria-labelledby="benefits">
+            <CardHeader titleId="benefits" title="Benefits" />
+            <ul className="divide-y divide-border">
+              {r.benefits.map((b) => (
+                <li key={b.code} className="flex flex-wrap items-start gap-x-4 gap-y-1 px-5 py-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-fg">
+                      {b.name}{' '}
+                      <span className="font-normal text-muted">
+                        · {sentenceCase(b.packaging).toLowerCase()}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 text-sm text-muted">
+                      {b.limits.maximum !== null
+                        ? `Up to $${b.limits.maximum.toLocaleString('en-US')} ${b.limits.basis ?? ''} · `
+                        : ''}
+                      {dayRange(b.coverageStart.slice(0, 10), b.coverageEnd.slice(0, 10))}
+                    </p>
+                    <p className="mt-0.5 text-xs text-subtle">
+                      Underwritten by{' '}
+                      {b.underwriter ? ARRANGEMENT_LABELS[b.underwriter] : 'not set'}
+                    </p>
+                  </div>
+                  <p className="text-sm font-medium tabular-nums text-fg">
+                    {b.premium ? money(b.premium) : '—'}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          {!asOfIso && me.permissions.includes('documents:read') ? (
+            <PolicyDocuments
               policyId={p.id}
-              travellers={r.travellers.map((t) => ({
-                id: t.id,
-                name: `${t.firstName} ${t.lastName}`,
-              }))}
-              optionalBenefits={optionalBenefits}
+              canManage={me.permissions.includes('documents:manage')}
             />
-          </div>
-        </Card>
-      ) : null}
-      {!asOfIso && me.permissions.includes('billing:read') ? (
-        <PolicyPremium policyId={p.id} />
-      ) : null}
-      {!asOfIso && me.permissions.includes('documents:read') ? (
-        <PolicyDocuments policyId={p.id} canManage={me.permissions.includes('documents:manage')} />
-      ) : null}
+          ) : null}
+          {!asOfIso && me.permissions.includes('billing:read') ? (
+            <PolicyPremium policyId={p.id} />
+          ) : null}
 
-      <Card className="mb-6">
-        <CardHeader
-          title="Benefits"
-          description="Cover dates by benefit, with the underwriting arrangement premium and documents follow."
-        />
-        <Table caption="Benefits">
-          <THead>
-            <tr>
-              <TH>Benefit</TH>
-              <TH>Underwriter</TH>
-              <TH>Limit</TH>
-              <TH>Cover starts</TH>
-              <TH>Cover ends</TH>
-              <TH className="text-right">Premium</TH>
-            </tr>
-          </THead>
-          <tbody>
-            {r.benefits.map((b) => (
-              <TR key={b.code}>
-                <TD>
-                  {b.name}
-                  <span className="block text-xs text-muted">{sentenceCase(b.packaging)}</span>
-                </TD>
-                <TD>
-                  {b.underwriter ? (
-                    ARRANGEMENT_LABELS[b.underwriter]
+          <Card aria-labelledby="history">
+            <CardHeader
+              titleId="history"
+              title="History"
+              description="Every change: who or which agent, when and why."
+            />
+            <ol className="px-5 py-4">
+              {p.history.map((h, i) => (
+                <li key={h.seq} className="relative flex gap-3 pb-5 last:pb-0">
+                  {i < p.history.length - 1 ? (
+                    <span aria-hidden className="absolute bottom-0 left-3 top-7 w-px bg-border" />
+                  ) : null}
+                  {h.actor.startsWith('agent:') ? (
+                    <AgentMark size="sm" />
                   ) : (
-                    <span className="text-muted">Not set</span>
+                    <span
+                      aria-hidden
+                      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border-strong bg-surface"
+                    >
+                      <span className="size-2 rounded-full bg-primary" />
+                    </span>
                   )}
-                </TD>
-                <TD className="text-xs">
-                  {b.limits.maximum !== null
-                    ? `$${b.limits.maximum.toLocaleString('en-US')} ${b.limits.basis ?? ''}`
-                    : '—'}
-                </TD>
-                <TD className="whitespace-nowrap text-xs">{when(b.coverageStart)}</TD>
-                <TD className="whitespace-nowrap text-xs">{when(b.coverageEnd)}</TD>
-                <TD className="text-right font-mono text-xs">{b.premium ?? '—'}</TD>
-              </TR>
-            ))}
-          </tbody>
-        </Table>
-      </Card>
+                  <div className="min-w-0 text-sm">
+                    <p>
+                      <span className="font-medium text-fg">{eventTitle(h)}</span>
+                      <span className="text-muted"> by {nameOf(names, h.actor)}</span>
+                    </p>
+                    {h.reason ? <p className="text-fg">{h.reason}</p> : null}
+                    <p className="text-xs text-subtle">
+                      <LocalTime iso={h.occurredAt} />
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </Card>
+        </div>
 
-      <Card>
-        <CardHeader
-          title="History"
-          description="Every change as an event: who or which agent, when and why."
-        />
-        <ol className="divide-y divide-border">
-          {p.history.map((h) => (
-            <li
-              key={h.seq}
-              className="flex flex-wrap items-baseline justify-between gap-2 px-5 py-3 text-sm"
+        <div className="min-w-0 space-y-6">
+          <Card aria-labelledby="travellers">
+            <CardHeader titleId="travellers" title="Travellers" />
+            <ul className="divide-y divide-border">
+              {r.travellers.map((t) => (
+                <li key={t.id} className="flex justify-between gap-4 px-5 py-3.5 text-sm">
+                  <span>
+                    <span className="block font-medium text-fg">
+                      {t.firstName} {t.lastName}
+                    </span>
+                    <span className="block text-xs text-muted">
+                      {t.dateOfBirth
+                        ? `Born ${formatDay(t.dateOfBirth)}`
+                        : t.age !== null
+                          ? `Age ${t.age}`
+                          : ''}
+                    </span>
+                  </span>
+                  <span className="text-right">
+                    <span className="block tabular-nums text-fg">{money(t.costPerTraveller)}</span>
+                    <span className="block text-xs text-muted">insured trip cost</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card aria-labelledby="purchase">
+            <CardHeader titleId="purchase" title="Purchase" />
+            <Details
+              items={[
+                { term: 'Bought', value: formatDay(r.purchasedOn) },
+                { term: 'Purchaser', value: r.purchaser.name },
+                { term: 'Email', value: r.purchaser.email ?? '—' },
+                { term: 'Disclosure', value: r.disclosure.title },
+                { term: 'Acknowledged by', value: r.disclosure.acknowledgedBy },
+                {
+                  term: 'Pre-existing condition waiver',
+                  value: r.waiver.applies ? 'Applied' : 'Did not apply',
+                },
+                {
+                  term: 'Cancel for any reason',
+                  value: r.cfar.offered
+                    ? `Offered${r.cfar.noticePeriod ? `, ${r.cfar.noticePeriod} notice` : ''}`
+                    : 'Not offered',
+                },
+              ]}
+            />
+          </Card>
+
+          <Card aria-labelledby="versions">
+            <CardHeader
+              titleId="versions"
+              title="Bought with"
+              description="The versions that priced and decided this policy."
+            />
+            <Details
+              items={[
+                { term: 'Plan', value: `${r.plan.code}, version ${r.plan.version}` },
+                { term: 'Rule set', value: `Version ${r.ruleSet.version}` },
+                ...Object.entries(r.manuals).map(([benefit, m]) => ({
+                  term: `${benefit} rates`,
+                  value: `${m.code}, version ${m.version}`,
+                })),
+              ]}
+            />
+          </Card>
+
+          <Card aria-labelledby="look-back">
+            <CardHeader titleId="look-back" title="Look back" />
+            <form
+              method="get"
+              className="space-y-2 px-5 py-4"
+              aria-label="See the policy as it was"
             >
-              <span>
-                <span className="font-medium text-fg">
-                  {h.type === 'bound'
-                    ? 'Bound'
-                    : h.type === 'status_changed'
-                      ? `Status changed to ${String(h.data.to)}`
-                      : 'Details changed'}
-                </span>
-                <span className="text-muted">
-                  {' '}
-                  by {nameOf(names, h.actor)}
-                  {h.reason ? `: ${h.reason}` : ''}
-                </span>
-              </span>
-              <LocalTime iso={h.occurredAt} />
-            </li>
-          ))}
-        </ol>
-      </Card>
+              <label className="block text-sm text-muted" htmlFor="asOf">
+                See the policy as it was on
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  id="asOf"
+                  type="datetime-local"
+                  name="asOf"
+                  required
+                  defaultValue={asOf ?? ''}
+                  className="w-auto min-w-0 flex-1"
+                />
+                <Button type="submit" variant="secondary">
+                  Show
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      </div>
     </>
   );
 }

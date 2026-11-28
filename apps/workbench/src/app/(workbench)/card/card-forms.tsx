@@ -568,7 +568,7 @@ export function UploadFeedForm({
         label="Feed file"
         required
         error={errors.file}
-        hint="Format v1 (pipe-separated). Up to 100 MB here; larger feeds go through the API or SFTP."
+        hint="The pipe-separated feed format, up to 100 MB. Larger files are sent system to system."
       >
         {(f) => (
           <Input

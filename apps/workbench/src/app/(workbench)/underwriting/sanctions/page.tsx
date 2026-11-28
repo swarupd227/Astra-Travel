@@ -30,9 +30,8 @@ export default async function SanctionsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Underwriting"
         title="Sanctions lists"
-        description="The US Treasury OFAC Specially Designated Nationals list, as uploaded by compliance and approved by a second person. Travellers are screened against the approved list at quote and bind."
+        description="The US Treasury list travellers are screened against when they get a quote and buy."
         actions={me.permissions.includes('underwriting:manage') ? <LoadSanctionsDialog /> : null}
       />
       <div className="mb-6">

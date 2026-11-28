@@ -22,9 +22,8 @@ export default async function CalculatorPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Rating"
         title="Rating calculator"
-        description="Rate one traveller for one benefit and see the full worksheet. Rating uses the published manual in effect on the rate date; previews of unpublished versions are labelled."
+        description="Price one traveller for one benefit and see how the figure is built."
       />
       <Card className="p-5">
         <RatingCalculator manuals={options} />

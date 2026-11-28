@@ -7,7 +7,12 @@ import type { ServicingPreview, ServicingRequest, ServicingResult } from '@astra
 import { api } from '@/lib/api';
 import { fromError, text, type ActionState } from '@/lib/actions';
 
-export type PreviewState = ActionState & { preview?: ServicingPreview; request?: ServicingRequest };
+export type PreviewState = ActionState & {
+  preview?: ServicingPreview;
+  request?: ServicingRequest;
+  /** One per preview: confirming twice makes one change, and no other preview can share it. */
+  idempotencyKey?: string;
+};
 
 /** Builds the request the API expects from the servicing form; the API validates everything again. */
 function requestFrom(form: FormData): ServicingRequest {
@@ -105,6 +110,7 @@ export async function previewServicing(_prev: PreviewState, form: FormData): Pro
         : 'This cannot be done.',
       preview,
       request,
+      idempotencyKey: randomUUID(),
     };
   } catch (err) {
     return fromError(err, form);

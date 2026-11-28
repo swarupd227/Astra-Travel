@@ -6,6 +6,7 @@ import { api, getMe } from '@/lib/api';
 import { sentenceCase } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
+import { plainReason } from '@/lib/plain-errors';
 import { Card, CardHeader, EmptyState, PageHeader } from '@/components/ui/primitives';
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { IssueMissingForm, RetryDeliveryForm } from '../document-forms';
@@ -31,9 +32,8 @@ export default async function FailuresPage() {
         <ChevronLeft aria-hidden className="size-4" /> Document templates
       </Link>
       <PageHeader
-        eyebrow="Documents"
         title="Failed documents and deliveries"
-        description="Documents that could not be produced when a policy was bound, and emails that could not be sent after every attempt. Nothing here is hidden from the traveller’s policy record: it shows the document as failed."
+        description="Documents that could not be produced, and emails that could not be delivered."
       />
       {documents.length === 0 && deliveries.length === 0 ? (
         <Card>
@@ -77,7 +77,7 @@ export default async function FailuresPage() {
                     )}
                   </TD>
                   <TD>{sentenceCase(d.kind)}</TD>
-                  <TD className="max-w-md text-sm">{d.failure}</TD>
+                  <TD className="max-w-md text-sm">{plainReason(d.failure ?? '')}</TD>
                   <TD>
                     {canManage && d.policyId ? (
                       <IssueMissingForm policyId={d.policyId} label="Issue again" />
@@ -122,7 +122,7 @@ export default async function FailuresPage() {
                   </TD>
                   <TD className="font-mono text-xs">{d.recipient}</TD>
                   <TD>{d.attempts}</TD>
-                  <TD className="max-w-md text-sm">{d.lastError}</TD>
+                  <TD className="max-w-md text-sm">{plainReason(d.lastError ?? '')}</TD>
                   <TD>{canManage ? <RetryDeliveryForm deliveryId={d.id} /> : null}</TD>
                 </TR>
               ))}

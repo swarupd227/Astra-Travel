@@ -21,9 +21,8 @@ export default async function ModelConnectionPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Settings"
         title="AI model connection"
-        description="The key the AI agents use to call the model. Only platform administrators can set, test or remove it."
+        description="The key the AI agents use to call the model. Only platform administrators can change it."
       />
       <div className="max-w-3xl space-y-4">
         <Card aria-labelledby="saved-key">

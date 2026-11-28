@@ -1,8 +1,11 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ChevronLeft } from 'lucide-react';
 import type { Quote } from '@astra/contracts';
 import { ApiProblem } from '@/lib/api-problem';
 import { journeyApi, journeyConfig } from '@/lib/journey';
 import { PayForm } from '../../../journey-forms';
+import { money, Panel, Steps } from '../../../parts';
 
 export const metadata = { title: 'Buy your cover', robots: { index: false, follow: false } };
 
@@ -24,29 +27,45 @@ export default async function JourneyPay({
   if (q.status !== 'open' || !q.premium || !q.disclosure) {
     return (
       <>
-        <h1 className="mb-3 text-3xl font-bold">This quote can no longer be bought</h1>
+        <h1 className="mb-3 text-3xl font-bold tracking-tight">
+          This quote can no longer be bought
+        </h1>
         <p>
-          <a className="underline" href={`/j/${slug}`}>
+          <Link className="font-medium underline" href={`/j/${slug}`}>
             Start again
-          </a>
+          </Link>
         </p>
       </>
     );
   }
   return (
     <>
-      <h1 className="mb-1 text-3xl font-bold">Buy your cover</h1>
-      <p className="mb-6 text-[#4a4a4a]">
-        {q.plan.name}: total{' '}
-        {`$${Number(q.premium.total).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-      </p>
-      <section aria-labelledby="notice" className="mb-6 rounded-lg border border-[#6b7280] p-4">
-        <h2 id="notice" className="mb-2 text-lg font-semibold">
-          {q.disclosure.title}
-        </h2>
-        <p className="whitespace-pre-line">{q.disclosure.text}</p>
-      </section>
-      <PayForm slug={slug} quoteId={quoteId} total={q.premium.total} payment={cfg.payment} />
+      <Steps current={3} />
+      <Link
+        href={`/j/${slug}/q/${quoteId}`}
+        className="mb-3 inline-flex items-center gap-1 text-sm font-medium underline"
+      >
+        <ChevronLeft aria-hidden className="size-4" /> Back to your price
+      </Link>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">Buy your cover</h1>
+      <div className="space-y-5">
+        <Panel className="flex flex-wrap items-baseline justify-between gap-3">
+          <p>
+            <span className="block font-semibold">{q.plan.name}</span>
+            <span className="text-sm text-[#4a4a4a]">
+              {q.travellers.map((t) => `${t.firstName} ${t.lastName}`).join(', ')}
+            </span>
+          </p>
+          <p className="text-2xl font-bold tabular-nums">{money(q.premium.total)}</p>
+        </Panel>
+        <Panel aria-labelledby="notice">
+          <h2 id="notice" className="mb-2 text-lg font-semibold">
+            {q.disclosure.title}
+          </h2>
+          <p className="whitespace-pre-line">{q.disclosure.text}</p>
+        </Panel>
+        <PayForm slug={slug} quoteId={quoteId} total={q.premium.total} payment={cfg.payment} />
+      </div>
     </>
   );
 }

@@ -184,7 +184,7 @@ export default async function ManualPage({
       <Card className="mb-6">
         <CardHeader
           title="Parity"
-          description="Cases from the filed manual and Assurant's workbooks only; the prototype rater is never a source."
+          description="Worked examples from the filed manual and Assurant’s workbooks. Every one must match to the cent."
         />
         <ParityForms manualId={m.id} canManage={me.permissions.includes('rating:manage')} />
         {run.data ? (

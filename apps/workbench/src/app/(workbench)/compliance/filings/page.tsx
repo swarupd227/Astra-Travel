@@ -55,9 +55,8 @@ export default async function FilingsPage({ searchParams }: { searchParams: Sear
   return (
     <>
       <PageHeader
-        eyebrow="Product & compliance"
         title="Filing register"
-        description="Every form, rate manual and rule set by state, with its filing status and effective dates. Plans and quotes can only use what is approved and in effect."
+        description="What is filed and approved in each state. Plans and quotes use only what is in effect."
         actions={canManage ? <RecordFilingDialog editions={editionOptions} /> : null}
       />
       {created ? (

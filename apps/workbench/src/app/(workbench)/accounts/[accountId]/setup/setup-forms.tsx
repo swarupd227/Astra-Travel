@@ -245,7 +245,7 @@ export function DecideSegmentForm({
       <button
         name="decision"
         value="approve"
-        className="inline-flex h-9 items-center gap-1 rounded-lg bg-primary px-3 text-sm font-medium text-primary-fg"
+        className="inline-flex h-9 items-center gap-1 rounded-lg bg-primary px-3 text-sm font-medium text-primary-contrast"
       >
         <Check aria-hidden className="size-4" /> Approve
       </button>

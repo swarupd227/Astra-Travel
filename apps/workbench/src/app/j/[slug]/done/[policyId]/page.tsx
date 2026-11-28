@@ -1,7 +1,10 @@
 import { notFound } from 'next/navigation';
+import { CircleCheck, Download } from 'lucide-react';
 import { DOCUMENT_KIND_LABELS, type IssuedDocument, type Policy } from '@astra/contracts';
 import { ApiProblem } from '@/lib/api-problem';
+import { formatDayTime } from '@/lib/format';
 import { journeyApi, journeyConfig } from '@/lib/journey';
+import { Panel } from '../../parts';
 
 export const metadata = { title: 'Your cover is bought', robots: { index: false, follow: false } };
 
@@ -25,40 +28,52 @@ export default async function JourneyDone({
     throw err;
   }
   return (
-    <>
-      <h1 className="mb-2 text-3xl font-bold">Your cover is bought</h1>
-      <p className="mb-6">
-        Your policy number is <strong className="font-mono">{policy.number}</strong>. Cover runs
-        from {policy.record.term.start.replace('T', ' ')} to{' '}
-        {policy.record.term.end.replace('T', ' ')}.
-      </p>
+    <div className="space-y-5">
+      <div className="text-center">
+        <CircleCheck aria-hidden className="mx-auto mb-3 size-14 text-[#15803d]" />
+        <h1 className="mb-2 text-3xl font-bold tracking-tight">Your cover is bought</h1>
+        <p>
+          Your policy number is <strong className="font-mono text-lg">{policy.number}</strong>
+        </p>
+        <p className="text-[#4a4a4a]">
+          Cover runs from {formatDayTime(policy.record.term.start)} to{' '}
+          {formatDayTime(policy.record.term.end)}.
+        </p>
+      </div>
       {cfg.payment === 'test' ? (
         <p
           role="note"
-          className="mb-6 rounded-lg border border-[#b25e00] bg-[#fff4e5] p-3 text-[#4d2900]"
+          className="rounded-xl border border-[#b25e00] bg-[#fff4e5] p-4 text-[#4d2900]"
         >
           This was a test purchase in a sandbox: no money was taken and the policy is not real.
         </p>
       ) : null}
-      <section aria-labelledby="docs">
-        <h2 id="docs" className="mb-2 text-lg font-semibold">
+      <Panel aria-labelledby="docs">
+        <h2 id="docs" className="mb-3 text-lg font-semibold">
           Your documents
         </h2>
-        <ul className="list-disc space-y-1 pl-5">
-          {docs.map((d) => (
-            <li key={d.id}>
-              <a
-                className="underline"
-                href={`/j/${slug}/file/${d.id}?policy=${policyId}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {DOCUMENT_KIND_LABELS[d.kind]} (PDF)
-              </a>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </>
+        {docs.length ? (
+          <ul className="divide-y divide-[#e3e6ea]">
+            {docs.map((d) => (
+              <li key={d.id} className="py-3 first:pt-0 last:pb-0">
+                <a
+                  className="flex items-center gap-3 font-medium underline"
+                  href={`/j/${slug}/file/${d.id}?policy=${policyId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Download aria-hidden className="size-5" />
+                  {DOCUMENT_KIND_LABELS[d.kind]} (PDF)
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-[#4a4a4a]">
+            Your documents are being prepared. Refresh this page in a moment.
+          </p>
+        )}
+      </Panel>
+    </div>
   );
 }

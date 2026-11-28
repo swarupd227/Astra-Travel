@@ -76,7 +76,7 @@ export default async function MappingPage({
       <PageHeader
         eyebrow="Eligibility feeds"
         title="Issuer file mapping"
-        description="How the issuer’s own file is read into an eligibility feed. The Eligibility Feed agent can draft it; a programme manager approves every version."
+        description="How the issuer’s file is read. The agent can draft it; a programme manager approves it."
         actions={
           current ? (
             <Badge tone="success">Version {current.version} in use</Badge>

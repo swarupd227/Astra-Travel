@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Lock, ScrollText } from 'lucide-react';
 import { AUDIT_ACTOR_TYPES, type AuditEntry } from '@astra/contracts';
+import { activityPhrase } from '@/lib/activity';
 import { api, getMe } from '@/lib/api';
 import { readParams, sentenceCase, type SearchParams } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
@@ -50,9 +51,8 @@ export default async function AuditPage({ searchParams }: { searchParams: Search
   return (
     <>
       <PageHeader
-        eyebrow="Governance"
         title="Audit trail"
-        description="Every change, approval and agent action, with who made it and why. Records cannot be edited or deleted, and sealed records are chained by hash so tampering is detectable."
+        description="Who changed what, when and why. Entries cannot be edited or deleted."
         actions={me.permissions.includes('audit:verify') ? <VerifyAudit /> : null}
       />
       <form
@@ -105,7 +105,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Search
         </div>
         <div>
           <label htmlFor="correlationId" className="mb-1 block text-xs font-medium text-muted">
-            Correlation ID
+            Reference
           </label>
           <input
             id="correlationId"
@@ -142,9 +142,9 @@ export default async function AuditPage({ searchParams }: { searchParams: Search
                 <THead>
                   <tr>
                     <TH>Time</TH>
-                    <TH>Actor</TH>
-                    <TH>Action</TH>
-                    <TH>Resource</TH>
+                    <TH>Who</TH>
+                    <TH>What happened</TH>
+                    <TH>Record</TH>
                     <TH>Reason</TH>
                     <TH>Details</TH>
                   </tr>
@@ -168,9 +168,14 @@ export default async function AuditPage({ searchParams }: { searchParams: Search
                           </span>
                         </div>
                       </TD>
-                      <TD className="font-mono text-xs">{a.action}</TD>
+                      <TD>
+                        <span className="block text-sm first-letter:uppercase">
+                          {activityPhrase(a.action)}
+                        </span>
+                        <span className="block font-mono text-[11px] text-subtle">{a.action}</span>
+                      </TD>
                       <TD className="text-xs text-muted">
-                        {a.resourceType}
+                        {a.resourceType.replace(/_/g, ' ')}
                         {a.resourceId ? (
                           <span className="block max-w-40 truncate font-mono" title={a.resourceId}>
                             {a.resourceId}

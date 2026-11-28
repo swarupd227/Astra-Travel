@@ -24,9 +24,8 @@ export default async function MasterPoliciesPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Card-linked cover"
         title="Master policies"
-        description="Group policies issued to card issuers and banks. Each card programme runs under one, within its states and dates."
+        description="Group policies issued to card issuers and banks. Each card programme runs under one."
         actions={
           me.permissions.includes('card:manage') ? (
             <CreateMasterPolicyDialog accounts={holders} />

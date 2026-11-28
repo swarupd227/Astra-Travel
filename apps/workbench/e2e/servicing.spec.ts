@@ -42,10 +42,11 @@ test('staff preview and make a correction, then preview and make a cancellation'
   const active = page.getByRole('row').filter({ hasText: 'ATP-' }).filter({ hasText: 'Active' });
   test.skip((await active.count()) === 0, 'Seed a bound policy first');
   await active.first().getByRole('link').click();
-  await expect(page.getByRole('heading', { name: 'Service this policy' })).toBeVisible({
-    timeout: 60_000,
-  });
+  const service = page.getByRole('button', { name: 'Change or cancel' });
+  await expect(service).toBeVisible({ timeout: 60_000 });
   await expectAccessible(page);
+  await service.click();
+  await expect(page.getByRole('heading', { name: 'Service this policy' })).toBeVisible();
 
   // A correction is previewed (no price change) and made with a reason.
   await page.getByLabel('What do you want to do?').selectOption('correct');
@@ -64,6 +65,7 @@ test('staff preview and make a correction, then preview and make a cancellation'
   await expect(page.getByText('Email typed wrongly at purchase').first()).toBeVisible();
 
   // A cancellation shows the rule that decides the refund, then is made.
+  await service.click();
   await page.getByLabel('What do you want to do?').selectOption('cancel');
   await page.getByLabel('The traveller has had no loss that would lead to a claim.').check();
   await page.getByLabel('Reason').fill('Traveller changed their mind');
@@ -75,7 +77,7 @@ test('staff preview and make a correction, then preview and make a cancellation'
   await expectAccessible(page);
   await page.getByRole('button', { name: 'Confirm at this price' }).click();
   await expect(page.getByText('Cancelled').first()).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByRole('heading', { name: 'Service this policy' })).toHaveCount(0);
+  await expect(service).toHaveCount(0);
   await expect(
     page
       .getByRole('link', { name: 'Notice of Cancellation' })

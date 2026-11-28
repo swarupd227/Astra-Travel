@@ -94,6 +94,45 @@ export function paymentConditionLabel(
 
 export const integer = (n: number) => new Intl.NumberFormat('en-US').format(n);
 
+/** "2 h 10 min left" or "Overdue by 1 h 30 min", from the minutes left on a work queue timer. */
+export function timeLeft(minutes: number): string {
+  const m = Math.abs(minutes);
+  const days = Math.floor(m / 1440);
+  const hours = Math.floor((m % 1440) / 60);
+  const mins = m % 60;
+  const span =
+    days > 0 ? `${days} d ${hours} h` : hours > 0 ? `${hours} h ${mins} min` : `${mins} min`;
+  return minutes < 0 ? `Overdue by ${span}` : `${span} left`;
+}
+
+// Policy dates carry no time zone: they are read and shown as written.
+const asWritten = (value: string) => new Date(`${value.length === 10 ? `${value}T00:00` : value}Z`);
+const day = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' });
+const clock = new Intl.DateTimeFormat('en-US', { timeStyle: 'short', timeZone: 'UTC' });
+
+/** "Nov 28, 2026". */
+export const formatDay = (value: string | null | undefined) =>
+  value ? day.format(asWritten(value)) : '—';
+
+/** "Nov 28 – Dec 29, 2026". */
+export const dayRange = (from: string | null | undefined, to: string | null | undefined) =>
+  from && to
+    ? day.formatRange(asWritten(from), asWritten(to))
+    : `${formatDay(from)} – ${formatDay(to)}`;
+
+/** "Nov 28, 2026, 12:01 AM". */
+export const formatDayTime = (value: string) =>
+  `${day.format(asWritten(value))}, ${clock.format(asWritten(value))}`;
+
+const regions = new Intl.DisplayNames(['en-US'], { type: 'region' });
+
+/** "France" for "FR"; anything that is not a country code is shown as given. */
+export const countryName = (code: string) =>
+  /^[A-Z]{2}$/.test(code) ? (regions.of(code) ?? code) : code;
+
+export const money = (value: string | number, currency = 'USD') =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(value));
+
 export function bytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`;

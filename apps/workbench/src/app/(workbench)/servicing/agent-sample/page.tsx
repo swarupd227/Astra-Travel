@@ -32,7 +32,6 @@ export default async function AgentSamplePage({
   return (
     <>
       <PageHeader
-        eyebrow="Policies"
         title="Changes made by the servicing agent"
         description={`A random sample of up to 10 of the ${total} change${total === 1 ? '' : 's'} the Policy Servicing agent made in the last ${window} days. Open each policy, read its history and the notice issued, and check the agent did what the requester confirmed.`}
       />

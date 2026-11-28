@@ -11,7 +11,9 @@ import {
 } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
-import { buttonClass } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
+import { FilterTabs } from '@/components/ui/filter-tabs';
+import { Input, Select } from '@/components/ui/form';
 import { Badge, Card, EmptyState, PageHeader } from '@/components/ui/primitives';
 import { Pager, Table, TD, TH, THead, TR, withQuery } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
@@ -35,75 +37,54 @@ export default async function AccountsPage({ searchParams }: { searchParams: Sea
   return (
     <>
       <PageHeader
-        eyebrow="Partners"
         title="Accounts"
-        description="Travel sellers, card issuers and banks. Each account is a separate tenant: its data is isolated from every other account."
+        description="Travel sellers, card issuers and banks. Each account’s data is kept apart from every other’s."
         actions={me.permissions.includes('accounts:manage') ? <CreateAccountDialog /> : null}
       />
 
       <form
         role="search"
         aria-label="Filter accounts"
-        className="mb-4 flex flex-wrap items-end gap-3"
+        className="mb-4 flex flex-wrap items-center gap-2"
         method="get"
       >
-        <div className="relative min-w-60 flex-1">
+        {status ? <input type="hidden" name="status" value={status} /> : null}
+        <div className="relative min-w-52 flex-1">
           <label htmlFor="q" className="sr-only">
             Search by name or code
           </label>
           <Search
             aria-hidden
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-subtle"
+            className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-subtle"
           />
-          <input
+          <Input
             id="q"
             name="q"
+            type="search"
+            key={q ?? ''}
             defaultValue={q}
             placeholder="Search by name or code"
-            className="h-10 w-full rounded-lg border border-border-strong bg-surface pl-9 pr-3 text-sm text-fg shadow-card placeholder:text-subtle"
+            className="pl-10"
           />
         </div>
-        <div>
-          <label htmlFor="status" className="sr-only">
-            Status
-          </label>
-          <select
-            id="status"
-            name="status"
-            defaultValue={status ?? ''}
-            className="h-10 rounded-lg border border-border-strong bg-surface px-3 text-sm text-fg shadow-card"
-          >
-            <option value="">All statuses</option>
-            {ACCOUNT_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {sentenceCase(s)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="kind" className="sr-only">
-            Type
-          </label>
-          <select
-            id="kind"
-            name="kind"
-            defaultValue={kind ?? ''}
-            className="h-10 rounded-lg border border-border-strong bg-surface px-3 text-sm text-fg shadow-card"
-          >
+        <label htmlFor="kind" className="sr-only">
+          Type
+        </label>
+        <div className="w-44">
+          <Select id="kind" name="kind" key={kind ?? ''} defaultValue={kind ?? ''}>
             <option value="">All types</option>
             {ACCOUNT_KINDS.map((k) => (
               <option key={k} value={k}>
                 {ACCOUNT_KIND_LABELS[k]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
-        <button type="submit" className={buttonClass('secondary')}>
-          Apply
-        </button>
+        <Button type="submit" variant="secondary">
+          Search
+        </Button>
         {filtered ? (
-          <Link href="/accounts" className="text-sm font-medium text-primary hover:underline">
+          <Link href="/accounts" className="px-1 text-sm font-medium text-primary hover:underline">
             Clear filters
           </Link>
         ) : null}
@@ -113,6 +94,14 @@ export default async function AccountsPage({ searchParams }: { searchParams: Sea
         <ErrorPanel error={result.error} />
       ) : (
         <Card>
+          <FilterTabs
+            label="Account status"
+            tabs={[undefined, ...ACCOUNT_STATUSES].map((v) => ({
+              href: withQuery('/accounts', {}, { q, kind, status: v }),
+              label: v ? sentenceCase(v) : 'All',
+              current: v === status,
+            }))}
+          />
           {result.data.items.length === 0 ? (
             <EmptyState
               icon={<Building2 className="size-5" />}
@@ -129,7 +118,6 @@ export default async function AccountsPage({ searchParams }: { searchParams: Sea
                 <THead>
                   <tr>
                     <TH>Account</TH>
-                    <TH>Code</TH>
                     <TH>Type</TH>
                     <TH>Status</TH>
                     <TH>Registered</TH>
@@ -139,14 +127,13 @@ export default async function AccountsPage({ searchParams }: { searchParams: Sea
                   {result.data.items.map((a) => (
                     <TR key={a.id}>
                       <TD>
-                        <Link
-                          href={`/accounts/${a.id}`}
-                          className="font-medium text-fg hover:text-primary hover:underline"
-                        >
-                          {a.name}
+                        <Link href={`/accounts/${a.id}`} className="group block">
+                          <span className="block font-semibold text-fg group-hover:text-primary group-hover:underline">
+                            {a.name}
+                          </span>
+                          <span className="block text-xs text-muted">{a.code}</span>
                         </Link>
                       </TD>
-                      <TD className="font-mono text-xs text-muted">{a.code}</TD>
                       <TD className="text-muted">{ACCOUNT_KIND_LABELS[a.kind]}</TD>
                       <TD>
                         <Badge tone={ACCOUNT_STATUS_TONES[a.status]}>

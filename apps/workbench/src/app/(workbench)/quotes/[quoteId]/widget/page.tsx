@@ -1,13 +1,12 @@
-import { createElement } from 'react';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
 import type { z } from 'zod';
 import type { Quote, WidgetSessionSchema } from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
+import { BackLink } from '@/components/ui/back-link';
 import { Card, CardHeader, Notice, PageHeader } from '@/components/ui/primitives';
+import { CopyButton, WidgetFrame } from './widget-frame';
 
 export const metadata = { title: 'Widget preview' };
 
@@ -27,16 +26,11 @@ export default async function WidgetPreview({ params }: { params: Promise<{ quot
   );
   return (
     <>
-      <Link
-        href={`/quotes/${quoteId}`}
-        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg"
-      >
-        <ChevronLeft aria-hidden className="size-4" /> Quote
-      </Link>
+      <BackLink href={`/quotes/${quoteId}`}>Quote</BackLink>
       <PageHeader
         eyebrow={`${q.data.plan.code} · ${q.data.state}`}
         title="Widget preview"
-        description="What the account’s booking page shows. The widget loads from the API with a short token for this one quote; it can add and remove optional benefits, and it cannot bind."
+        description="What the account’s booking page shows. Travellers can add and remove optional benefits here; they cannot buy."
       />
       {s.error ? (
         <Notice tone="warning" title="The widget cannot be shown">
@@ -47,22 +41,21 @@ export default async function WidgetPreview({ params }: { params: Promise<{ quot
           channel settings.
         </Notice>
       ) : (
-        <>
-          <Card className="mb-6">
+        <div className="space-y-6">
+          <Card className="overflow-hidden">
             <CardHeader title="As the traveller sees it" />
-            <div className="p-5">
-              <script src={s.data.scriptUrl} async />
-              {createElement('astra-cover-offer', {
-                api: s.data.apiUrl,
-                quote: quoteId,
-                token: s.data.token,
-              })}
-            </div>
+            <WidgetFrame
+              scriptUrl={s.data.scriptUrl}
+              api={s.data.apiUrl}
+              quoteId={quoteId}
+              token={s.data.token}
+            />
           </Card>
           <Card>
             <CardHeader
               title="Add it to a booking page"
               description="The account’s server starts a session for each quote and puts this in the page. The token lasts 30 minutes."
+              actions={<CopyButton text={s.data.snippet} />}
             />
             <pre
               className="overflow-auto p-5 font-mono text-xs leading-relaxed"
@@ -72,7 +65,7 @@ export default async function WidgetPreview({ params }: { params: Promise<{ quot
               {s.data.snippet}
             </pre>
           </Card>
-        </>
+        </div>
       )}
     </>
   );

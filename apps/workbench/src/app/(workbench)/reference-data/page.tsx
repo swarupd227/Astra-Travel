@@ -17,9 +17,8 @@ export default async function ReferenceDataPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Product & compliance"
         title="Reference data"
-        description="The lists rules, rating and documents rely on. Each dataset is versioned with effective dates; a version takes effect only after someone other than the person who loaded it approves it."
+        description="The lists that rules, rates and documents rely on. A second person approves each change."
       />
       {result.error ? (
         <ErrorPanel error={result.error} />

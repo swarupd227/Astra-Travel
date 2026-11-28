@@ -20,8 +20,8 @@ export function ChannelsForm({
   return (
     <form action={action} className="space-y-6">
       <input type="hidden" name="accountId" value={accountId} />
-      <fieldset className="space-y-4">
-        <legend className="text-base font-semibold text-fg">Branding</legend>
+      <fieldset className="space-y-4 rounded-xl border border-border p-4">
+        <legend className="px-1 text-base font-semibold text-fg">Branding</legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Name shown to travellers" error={errors['branding.displayName']}>
             {(f) => (
@@ -49,7 +49,7 @@ export function ChannelsForm({
           </Field>
           <Field
             label="Primary colour"
-            hint="Buttons and focus. Checked for WCAG 2.2 AA contrast when saved."
+            hint="Used for buttons. Saving checks that text on it is easy to read."
             error={errors['branding.primaryColor']}
           >
             {(f) => (
@@ -73,8 +73,8 @@ export function ChannelsForm({
           </Field>
         </div>
       </fieldset>
-      <fieldset className="space-y-4">
-        <legend className="text-base font-semibold text-fg">Widget</legend>
+      <fieldset className="space-y-4 rounded-xl border border-border p-4">
+        <legend className="px-1 text-base font-semibold text-fg">Widget</legend>
         <label className="flex items-center gap-2 text-sm text-fg">
           <input
             type="checkbox"
@@ -99,8 +99,8 @@ export function ChannelsForm({
           )}
         </Field>
       </fieldset>
-      <fieldset className="space-y-4">
-        <legend className="text-base font-semibold text-fg">Hosted purchase journey</legend>
+      <fieldset className="space-y-4 rounded-xl border border-border p-4">
+        <legend className="px-1 text-base font-semibold text-fg">Hosted purchase journey</legend>
         <label className="flex items-center gap-2 text-sm text-fg">
           <input
             type="checkbox"

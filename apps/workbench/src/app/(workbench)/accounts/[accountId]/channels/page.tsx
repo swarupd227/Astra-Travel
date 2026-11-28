@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
 import type { Account, ChannelSettings } from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
-import { Card, CardHeader, Notice, PageHeader } from '@/components/ui/primitives';
+import { Card, CardHeader, Notice } from '@/components/ui/primitives';
+import { AccountHeader } from '../account-header';
 import { ChannelsForm } from './channels-form';
 
 export const metadata = { title: 'Sales channels' };
@@ -25,16 +25,11 @@ export default async function ChannelsPage({ params }: { params: Promise<{ accou
   const s = set.data;
   return (
     <>
-      <Link
-        href={`/accounts/${accountId}`}
-        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg"
-      >
-        <ChevronLeft aria-hidden className="size-4" /> {acc.data.name}
-      </Link>
-      <PageHeader
-        eyebrow="Sales channels"
+      <AccountHeader
+        account={acc.data}
+        current="channels"
         title="Widget, hosted journey and files"
-        description="Every channel sells through the same quote and bind rules as the API. Branding is checked for accessible contrast when it is saved."
+        description="Every channel sells with the same price and rules."
       />
       {s.journey.enabled && s.journey.slug ? (
         <div className="mb-6">

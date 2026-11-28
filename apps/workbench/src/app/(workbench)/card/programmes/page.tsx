@@ -51,9 +51,8 @@ export default async function ProgrammesPage({ searchParams }: { searchParams: S
   return (
     <>
       <PageHeader
-        eyebrow="Card-linked cover"
         title="Card programmes"
-        description="Travel cover that comes with a card. Issuers send eligibility feeds; cover is answered from the eligibility ledger, with the feed version behind every answer."
+        description="Travel cover that comes with a card, answered from each issuer’s eligibility files."
         actions={canManage ? <CreateProgrammeDialog policies={activePolicies} /> : null}
       />
 

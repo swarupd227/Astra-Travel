@@ -36,9 +36,8 @@ export default async function RuleSetPlansPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Underwriting"
         title="Rule sets"
-        description="Plan limits, referral rules and eligibility options for each state and account plan. A rule set is approved by a second person and published only when every test case passes."
+        description="Limits and referral rules for each plan, tested before they are published."
       />
       <Card>
         {plans.length === 0 ? (

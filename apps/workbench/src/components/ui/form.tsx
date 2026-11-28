@@ -108,7 +108,7 @@ export function FormMessage({ state }: { state: ActionState }) {
     <div role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
       <p className="font-medium">{state.message}</p>
       {state.correlationId ? (
-        <p className="mt-0.5 text-xs opacity-80">Reference: {state.correlationId}</p>
+        <p className="mt-0.5 text-xs">Reference: {state.correlationId}</p>
       ) : null}
     </div>
   );

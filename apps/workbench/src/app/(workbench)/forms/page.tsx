@@ -20,9 +20,8 @@ export default async function FormsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Product & compliance"
         title="Forms & schedules"
-        description="Every filed form and schedule edition, its approvals by state and its variable map: the bracketed options and values a plan may set, with their filed ranges."
+        description="Filed forms and schedules, where each is approved, and what a plan may set in them."
         actions={me.permissions.includes('forms:manage') ? <LoadEditionDialog /> : null}
       />
       {result.error ? (

@@ -1,14 +1,11 @@
 import Link from 'next/link';
 import type { PremiumRecord } from '@astra/contracts';
 import { api } from '@/lib/api';
-import { sentenceCase } from '@/lib/format';
+import { money, sentenceCase } from '@/lib/format';
 import { load } from '@/components/error-panel';
 import { Badge, Card, CardHeader } from '@/components/ui/primitives';
-import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { RECORD_TONES } from './tones';
 
-const money = (v: string) =>
-  `${v.startsWith('-') ? '−' : ''}$${Number(v.replace('-', '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const MEANING: Record<PremiumRecord['status'], string> = {
   held: 'Held: something is missing',
   ready: 'Ready to send',
@@ -25,45 +22,35 @@ export async function PolicyPremium({ policyId }: { policyId: string }) {
   );
   if (res.error || res.data.items.length === 0) return null;
   return (
-    <Card className="mb-6">
+    <Card aria-labelledby="premium-records">
       <CardHeader
+        titleId="premium-records"
         title="Premium records"
-        description="What was charged and refunded, and where each stands with Assurant’s billing system."
+        description="Each charge and refund, and where it stands with Assurant’s billing system."
       />
-      <Table caption="Premium records of this policy">
-        <THead>
-          <tr>
-            <TH>Record</TH>
-            <TH>Transaction</TH>
-            <TH className="text-right">Charged</TH>
-            <TH className="text-right">Refunded</TH>
-            <TH>With billing</TH>
-          </tr>
-        </THead>
-        <tbody>
-          {res.data.items.map((r) => (
-            <TR key={r.id}>
-              <TD>
-                <Link
-                  href={`/billing/records/${r.id}`}
-                  className="font-mono text-xs font-medium text-fg hover:text-primary hover:underline"
-                >
-                  {r.number}
-                </Link>
-              </TD>
-              <TD>{sentenceCase(r.type)}</TD>
-              <TD className="text-right font-mono text-xs">{money(r.charge)}</TD>
-              <TD className="text-right font-mono text-xs">{money(r.refund)}</TD>
-              <TD>
-                <Badge tone={RECORD_TONES[r.status]}>{MEANING[r.status]}</Badge>
-                {r.billingReference ? (
-                  <span className="block font-mono text-xs text-muted">{r.billingReference}</span>
-                ) : null}
-              </TD>
-            </TR>
-          ))}
-        </tbody>
-      </Table>
+      <ul className="divide-y divide-border">
+        {res.data.items.map((r) => (
+          <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5">
+            <span className="min-w-0 flex-1">
+              <Link
+                href={`/billing/records/${r.id}`}
+                className="block text-sm font-medium text-fg hover:text-primary hover:underline"
+              >
+                {r.number}
+              </Link>
+              <span className="block text-xs text-muted">
+                {sentenceCase(r.type)}
+                {r.billingReference ? ` · billing reference ${r.billingReference}` : ''}
+              </span>
+            </span>
+            <span className="text-right text-sm tabular-nums text-fg">
+              {Number(r.charge) ? <span className="block">{money(r.charge)} charged</span> : null}
+              {Number(r.refund) ? <span className="block">{money(r.refund)} refunded</span> : null}
+            </span>
+            <Badge tone={RECORD_TONES[r.status]}>{MEANING[r.status]}</Badge>
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }

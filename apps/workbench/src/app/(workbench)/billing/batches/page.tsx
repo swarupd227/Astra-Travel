@@ -41,9 +41,8 @@ export default async function BatchesPage() {
         <ChevronLeft aria-hidden className="size-4" /> Premium records
       </Link>
       <PageHeader
-        eyebrow="Billing"
         title="Batches sent to billing"
-        description="Each batch takes every ready record once and carries its record count and amount totals. Billing confirms the totals it received; a difference, or no answer, is raised here."
+        description="Records sent to billing, and whether billing’s totals match."
         actions={canManage ? <CreateBatchForm /> : null}
       />
       {attention.length ? (

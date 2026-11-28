@@ -34,6 +34,8 @@ import {
   type CheckState,
   type SaveState,
 } from './actions';
+import { COUNTRIES } from '@/lib/countries';
+import { fieldLabel } from '@/lib/field-labels';
 
 // ---------------- Quote fields shared by the check page and the test case dialog ----------------
 
@@ -81,72 +83,85 @@ export function CaseFields({
   );
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-3">
-        {text('firstName', 'First name', { required: true })}
-        {text('lastName', 'Last name', { required: true })}
-        {date(
-          'dateOfBirth',
-          'Date of birth',
-          false,
-          'Needed for the duplicate check; sharpens sanctions screening.',
-        )}
-      </div>
-      <div className="grid gap-4 sm:grid-cols-3">
-        {text('age', 'Age', { type: 'number', hint: 'Taken from the date of birth when blank.' })}
-        {text('costPerTraveller', 'Trip cost per traveller', { hint: 'For example 4200.00' })}
-        {text('insuredPercent', 'Trip costs insured (%)', {
-          type: 'number',
-          hint: '100 means all relevant costs.',
-        })}
-      </div>
-      <div className="grid gap-4 sm:grid-cols-4">
-        {date('purchaseDate', 'Purchase date')}
-        {date(
-          'initialDepositDate',
-          'Initial deposit date',
-          false,
-          'Needed to show the time-sensitive period.',
-        )}
-        {date('departureDate', 'Departure')}
-        {date('returnDate', 'Return')}
-      </div>
-      <div className="grid gap-4 sm:grid-cols-4">
-        {text('destinationCountry', 'Destination country', {
-          hint: 'Two letters, for example FR.',
-          className: 'uppercase',
-        })}
-        {text('destinationRegion', 'Destination region')}
-        {text('businessSegment', 'Business segment')}
-        {text('benefits', 'Benefits wanted', { hint: 'Catalogue codes, separated by commas.' })}
-      </div>
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="Able to travel">
-          {(f) => (
-            <Select id={f.id} name="ableToTravel" defaultValue={keep('ableToTravel', 'yes')}>
-              <option value="yes">Confirmed</option>
-              <option value="no">Not able</option>
-              <option value="">Not asked yet</option>
-            </Select>
+      <fieldset className="min-w-0 space-y-4 rounded-xl border border-border p-4">
+        <legend className="px-1 text-sm font-semibold text-fg">Traveller</legend>
+        <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {text('firstName', 'First name', { required: true })}
+          {text('lastName', 'Last name', { required: true })}
+          {date(
+            'dateOfBirth',
+            'Date of birth',
+            false,
+            'Needed for the duplicate check; sharpens sanctions screening.',
           )}
-        </Field>
-        <Field label="Stage">
-          {(f) => (
-            <Select id={f.id} name="stage" defaultValue={keep('stage', 'quote')}>
-              <option value="quote">Quote</option>
-              <option value="bind">Bind</option>
-              <option value="change">Change</option>
-            </Select>
+          {text('age', 'Age', { type: 'number', hint: 'From the date of birth when blank.' })}
+          <Field label="Able to travel">
+            {(f) => (
+              <Select id={f.id} name="ableToTravel" defaultValue={keep('ableToTravel', 'yes')}>
+                <option value="yes">Confirmed</option>
+                <option value="no">Not able</option>
+                <option value="">Not asked yet</option>
+              </Select>
+            )}
+          </Field>
+        </div>
+      </fieldset>
+      <fieldset className="min-w-0 space-y-4 rounded-xl border border-border p-4">
+        <legend className="px-1 text-sm font-semibold text-fg">Trip</legend>
+        <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {date('departureDate', 'Departure')}
+          {date('returnDate', 'Return')}
+          <Field label="Destination country">
+            {(f) => (
+              <Select id={f.id} name="destinationCountry" defaultValue={keep('destinationCountry')}>
+                <option value="">Not given</option>
+                {COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          {text('destinationRegion', 'Destination region')}
+          {text('costPerTraveller', 'Trip cost per traveller', { hint: 'For example 4200.00' })}
+          {text('insuredPercent', 'Trip costs insured (%)', {
+            type: 'number',
+            hint: '100 means all relevant costs.',
+          })}
+        </div>
+      </fieldset>
+      <fieldset className="min-w-0 space-y-4 rounded-xl border border-border p-4">
+        <legend className="px-1 text-sm font-semibold text-fg">Sale</legend>
+        <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {date('purchaseDate', 'Purchase date')}
+          {date(
+            'initialDepositDate',
+            'Initial deposit date',
+            false,
+            'Needed to show the time-sensitive period.',
           )}
-        </Field>
-        <Field label="Term">
-          {(f) => (
-            <Select id={f.id} name="term" defaultValue={keep('term', 'single_trip')}>
-              <option value="single_trip">Single trip</option>
-              <option value="annual">Annual</option>
-            </Select>
-          )}
-        </Field>
-      </div>
+          {text('businessSegment', 'Business segment')}
+          {text('benefits', 'Benefits wanted', { hint: 'Benefit codes, separated by commas.' })}
+          <Field label="Stage">
+            {(f) => (
+              <Select id={f.id} name="stage" defaultValue={keep('stage', 'quote')}>
+                <option value="quote">Quote</option>
+                <option value="bind">Bind</option>
+                <option value="change">Change</option>
+              </Select>
+            )}
+          </Field>
+          <Field label="Term">
+            {(f) => (
+              <Select id={f.id} name="term" defaultValue={keep('term', 'single_trip')}>
+                <option value="single_trip">Single trip</option>
+                <option value="annual">Annual</option>
+              </Select>
+            )}
+          </Field>
+        </div>
+      </fieldset>
     </div>
   );
 }
@@ -184,9 +199,11 @@ export function EvaluationView({ r }: { r: EvaluationResult }) {
         <ul className="space-y-1 text-sm">
           {r.referrals.map((x) => (
             <li key={x.rule}>
-              <span className="font-mono text-xs">{x.rule}</span> (
-              {x.recommendation === 'recommend_decline' ? 'recommends decline' : 'refer'}):{' '}
-              {x.reason}
+              {x.reason}{' '}
+              <span className="text-muted">
+                ({x.recommendation === 'recommend_decline' ? 'recommends decline' : 'refer'}, rule{' '}
+                {x.rule})
+              </span>
             </li>
           ))}
         </ul>
@@ -207,7 +224,7 @@ export function EvaluationView({ r }: { r: EvaluationResult }) {
           <dd className="text-muted">{r.waiver.applies ? 'Applies' : 'Does not apply'}</dd>
         </div>
         <div>
-          <dt className="font-medium text-fg">CFAR</dt>
+          <dt className="font-medium text-fg">Cancel for any reason</dt>
           <dd className="text-muted">{r.cfar.offered ? 'Offered' : 'Not offered'}</dd>
         </div>
       </dl>
@@ -218,7 +235,7 @@ export function EvaluationView({ r }: { r: EvaluationResult }) {
         <div className="divide-y divide-border">
           {groups.map((g) => (
             <div key={g} className="px-3 py-2">
-              <p className="text-xs font-semibold tracking-wide text-muted uppercase">
+              <p className="text-xs font-semibold text-muted first-letter:uppercase">
                 {g.replace(/_/g, ' ')}
               </p>
               <ul className="mt-1 space-y-1 text-sm">
@@ -240,9 +257,12 @@ export function EvaluationView({ r }: { r: EvaluationResult }) {
           ))}
         </div>
       </details>
-      <pre className="overflow-x-auto rounded-md bg-surface-muted p-3 text-xs text-fg whitespace-pre-wrap">
-        {r.summary}
-      </pre>
+      <details className="rounded-lg border border-border">
+        <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-fg">
+          Decision as recorded
+        </summary>
+        <p className="whitespace-pre-wrap px-3 pb-3 text-sm text-muted">{r.summary}</p>
+      </details>
     </div>
   );
 }
@@ -285,7 +305,7 @@ export function CheckForm({
           <ul className="list-disc pl-5 text-xs text-danger">
             {Object.entries(state.fieldErrors).map(([k, m]) => (
               <li key={k}>
-                {k}: {m}
+                {fieldLabel(k)}: {m}
               </li>
             ))}
           </ul>
@@ -294,7 +314,7 @@ export function CheckForm({
           <ShieldCheck aria-hidden className="size-4" /> Check eligibility
         </SubmitButton>
       </form>
-      <Card>
+      <Card className="self-start xl:sticky xl:top-20">
         <CardHeader
           title="Result"
           description="Uses the rule set published for the plan on the purchase date, with the sanctions list, prohibited destinations and cover register in force."
@@ -863,8 +883,8 @@ export function RuleSetEditor({
                   </div>
                 ) : (
                   <Notice tone="neutral">
-                    This rule uses nested conditions, which the editor shows but does not change.
-                    Edit it through the API.
+                    This rule uses nested conditions, which the editor shows but does not change. It
+                    cannot be edited on this screen.
                   </Notice>
                 )}
                 <Input
@@ -1167,7 +1187,7 @@ export function SanctionsDecisionForm({ listId }: { listId: string }) {
       <button
         name="decision"
         value="approve"
-        className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-fg hover:opacity-90"
+        className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-contrast hover:opacity-90"
       >
         Approve
       </button>
@@ -1218,7 +1238,7 @@ export function ReferralDecisionForm({
         <button
           name="decision"
           value="approved"
-          className="h-10 rounded-lg bg-primary px-4 text-sm font-medium text-primary-fg hover:opacity-90"
+          className="h-10 rounded-lg bg-primary px-4 text-sm font-medium text-primary-contrast hover:opacity-90"
         >
           {sanctions ? 'Clear the match' : 'Approve'}
         </button>

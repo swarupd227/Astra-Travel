@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
 import type { Referral, ReferralSummary } from '@astra/contracts';
 import { api, ApiProblem, getMe } from '@/lib/api';
 import { sentenceCase } from '@/lib/format';
@@ -16,6 +15,9 @@ import {
   PageHeader,
 } from '@/components/ui/primitives';
 import { LocalTime } from '@/components/ui/time';
+import { AgentMark } from '@/components/copilot/agent-mark';
+import { BackLink } from '@/components/ui/back-link';
+import { AutoRefresh } from '../../../proposals/proposal-forms';
 import { EvaluationView, ReferralDecisionForm } from '../../uw-forms';
 import { AskSummaryForm, SummaryDecisionForm } from './summary-forms';
 
@@ -52,12 +54,7 @@ export default async function ReferralPage({
   const sanctions = r.kind === 'sanctions';
   return (
     <>
-      <Link
-        href="/underwriting/referrals"
-        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-fg"
-      >
-        <ChevronLeft aria-hidden className="size-4" /> Referrals
-      </Link>
+      <BackLink href="/underwriting/referrals">Referrals</BackLink>
       <PageHeader
         eyebrow={sanctions ? 'Sanctions hold' : 'Underwriting referral'}
         title={r.caseRef}
@@ -77,17 +74,117 @@ export default async function ReferralPage({
           </Notice>
         </div>
       ) : null}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader
-            title="Case"
-            description="The rule results. The referral agent's summary of them is below."
-          />
-          <div className="p-5">
-            <EvaluationView r={r.evaluation} />
-          </div>
-        </Card>
-        <Card>
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
+        <div className="min-w-0 space-y-6 xl:col-span-2">
+          {r.kind === 'underwriting' ? (
+            <Card className="ai-surface overflow-hidden">
+              <CardHeader
+                title={
+                  <span className="flex items-center gap-2.5">
+                    <AgentMark size="sm" /> Summary by the Underwriting Referral agent
+                  </span>
+                }
+                description="It reads the case and suggests what to do. You decide; a decline is always your decision."
+                actions={
+                  canAsk ? (
+                    <AskSummaryForm
+                      referralId={r.id}
+                      label={
+                        summaryList.length ? 'Ask for a new summary' : 'Summarise this referral'
+                      }
+                    />
+                  ) : undefined
+                }
+              />
+              <div className="space-y-6 p-5">
+                <AutoRefresh active={!!asked && summaryList.length === 0} />
+                {askError ? (
+                  <Notice tone="danger" title="The agent could not be asked">
+                    {askError}
+                  </Notice>
+                ) : null}
+                {summaryList.length === 0 && !asked ? (
+                  <p className="text-sm text-muted">
+                    No summary yet.{canAsk ? ' Ask the agent for one.' : ''}
+                  </p>
+                ) : null}
+                {summaryList.map((s) => {
+                  const shown =
+                    s.decision?.decision === 'edited' && s.decision.edited
+                      ? s.decision.edited.summary
+                      : s.summary;
+                  return (
+                    <section
+                      key={s.id}
+                      aria-label={`Summary written ${s.createdAt}`}
+                      className="rounded-xl border border-border bg-surface p-4"
+                    >
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <Badge
+                          tone={
+                            s.suggested === 'decline'
+                              ? 'warning'
+                              : s.suggested === 'approve'
+                                ? 'success'
+                                : 'neutral'
+                          }
+                        >
+                          Suggests: {sentenceCase(s.suggested)}
+                        </Badge>
+                        {s.decision ? (
+                          <Badge tone={s.decision.decision === 'rejected' ? 'danger' : 'primary'}>
+                            You{' '}
+                            {s.decision.decision === 'edited'
+                              ? 'corrected it'
+                              : s.decision.decision}
+                          </Badge>
+                        ) : (
+                          <Badge tone="warning">Not yet judged</Badge>
+                        )}
+                        <span className="text-xs text-muted">
+                          {s.agentId ?? 'Agent'} · <LocalTime iso={s.createdAt} />
+                        </span>
+                      </div>
+                      <p className="whitespace-pre-line text-sm text-fg">{shown}</p>
+                      <p className="mt-2 text-xs text-muted">
+                        Rules relied on:{' '}
+                        {s.rulesCited
+                          .map(
+                            (c) =>
+                              `${c}${s.verification.rulesChecked.find((x) => x.code === c)?.fired ? ' (fired, checked)' : ''}`,
+                          )
+                          .join(', ')}
+                      </p>
+                      {s.decision?.reason ? (
+                        <p className="mt-1 text-xs text-muted">Reason given: {s.decision.reason}</p>
+                      ) : null}
+                      {s.runId ? (
+                        <p className="mt-2 text-sm">
+                          <Link
+                            href={`/agents/runs/${s.runId}/review`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            How the agent reached this: its inputs, evidence and limits
+                          </Link>
+                        </p>
+                      ) : null}
+                      {!s.decision && canJudge ? (
+                        <SummaryDecisionForm summaryId={s.id} summary={s.summary} />
+                      ) : null}
+                    </section>
+                  );
+                })}
+              </div>
+            </Card>
+          ) : null}
+          <Card aria-labelledby="case">
+            <CardHeader titleId="case" title="Case" description="What the rules found." />
+            <div className="p-5">
+              <EvaluationView r={r.evaluation} />
+            </div>
+          </Card>
+        </div>
+        <Card className="self-start xl:sticky xl:top-20">
           <CardHeader title={r.status === 'open' ? 'Decide' : 'Decision'} />
           <div className="space-y-4 p-5">
             {r.status === 'open' ? (
@@ -116,104 +213,6 @@ export default async function ReferralPage({
           </div>
         </Card>
       </div>
-
-      {r.kind === 'underwriting' ? (
-        <Card className="mt-6">
-          <CardHeader
-            title="Summary by the Underwriting Referral agent"
-            description="The agent reads the case and the rules that fired and suggests what to do. It only suggests: you decide the referral, and a decline is always your decision."
-            actions={
-              canAsk ? (
-                <AskSummaryForm
-                  referralId={r.id}
-                  label={summaryList.length ? 'Ask for a new summary' : 'Summarise this referral'}
-                />
-              ) : undefined
-            }
-          />
-          <div className="space-y-6 p-5">
-            {asked ? (
-              <Notice tone="primary" title="Asked">
-                The agent is reading the case. Reload this page in a moment to see its summary.
-              </Notice>
-            ) : null}
-            {askError ? (
-              <Notice tone="danger" title="The agent could not be asked">
-                {askError}
-              </Notice>
-            ) : null}
-            {summaryList.length === 0 && !asked ? (
-              <p className="text-sm text-muted">
-                No summary yet.{canAsk ? ' Ask the agent for one.' : ''}
-              </p>
-            ) : null}
-            {summaryList.map((s) => {
-              const shown =
-                s.decision?.decision === 'edited' && s.decision.edited
-                  ? s.decision.edited.summary
-                  : s.summary;
-              return (
-                <section
-                  key={s.id}
-                  aria-label={`Summary written ${s.createdAt}`}
-                  className="rounded-lg border border-border p-4"
-                >
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <Badge
-                      tone={
-                        s.suggested === 'decline'
-                          ? 'warning'
-                          : s.suggested === 'approve'
-                            ? 'success'
-                            : 'neutral'
-                      }
-                    >
-                      Suggests: {sentenceCase(s.suggested)}
-                    </Badge>
-                    {s.decision ? (
-                      <Badge tone={s.decision.decision === 'rejected' ? 'danger' : 'primary'}>
-                        You{' '}
-                        {s.decision.decision === 'edited' ? 'corrected it' : s.decision.decision}
-                      </Badge>
-                    ) : (
-                      <Badge tone="warning">Not yet judged</Badge>
-                    )}
-                    <span className="text-xs text-muted">
-                      {s.agentId ?? 'Agent'} · <LocalTime iso={s.createdAt} />
-                    </span>
-                  </div>
-                  <p className="whitespace-pre-line text-sm text-fg">{shown}</p>
-                  <p className="mt-2 text-xs text-muted">
-                    Rules relied on:{' '}
-                    {s.rulesCited
-                      .map(
-                        (c) =>
-                          `${c}${s.verification.rulesChecked.find((x) => x.code === c)?.fired ? ' (fired, checked)' : ''}`,
-                      )
-                      .join(', ')}
-                  </p>
-                  {s.decision?.reason ? (
-                    <p className="mt-1 text-xs text-muted">Reason given: {s.decision.reason}</p>
-                  ) : null}
-                  {s.runId ? (
-                    <p className="mt-2 text-sm">
-                      <Link
-                        href={`/agents/runs/${s.runId}/review`}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        How the agent reached this: its inputs, evidence and limits
-                      </Link>
-                    </p>
-                  ) : null}
-                  {!s.decision && canJudge ? (
-                    <SummaryDecisionForm summaryId={s.id} summary={s.summary} />
-                  ) : null}
-                </section>
-              );
-            })}
-          </div>
-        </Card>
-      ) : null}
     </>
   );
 }

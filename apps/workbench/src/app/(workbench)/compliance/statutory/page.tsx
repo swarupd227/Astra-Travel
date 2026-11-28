@@ -25,9 +25,8 @@ export default async function StatutoryPage({
   return (
     <>
       <PageHeader
-        eyebrow="Compliance"
         title="Statutory and statistical data"
-        description="Premium and policy counts by state, underwriting entity and benefit, built from the premium records and checked against them. Dates are the UTC date of each transaction."
+        description="Premium and policy counts by state, underwriter and benefit, checked against the premium records."
       />
       <Card className="mb-6">
         <PeriodForm {...p} csvHref={`/api/reports/statutory?from=${p.from}&to=${p.to}`} />

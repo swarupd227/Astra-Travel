@@ -5,6 +5,7 @@ import { api, getMe } from '@/lib/api';
 import { sentenceCase } from '@/lib/format';
 import { AccessDenied } from '@/components/access-denied';
 import { ErrorPanel, load } from '@/components/error-panel';
+import { FilterTabs } from '@/components/ui/filter-tabs';
 import { Badge, Card, EmptyState, PageHeader } from '@/components/ui/primitives';
 import { Table, TD, TH, THead, TR } from '@/components/ui/table';
 import { LocalTime } from '@/components/ui/time';
@@ -13,25 +14,46 @@ export const metadata = { title: 'Referrals' };
 
 const TONES = { open: 'warning', approved: 'success', declined: 'neutral' } as const;
 
-export default async function ReferralsPage() {
+const VIEWS = ['open', 'decided', 'all'] as const;
+const LABELS = { open: 'Waiting', decided: 'Decided', all: 'All' } as const;
+
+export default async function ReferralsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
   const me = (await getMe())!;
   if (!me.permissions.includes('underwriting:read'))
     return <AccessDenied permission="underwriting:read" />;
   const res = await load(() => api<{ items: Omit<Referral, 'evaluation'>[] }>('/v1/referrals'));
   if (res.error) return <ErrorPanel error={res.error} />;
-  const items = res.data.items;
+  const all = res.data.items;
+  const asked = (await searchParams).view;
+  const view = VIEWS.find((v) => v === asked) ?? 'open';
+  const inView = (status: string, v: (typeof VIEWS)[number]) =>
+    v === 'all' || (v === 'open' ? status === 'open' : status !== 'open');
+  const items = all.filter((r) => inView(r.status, view));
   return (
     <>
       <PageHeader
-        eyebrow="Underwriting"
         title="Referrals"
-        description="Cases that met a referral rule, and travellers held for a possible sanctions match. An underwriter decides each one; a decline is always a person's decision."
+        description="Cases that need an underwriter, including possible sanctions matches. A person decides each one."
       />
       <Card>
+        <FilterTabs
+          label="Referral views"
+          tabs={VIEWS.map((v) => ({
+            href: v === 'open' ? '/underwriting/referrals' : `/underwriting/referrals?view=${v}`,
+            label: LABELS[v],
+            current: v === view,
+            count: all.filter((r) => inView(r.status, v)).length,
+            tone: v === 'open' ? 'warning' : undefined,
+          }))}
+        />
         {items.length === 0 ? (
           <EmptyState
             icon={<Inbox className="size-5" />}
-            title="No referrals"
+            title={view === 'open' ? 'No referrals waiting' : 'No referrals'}
             description="Cases appear here when a rule set refers them or screening holds them."
           />
         ) : (

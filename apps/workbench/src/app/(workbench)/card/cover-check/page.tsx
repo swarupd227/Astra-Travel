@@ -23,9 +23,8 @@ export default async function CoverCheckPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Card-linked cover"
         title="Cover check"
-        description="The same answer the claims system gets: whether the cardholder account was covered for a trip, the feed versions behind it, and the payment condition result."
+        description="Was a cardholder covered for a trip? The same answer the claims system gets."
       />
       <Card className="p-5">
         {options.length === 0 ? (

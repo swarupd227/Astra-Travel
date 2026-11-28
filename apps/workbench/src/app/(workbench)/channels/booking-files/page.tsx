@@ -37,18 +37,36 @@ export default async function BookingFilesPage({
   return (
     <>
       <PageHeader
-        eyebrow="Channels"
         title="Booking files"
-        description={`For accounts without an API. Each booking is quoted and bound through the same rules as the API, and the result file lists every booking as accepted or rejected with its reasons. A file holds at most ${MAX_BOOKINGS_PER_FILE} bookings and cannot be loaded twice.`}
+        description={`For accounts that send bookings as a CSV file. Each booking is priced and bought like any other, and the result file says which were accepted and why not. Up to ${MAX_BOOKINGS_PER_FILE} bookings a file.`}
       />
       {canSend ? (
         <Card className="mb-6">
-          <CardHeader title="Send a file" description={`Columns: ${BOOKING_COLUMNS.join(', ')}.`} />
+          <CardHeader
+            title="Send a file"
+            actions={
+              <a
+                className={buttonClass('secondary', 'sm')}
+                download="bookings-template.csv"
+                href={`data:text/csv;charset=utf-8,${encodeURIComponent(`${BOOKING_COLUMNS.join(',')}\n`)}`}
+              >
+                <FileSpreadsheet aria-hidden className="size-4" /> Download a template
+              </a>
+            }
+          />
           <div className="p-5">
             <BookingFileForm
               accounts={list.map((a) => ({ id: a.id, name: a.name }))}
               fixedAccountId={q ? accountId! : null}
             />
+            <details className="mt-4 text-sm">
+              <summary className="cursor-pointer font-medium text-primary">
+                The columns a file needs
+              </summary>
+              <p className="mt-2 break-words font-mono text-xs leading-6 text-muted">
+                {BOOKING_COLUMNS.join(', ')}
+              </p>
+            </details>
           </div>
         </Card>
       ) : null}

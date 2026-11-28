@@ -48,9 +48,8 @@ export default async function LaunchPage({
   return (
     <>
       <PageHeader
-        eyebrow="Compliance"
         title="Launch readiness"
-        description="What each state still needs before it can be sold, from the plans, rules, manuals, parity runs, templates and filings in the platform. Going live needs every state ready and a signature from product, actuarial, compliance and finance."
+        description="What each state still needs before it can be sold, and who has signed off."
         actions={
           <Badge tone={r.goLiveApproved ? 'success' : 'warning'}>
             {r.goLiveApproved ? 'Go-live approved' : 'Not approved'}

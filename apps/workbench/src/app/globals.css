@@ -6,10 +6,10 @@
  * All text/background pairs meet WCAG 2.2 AA contrast.
  */
 :root {
-  --bg: #f5f7fa;
+  --bg: #f6f7fb;
   --surface: #ffffff;
   --surface-muted: #f0f3f7;
-  --border: #e1e6ed;
+  --border: #e4e7ef;
   --border-strong: #c9d1dc;
   --text: #0e1628;
   --text-muted: #4f5d71;
@@ -31,8 +31,16 @@
   --sidebar-text: #c3cee2;
   --sidebar-text-strong: #ffffff;
   --sidebar-active: #1b3060;
-  --shadow: 0 1px 2px rgb(14 22 40 / 0.06), 0 1px 3px rgb(14 22 40 / 0.08);
+  --shadow: 0 1px 2px rgb(14 22 40 / 0.04), 0 1px 3px rgb(14 22 40 / 0.04);
   --shadow-lg: 0 12px 32px rgb(14 22 40 / 0.18);
+  --ai-from: #4f6ef7;
+  --ai-to: #0d9488;
+  --ai-wash: linear-gradient(
+    120deg,
+    rgb(79 110 247 / 0.1),
+    rgb(13 148 136 / 0.08) 60%,
+    transparent
+  );
   color-scheme: light;
 }
 
@@ -63,6 +71,12 @@
     --sidebar-active: #172a52;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
     --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.5);
+    --ai-wash: linear-gradient(
+      120deg,
+      rgb(122 160 255 / 0.16),
+      rgb(79 209 189 / 0.1) 60%,
+      transparent
+    );
     color-scheme: dark;
   }
 }
@@ -127,6 +141,78 @@
   }
 }
 
+/* On a phone, a table reads as a list of records: each value under its column's heading. */
+@media (max-width: 639.98px) {
+  table.stack,
+  table.stack > tbody {
+    display: block;
+    width: 100%;
+  }
+  table.stack > thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  table.stack > tbody > tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem 1rem;
+    padding: 0.875rem 1rem;
+  }
+  table.stack > tbody > tr > :not(.hidden) {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  table.stack > tbody > tr > :first-child,
+  table.stack > tbody > tr > [colspan]:not([colspan='1']),
+  table.stack > tbody > tr > [data-label='']:not(.hidden) {
+    grid-column: 1 / -1;
+  }
+  table.stack > tbody > tr > :not(:first-child):not([data-label=''])::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.125rem;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+  }
+}
+
+/* The look of anything an AI agent does: a gradient mark, ring and wash. Kept for agents only. */
+.ai-fill {
+  background: linear-gradient(135deg, var(--ai-from), var(--ai-to));
+}
+.ai-ring {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(120deg, var(--ai-from), var(--ai-to)) border-box;
+}
+.ai-ring:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.ai-surface {
+  border: 1px solid var(--border);
+  background: var(--ai-wash), var(--surface);
+  box-shadow: var(--shadow);
+}
+
+@keyframes panel-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
 @keyframes overlay-in {
   from {
     opacity: 0;
@@ -158,6 +244,9 @@
 }
 .animate-dialog {
   animation: dialog-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.animate-panel {
+  animation: panel-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .animate-drawer {
   animation: drawer-in 200ms cubic-bezier(0.16, 1, 0.3, 1);

@@ -24,11 +24,11 @@ export function ReplayDialog({
     <Dialog
       open={open}
       onOpenChange={setOpen}
-      title={all ? 'Replay every dead-lettered delivery' : 'Replay this delivery'}
-      description="The delivery goes back into the queue with a fresh set of retries. Fix the cause first, for example a partner endpoint that was down."
+      title={all ? 'Send every failed delivery again' : 'Send this delivery again'}
+      description="It is queued again with fresh retries. Fix the cause first, for example a partner system that was down."
       trigger={
         <Button variant={all ? 'primary' : 'secondary'} size="sm">
-          <RotateCcw aria-hidden className="size-3.5" /> {all ? 'Replay all' : 'Replay'}
+          <RotateCcw aria-hidden className="size-3.5" /> {all ? 'Send all again' : 'Send again'}
         </Button>
       }
     >
@@ -54,7 +54,7 @@ export function ReplayDialog({
           <Button variant="secondary" onClick={() => setOpen(false)}>
             Close
           </Button>
-          <SubmitButton pendingLabel="Replaying…">Replay</SubmitButton>
+          <SubmitButton pendingLabel="Sending…">Send again</SubmitButton>
         </div>
       </form>
     </Dialog>
